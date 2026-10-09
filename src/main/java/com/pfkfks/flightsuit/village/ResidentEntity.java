@@ -5,6 +5,9 @@ import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.ResidentScreenS2CPacket;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.village.ai.BuilderWorkGoal;
+import com.pfkfks.flightsuit.village.ai.ChildSchoolGoal;
+import com.pfkfks.flightsuit.village.ai.DoctorWorkGoal;
+import com.pfkfks.flightsuit.village.ai.TeacherWorkGoal;
 import com.pfkfks.flightsuit.village.ai.FarmerWorkGoal;
 import com.pfkfks.flightsuit.village.ai.GuardFirefightGoal;
 import com.pfkfks.flightsuit.village.ai.GuardHurtByTargetGoal;
@@ -87,6 +90,11 @@ public class ResidentEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> WANDERER = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.BOOLEAN);
     /** Seconds left while downed (0 = up), for the name tag and the lying-down pose. */
     private static final EntityDataAccessor<Integer> DOWNED = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
+    /** Days left until grown up (0 = an adult) - drives the child size and the name tag (M11). */
+    private static final EntityDataAccessor<Integer> CHILD_DAYS = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
+    /** School days so far, and the job the child is drawn to (ResidentJob ordinal), for the screen. */
+    private static final EntityDataAccessor<Integer> LESSONS = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> FAVORITE = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
 
     public static final int ACTION_ACCEPT = 0;
     public static final int ACTION_DISMISS = 1;
@@ -116,6 +124,10 @@ public class ResidentEntity extends PathfinderMob {
      * are a gift (4-5) - so it matters who you make the farmer.
      */
     private final int[] talents = new int[ResidentJob.values().length];
+    /** Children: the day they were born, what school has given them so far (teacher stars summed), their parents. */
+    private long bornDay;
+    private int schoolPoints;
+    private String parents = "";
 
     private static final UUID GUARD_HEALTH = UUID.fromString("6b1c2b9e-7f43-4a3e-9d57-1f7e0b8a2c11");
     private static final UUID GUARD_DAMAGE = UUID.fromString("0d5e8a41-3c2f-4b6d-8e9a-5a7c4f2b1d36");
@@ -153,6 +165,9 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(5, new FarmerWorkGoal(this));
         goalSelector.addGoal(5, new BuilderWorkGoal(this));
         goalSelector.addGoal(5, new GuardPatrolGoal(this));
+        goalSelector.addGoal(2, new DoctorWorkGoal(this));
+        goalSelector.addGoal(5, new TeacherWorkGoal(this));
+        goalSelector.addGoal(5, new ChildSchoolGoal(this));
         goalSelector.addGoal(6, new WandererGoal(this));
         goalSelector.addGoal(7, new ResidentStrollGoal(this));
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -167,6 +182,9 @@ public class ResidentEntity extends PathfinderMob {
         entityData.define(JOB, ResidentJob.NONE.ordinal());
         entityData.define(WANDERER, false);
         entityData.define(DOWNED, 0);
+        entityData.define(CHILD_DAYS, 0);
+        entityData.define(LESSONS, 0);
+        entityData.define(FAVORITE, ResidentJob.FARMER.ordinal());
     }
 
     // ---- arriving ----
@@ -194,6 +212,31 @@ public class ResidentEntity extends PathfinderMob {
         level.addFreshEntity(recruit);
         hall.announceJoined(recruit);
         return recruit;
+    }
+
+    /**
+     * A baby born in the village (DESIGN.md 4-12 번식, M11): starts out with only small talents - school decides
+     * what they'll be good at (교육이 재능을 정함) - and one job they're drawn to.
+     */
+    public static ResidentEntity spawnChild(ServerLevel level, VillageHallBlockEntity hall, Vec3 at, String parents) {
+        ResidentEntity child = new ResidentEntity(ModEntities.RESIDENT.get(), level);
+        child.moveTo(at.x, at.y, at.z, level.random.nextFloat() * 360.0F, 0.0F);
+        child.becomeWandererOf(hall);
+        child.entityData.set(WANDERER, false);
+        ResidentJob[] jobs = ResidentJob.values();
+        for (ResidentJob job : jobs) {
+            child.talents[job.ordinal()] = job == ResidentJob.NONE ? 0 : 1;
+        }
+        int favorite = 1 + level.random.nextInt(jobs.length - 1);
+        child.talents[favorite] = 2;
+        child.entityData.set(FAVORITE, favorite);
+        child.entityData.set(CHILD_DAYS, VillageTuning.CHILDHOOD_DAYS);
+        child.bornDay = level.getDayTime() / 24000L;
+        child.parents = parents;
+        child.refreshDimensions();
+        child.homeBed = hall.claimBed(child);
+        level.addFreshEntity(child);
+        return child;
     }
 
     private void becomeWandererOf(@Nullable VillageHallBlockEntity hall) {
@@ -280,6 +323,68 @@ public class ResidentEntity extends PathfinderMob {
         return entityData.get(WANDERER);
     }
 
+    /** A child (M11): small, no job, goes to school. */
+    @Override
+    public boolean isBaby() {
+        return entityData.get(CHILD_DAYS) > 0;
+    }
+
+    public int getChildDaysLeft() {
+        return entityData.get(CHILD_DAYS);
+    }
+
+    public int getLessons() {
+        return entityData.get(LESSONS);
+    }
+
+    public ResidentJob getFavorite() {
+        return ResidentJob.byId(entityData.get(FAVORITE));
+    }
+
+    public String getParents() {
+        return parents;
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (CHILD_DAYS.equals(key)) {
+            refreshDimensions();
+        }
+    }
+
+    /** A day at school with a teacher of {@code teacherStars} (VillageHallBlockEntity.morning). */
+    void attendSchool(int teacherStars) {
+        schoolPoints += Math.max(1, teacherStars);
+        entityData.set(LESSONS, getLessons() + 1);
+    }
+
+    /** Test helper (/flightsuit village grow): grow up right now. */
+    public void growUpNow() {
+        VillageHallBlockEntity hall = hall();
+        if (isBaby() && hall != null) {
+            growUp(hall);
+        }
+    }
+
+    /**
+     * Grown up: what school taught them turns into talent - every few points one star, half the time in the
+     * job they were drawn to. Starts out unemployed, like a wanderer taken in.
+     */
+    private void growUp(VillageHallBlockEntity hall) {
+        int points = schoolPoints;
+        ResidentJob[] jobs = ResidentJob.values();
+        while (points >= VillageTuning.POINTS_PER_STAR) {
+            int job = random.nextFloat() < 0.5F ? getFavorite().ordinal() : 1 + random.nextInt(jobs.length - 1);
+            talents[job] = Math.min(5, talents[job] + 1);
+            points -= VillageTuning.POINTS_PER_STAR;
+        }
+        entityData.set(CHILD_DAYS, 0);
+        refreshDimensions();
+        setJob(ResidentJob.NONE);
+        hall.announceGrownUp(this, getLessons());
+    }
+
     public boolean isLeaving() {
         return leaving;
     }
@@ -335,6 +440,16 @@ public class ResidentEntity extends PathfinderMob {
         this.fed = fed;
         int value = 50 + (fed ? 20 : -25) + (homeBed != null ? 15 : -15) - 15 * recentDeaths + (safety >= 75 ? 10 : 0);
         mood = Mth.clamp(value, 0, 100);
+        if (isBaby()) {
+            long age = level().getDayTime() / 24000L - bornDay;
+            int left = (int) Math.max(0L, VillageTuning.CHILDHOOD_DAYS - age);
+            VillageHallBlockEntity hall = hall();
+            if (left <= 0 && hall != null) {
+                growUp(hall);
+            } else {
+                entityData.set(CHILD_DAYS, Math.max(1, left));
+            }
+        }
     }
 
     // ---- ticking ----
@@ -550,7 +665,7 @@ public class ResidentEntity extends PathfinderMob {
                 }
             }
             case ACTION_SET_JOB -> {
-                if (!isWanderer()) {
+                if (!isWanderer() && !isBaby()) {
                     setJob(ResidentJob.byId(arg));
                     hall.refreshStats();
                 }
@@ -616,7 +731,8 @@ public class ResidentEntity extends PathfinderMob {
     @Override
     public Component getDisplayName() {
         MutableComponent name = super.getDisplayName().copy();
-        Component role = Component.translatable(isWanderer() ? "job.flightsuit.wanderer" : getJob().translationKey());
+        Component role = isBaby() ? Component.translatable("job.flightsuit.child", getChildDaysLeft())
+                : Component.translatable(isWanderer() ? "job.flightsuit.wanderer" : getJob().translationKey());
         name.append(Component.literal(" · ").append(role).withStyle(ChatFormatting.GRAY));
         if (isDowned()) {
             name.append(Component.literal(" ").append(Component.translatable("tag.flightsuit.downed", getDownedSeconds()))
@@ -670,6 +786,12 @@ public class ResidentEntity extends PathfinderMob {
         tag.putBoolean("Leaving", leaving);
         tag.put("Pack", pack.createTag());
         tag.putIntArray("Talents", talents);
+        tag.putInt("ChildDays", getChildDaysLeft());
+        tag.putInt("Lessons", getLessons());
+        tag.putInt("Favorite", getFavorite().ordinal());
+        tag.putLong("BornDay", bornDay);
+        tag.putInt("SchoolPoints", schoolPoints);
+        tag.putString("Parents", parents);
     }
 
     @Override
@@ -697,6 +819,14 @@ public class ResidentEntity extends PathfinderMob {
         } else {
             System.arraycopy(saved, 0, talents, 0, Math.min(saved.length, talents.length));
         }
+        entityData.set(CHILD_DAYS, Math.max(0, tag.getInt("ChildDays")));
+        entityData.set(LESSONS, tag.getInt("Lessons"));
+        if (tag.contains("Favorite")) {
+            entityData.set(FAVORITE, ResidentJob.byId(tag.getInt("Favorite")).ordinal());
+        }
+        bornDay = tag.getLong("BornDay");
+        schoolPoints = tag.getInt("SchoolPoints");
+        parents = tag.getString("Parents");
         applyJobBonus();
     }
 }

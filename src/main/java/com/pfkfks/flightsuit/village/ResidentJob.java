@@ -13,8 +13,8 @@ public enum ResidentJob {
     RANCHER("rancher", false),
     COOK("cook", false),
     ARCHITECT("architect", true),
-    TEACHER("teacher", false),
-    DOCTOR("doctor", false),
+    TEACHER("teacher", true),
+    DOCTOR("doctor", true),
     GUARD("guard", true),
     BLACKSMITH("blacksmith", false),
     MERCHANT("merchant", false),
@@ -35,7 +35,7 @@ public enum ResidentJob {
         return id;
     }
 
-    /** Whether this job already has its work (M9: farmer, architect, guard, soldier). */
+    /** Whether this job already has its work (M9: farmer, architect, guard, soldier; M11: teacher, doctor). */
     public boolean works() {
         return works;
     }

@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LanternBlock;
+import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -85,6 +86,17 @@ public enum Blueprint {
             {" ePPPw ", " e...w ", " e...w ", " e...w ", " e...w ", " e...w ", " ePPPw "},
             {"  ePw  ", "  e.w  ", "  e.w  ", "  e.w  ", "  e.w  ", "  e.w  ", "  ePw  "},
             {"   P   ", "   P   ", "   P   ", "   P   ", "   P   ", "   P   ", "   P   "}
+    }),
+    /**
+     * Stage 1 school (M11): an open pavilion - benches facing a blackboard on the back wall, the teacher's
+     * lectern in front of it, a slab roof with a lantern. The children go here by day when a teacher is in.
+     */
+    SCHOOL("school", 1, false, new String[][]{
+            {"SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS"},
+            {"X.....X", ".......", ".v.v.v.", ".......", ".v.v.v.", "...n...", "XPkkkPX"},
+            {"X.....X", ".......", ".......", ".......", ".......", ".......", "XPkkkPX"},
+            {"X.....X", ".......", ".......", "...h...", ".......", ".......", "XPPPPPX"},
+            {"ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo"}
     });
 
     static {
@@ -235,6 +247,11 @@ public enum Blueprint {
             case 'e' -> Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST);
             case 'w' -> Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST);
             case 'm' -> Blocks.FARMLAND.defaultBlockState();
+            // School: blackboard, the teacher's lectern (turned to the class), benches, slab roof.
+            case 'k' -> Blocks.BLACK_WOOL.defaultBlockState();
+            case 'n' -> Blocks.LECTERN.defaultBlockState().setValue(LecternBlock.FACING, Direction.NORTH);
+            case 'v' -> Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH);
+            case 'o' -> Blocks.OAK_SLAB.defaultBlockState();
             case '~' -> Blocks.WATER.defaultBlockState();
             default -> Blocks.AIR.defaultBlockState();
         };

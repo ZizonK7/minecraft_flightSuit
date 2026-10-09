@@ -50,6 +50,26 @@ public final class VillageTuning {
     public static final double GUARD_HEALTH_PER_STAR = 4.0D;
     public static final double GUARD_DAMAGE_PER_STAR = 1.0D;
 
+    // ---- families (M11) ----
+
+    /** Days from birth to grown-up. */
+    public static final int CHILDHOOD_DAYS = 5;
+    /** Morning chance of a birth: base, + happiness above BIRTH_MOOD / 300, + with a doctor around. */
+    public static final float BIRTH_BASE_CHANCE = 0.12F;
+    public static final int BIRTH_MOOD = 55;
+    public static final float BIRTH_DOCTOR_BONUS = 0.12F;
+    /** No more babies than this share of the adults at once. */
+    public static final float CHILDREN_PER_ADULT = 0.5F;
+    /** Children one teacher can take in a day. */
+    public static final int PUPILS_PER_TEACHER = 4;
+    /** School points (the teacher's stars, summed over the days) per talent star a child gains on growing up. */
+    public static final int POINTS_PER_STAR = 3;
+    /** A doctor at a downed resident's side gets them up after this (scaled by the doctor's talent). */
+    public static final int TREAT_TICKS = 60;
+    /** And patches up the walking wounded: this much health, then a pause. */
+    public static final float HEAL_AMOUNT = 6.0F;
+    public static final int HEAL_COOLDOWN = 200;
+
     private VillageTuning() {
     }
 }

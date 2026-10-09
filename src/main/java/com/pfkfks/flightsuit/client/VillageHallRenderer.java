@@ -99,7 +99,9 @@ public class VillageHallRenderer implements BlockEntityRenderer<VillageHallBlock
         Component owner = Component.literal(hall.getOwnerName().isEmpty() ? "?" : hall.getOwnerName());
         Component stage = Component.translatable("stage.flightsuit." + hall.getStage());
         lines.add(new Line(Component.translatable("board.flightsuit.title", owner, stage).withStyle(ChatFormatting.BOLD), TITLE));
-        lines.add(new Line(Component.translatable("board.flightsuit.population", hall.getPopulation()), INK));
+        lines.add(new Line(hall.getChildren() > 0
+                ? Component.translatable("board.flightsuit.population_children", hall.getPopulation(), hall.getChildren())
+                : Component.translatable("board.flightsuit.population", hall.getPopulation()), INK));
         if (hall.getPopulation() > 0) {
             lines.add(new Line(jobSummary(hall), INK));
         }
@@ -107,7 +109,8 @@ public class VillageHallRenderer implements BlockEntityRenderer<VillageHallBlock
                 hall.getPopulation() == 0 ? hall.getFood() : hall.getFood() / hall.getPopulation(),
                 hall.getBeds() - hall.getFreeBeds(), hall.getBeds()), INK));
         Component happiness = hall.getHappiness() < 0 ? Component.literal("-") : Component.literal(hall.getHappiness() + "%");
-        lines.add(new Line(Component.translatable("board.flightsuit.mood_safety", happiness, hall.getSafety()), INK));
+        Component education = hall.getEducation() < 0 ? Component.literal("-") : Component.literal(hall.getEducation() + "%");
+        lines.add(new Line(Component.translatable("board.flightsuit.mood_safety", happiness, hall.getSafety(), education), INK));
         Component buildings = buildingSummary(hall);
         if (buildings != null) {
             lines.add(new Line(Component.translatable("board.flightsuit.buildings", buildings), INK));

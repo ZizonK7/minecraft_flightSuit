@@ -86,6 +86,9 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
 
     // What the board shows: computed on the server, sent to clients.
     private int population;
+    /** Of the population, how many are children (M11), and the education figure (-1 = nothing to say). */
+    private int children;
+    private int education = -1;
     private final int[] jobCounts = new int[ResidentJob.values().length];
     private int food;
     private int beds;
@@ -282,6 +285,10 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         }
     }
 
+    public void announceTreated(ResidentEntity doctor, ResidentEntity patient) {
+        addNews(Component.translatable("news.flightsuit.treated", doctor.getName(), patient.getName()));
+    }
+
     public void announceRevived(ResidentEntity resident) {
         addNews(Component.translatable("news.flightsuit.revived", resident.getName()));
     }
@@ -346,6 +353,88 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         }
         BlockPos front = worldPosition.relative(getBlockState().getValue(VillageHallBlock.FACING), 2);
         return new BlockPos(front.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, front.getX(), front.getZ()), front.getZ());
+    }
+
+    // ---- families (M11) ----
+
+    /**
+     * The day's lessons: with a school standing and a teacher on their feet, each teacher takes up to
+     * VillageTuning.PUPILS_PER_TEACHER children; each child gets the stars of the best teacher (DESIGN 4-12:
+     * 선생님 → 아이 교육 → 커서 가질 재능).
+     */
+    private void schoolDay() {
+        if (works.count(Blueprint.SCHOOL) == 0) {
+            return;
+        }
+        int bestTeacher = 0;
+        int teachers = 0;
+        List<ResidentEntity> pupils = new ArrayList<>();
+        for (ResidentEntity resident : residents()) {
+            if (resident.isBaby()) {
+                pupils.add(resident);
+            } else if (resident.getJob() == ResidentJob.TEACHER && !resident.isDowned()) {
+                teachers++;
+                bestTeacher = Math.max(bestTeacher, resident.talent(ResidentJob.TEACHER));
+            }
+        }
+        int seats = teachers * VillageTuning.PUPILS_PER_TEACHER;
+        for (int i = 0; i < pupils.size() && i < seats; i++) {
+            pupils.get(i).attendSchool(bestTeacher);
+        }
+    }
+
+    /**
+     * Maybe a baby this morning (DESIGN 4-12 번식): two grown-ups in a good mood, a free bed, food to spare and
+     * not too many children already. Happier villages have more; a doctor helps (출산 돌봄).
+     */
+    private void tryBirth() {
+        if (!(level instanceof ServerLevel server)) {
+            return;
+        }
+        List<ResidentEntity> adults = new ArrayList<>();
+        int kids = 0;
+        boolean doctor = false;
+        for (ResidentEntity resident : residents()) {
+            if (resident.isBaby()) {
+                kids++;
+            } else if (!resident.isDowned()) {
+                adults.add(resident);
+                doctor |= resident.getJob() == ResidentJob.DOCTOR;
+            }
+        }
+        if (adults.size() < 2 || freeBeds <= 0 || kids >= Math.max(1, (int) (adults.size() * VillageTuning.CHILDREN_PER_ADULT))
+                || countFood() < (adults.size() + kids) * 2 || happiness < VillageTuning.BIRTH_MOOD) {
+            return;
+        }
+        float chance = VillageTuning.BIRTH_BASE_CHANCE + (happiness - VillageTuning.BIRTH_MOOD) / 300.0F
+                + (doctor ? VillageTuning.BIRTH_DOCTOR_BONUS : 0.0F);
+        if (server.random.nextFloat() >= chance) {
+            return;
+        }
+        adults.sort((a, b) -> Integer.compare(b.getMood(), a.getMood()));
+        ResidentEntity first = adults.get(0);
+        ResidentEntity second = adults.get(1);
+        String parents = first.getName().getString() + " · " + second.getName().getString();
+        BlockPos at = first.getHomeBed() != null ? first.getHomeBed() : first.blockPosition();
+        ResidentEntity child = ResidentEntity.spawnChild(server, this, Vec3.atBottomCenterOf(at).add(0.0D, 0.6D, 0.0D), parents);
+        server.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, child.getX(), child.getY() + 0.8D, child.getZ(),
+                6, 0.4D, 0.4D, 0.4D, 0.0D);
+        addNews(Component.translatable("news.flightsuit.born", child.getName(), first.getName(), second.getName()));
+        tellOwner(Component.translatable("message.flightsuit.born", first.getName(), second.getName(), child.getName(),
+                VillageTuning.CHILDHOOD_DAYS).withStyle(ChatFormatting.LIGHT_PURPLE));
+    }
+
+    void announceGrownUp(ResidentEntity resident, int lessons) {
+        ResidentJob best = ResidentJob.FARMER;
+        for (ResidentJob job : ResidentJob.values()) {
+            if (job != ResidentJob.NONE && resident.talent(job) > resident.talent(best)) {
+                best = job;
+            }
+        }
+        Component gift = Component.translatable(best.translationKey()).copy().append(" ★" + resident.talent(best));
+        addNews(Component.translatable("news.flightsuit.grown_up", resident.getName()));
+        tellOwner(Component.translatable("message.flightsuit.grown_up", resident.getName(), lessons, gift).withStyle(ChatFormatting.LIGHT_PURPLE));
+        refreshStats();
     }
 
     // ---- food ----
@@ -555,6 +644,8 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         for (ResidentEntity resident : residents()) {
             resident.morning(takeMeal(), deaths, safety);
         }
+        schoolDay();
+        tryBirth();
         refreshStats();
         float chance = VillageTuning.WANDERER_BASE_CHANCE + Math.max(0, happiness) / 200.0F;
         if (freeBeds > 0 && !wandererOnTheWay() && level.random.nextFloat() < chance) {
@@ -574,13 +665,18 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         int guards = 0;
         int wanderers = 0;
         population = 0;
+        children = 0;
         for (ResidentEntity person : people) {
             if (person.isWanderer()) {
                 wanderers++;
                 continue;
             }
             population++;
-            jobCounts[person.getJob().ordinal()]++;
+            if (person.isBaby()) {
+                children++;
+            } else {
+                jobCounts[person.getJob().ordinal()]++;
+            }
             moodSum += person.getMood();
             if (person.getJob() == ResidentJob.GUARD) {
                 guards++;
@@ -592,6 +688,13 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         happiness = population == 0 ? -1 : moodSum / population;
         int guarded = population == 0 ? 100 : Math.min(100, guards * VillageTuning.RESIDENTS_PER_GUARD * 100 / population);
         safety = Mth.clamp(guarded - 20 * recentDeaths(), 0, 100);
+        int teachers = jobCounts[ResidentJob.TEACHER.ordinal()];
+        if (children == 0) {
+            education = teachers > 0 && works.count(Blueprint.SCHOOL) > 0 ? 100 : -1;
+        } else {
+            education = works.count(Blueprint.SCHOOL) == 0 ? 0
+                    : Math.min(100, teachers * VillageTuning.PUPILS_PER_TEACHER * 100 / children);
+        }
         alarm = isAlarm();
 
         works.checkFinished();
@@ -638,6 +741,15 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
 
     public int getPopulation() {
         return population;
+    }
+
+    public int getChildren() {
+        return children;
+    }
+
+    /** 0..100, or -1 when there's nobody to teach and no teacher. */
+    public int getEducation() {
+        return education;
     }
 
     public int getJobCount(ResidentJob job) {
@@ -756,6 +868,8 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         tag.put("News", newsList);
         CompoundTag stats = new CompoundTag();
         stats.putInt("Population", population);
+        stats.putInt("Children", children);
+        stats.putInt("Education", education);
         stats.putIntArray("Jobs", jobCounts);
         stats.putInt("Food", food);
         stats.putInt("Beds", beds);
@@ -803,6 +917,8 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         if (tag.contains("Stats")) {
             CompoundTag stats = tag.getCompound("Stats");
             population = stats.getInt("Population");
+            children = stats.getInt("Children");
+            education = stats.contains("Education") ? stats.getInt("Education") : -1;
             copyInto(stats.getIntArray("Jobs"), jobCounts);
             food = stats.getInt("Food");
             beds = stats.getInt("Beds");

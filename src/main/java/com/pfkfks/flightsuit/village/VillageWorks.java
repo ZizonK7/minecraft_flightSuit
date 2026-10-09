@@ -233,6 +233,10 @@ public class VillageWorks {
         if (hall.getJobCount(ResidentJob.GUARD) > 0 && count(Blueprint.WATCHTOWER) + queued(Blueprint.WATCHTOWER) == 0) {
             out.add(new Proposal(ProposalKind.BUILD, Blueprint.WATCHTOWER, "proposal.flightsuit.lookout", -1));
         }
+        boolean teaching = hall.getChildren() > 0 || hall.getJobCount(ResidentJob.TEACHER) > 0;
+        if (teaching && count(Blueprint.SCHOOL) + queued(Blueprint.SCHOOL) == 0) {
+            out.add(new Proposal(ProposalKind.BUILD, Blueprint.SCHOOL, "proposal.flightsuit.school", -1));
+        }
         for (int i = 0; i < buildings.size(); i++) {
             Construction building = buildings.get(i);
             Blueprint upgrade = building.blueprint().upgrade();

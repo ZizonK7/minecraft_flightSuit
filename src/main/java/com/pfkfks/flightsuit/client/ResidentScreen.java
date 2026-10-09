@@ -45,6 +45,7 @@ public class ResidentScreen extends Screen {
     private @Nullable CompoundTag works;
     private ResidentJob shownJob;
     private boolean shownWanderer;
+    private boolean shownChild;
     private boolean buildTab;
 
     private ResidentScreen(ResidentScreenS2CPacket packet) {
@@ -103,6 +104,11 @@ public class ResidentScreen extends Screen {
         }
         shownJob = resident.getJob();
         shownWanderer = resident.isWanderer();
+        shownChild = resident.isBaby();
+        if (shownChild) {
+            // Children don't work yet: no job buttons, just who they are (render).
+            return;
+        }
         if (works == null) {
             buildTab = false;
         }
@@ -236,7 +242,7 @@ public class ResidentScreen extends Screen {
         if (resident == null || resident.isRemoved() || resident.isDowned()
                 || minecraft.player == null || resident.distanceToSqr(minecraft.player) > 144.0D) {
             onClose();
-        } else if (resident.getJob() != shownJob || resident.isWanderer() != shownWanderer) {
+        } else if (resident.getJob() != shownJob || resident.isWanderer() != shownWanderer || resident.isBaby() != shownChild) {
             rebuildWidgets();
         }
     }
@@ -254,7 +260,8 @@ public class ResidentScreen extends Screen {
                     left + 46 - mouseX, top + 62 - mouseY, resident);
             int x = left + 92;
             graphics.drawString(font, resident.getName().copy().withStyle(ChatFormatting.BOLD), x, top + 10, 0xFFFFFF);
-            Component role = Component.translatable(shownWanderer ? "job.flightsuit.wanderer" : shownJob.translationKey());
+            Component role = shownChild ? Component.translatable("job.flightsuit.child", resident.getChildDaysLeft())
+                    : Component.translatable(shownWanderer ? "job.flightsuit.wanderer" : shownJob.translationKey());
             graphics.drawString(font, role, x, top + 22, 0xA8B4BE);
             graphics.drawString(font, Component.translatable("screen.flightsuit.resident.mood", mood), x, top + 34, moodColor());
             if (!shownWanderer) {
@@ -263,7 +270,14 @@ public class ResidentScreen extends Screen {
                 graphics.drawString(font, meal.copy().append(" · ").append(bed), x, top + 45, 0xC8C8C8);
             }
             graphics.drawString(font, gifts(), x, top + 58, 0xC8C8C8);
-            if (shownWanderer) {
+            if (shownChild) {
+                renderTalentTable(graphics, x, top + 74);
+                Component parents = resident.getParents().isEmpty() ? Component.literal("-") : Component.literal(resident.getParents());
+                graphics.drawString(font, Component.translatable("screen.flightsuit.child.parents", parents), x, top + 124, PLAIN);
+                graphics.drawString(font, Component.translatable("screen.flightsuit.child.school", resident.getLessons(),
+                        Component.translatable(resident.getFavorite().translationKey())), x, top + 136, PLAIN);
+                graphics.drawWordWrap(font, Component.translatable("screen.flightsuit.child.hint"), x, top + 152, WIDTH - 100, WEAK);
+            } else if (shownWanderer) {
                 renderTalentTable(graphics, x, top + 74);
                 graphics.drawWordWrap(font, Component.translatable("screen.flightsuit.resident.wanderer_ask", resident.getName()),
                         x, top + 124, WIDTH - 100, PLAIN);
