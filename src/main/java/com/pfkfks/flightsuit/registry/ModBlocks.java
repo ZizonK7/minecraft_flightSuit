@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.block.BatteryBlock;
+import com.pfkfks.flightsuit.cleaner.CleanerDockBlock;
 import com.pfkfks.flightsuit.block.GeneratorBlock;
 import com.pfkfks.flightsuit.block.SolarPanelBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlock;
@@ -28,6 +29,8 @@ public final class ModBlocks {
             () -> new GeneratorBlock(metal().lightLevel(state -> state.getValue(GeneratorBlock.LIT) ? 13 : 0)));
     public static final RegistryObject<BatteryBlock> BATTERY = register("battery",
             () -> new BatteryBlock(metal()));
+    public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
+            () -> new CleanerDockBlock(metal().noOcclusion()));
 
     private ModBlocks() {
     }

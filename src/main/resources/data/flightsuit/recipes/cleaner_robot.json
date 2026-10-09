@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["QBQ", "IHI"],
+  "key": {"Q": {"item": "minecraft:quartz"}, "B": {"item": "minecraft:stone_button"}, "I": {"item": "minecraft:iron_ingot"}, "H": {"item": "minecraft:hopper"}},
+  "result": {"item": "flightsuit:cleaner_robot", "count": 1}
+}

@@ -1,6 +1,8 @@
 package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.car.HoverCarEntity;
+import com.pfkfks.flightsuit.cleaner.CleanerRobotEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
 import net.minecraft.world.entity.EntityType;
@@ -29,6 +31,19 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .updateInterval(1)
                     .build("suit_companion"));
+
+    public static final RegistryObject<EntityType<CleanerRobotEntity>> CLEANER_ROBOT = ENTITY_TYPES.register("cleaner_robot",
+            () -> EntityType.Builder.<CleanerRobotEntity>of(CleanerRobotEntity::new, MobCategory.MISC)
+                    .sized(0.9F, 0.3F)
+                    .clientTrackingRange(8)
+                    .build("cleaner_robot"));
+
+    public static final RegistryObject<EntityType<HoverCarEntity>> HOVER_CAR = ENTITY_TYPES.register("hover_car",
+            () -> EntityType.Builder.<HoverCarEntity>of(HoverCarEntity::new, MobCategory.MISC)
+                    .sized(1.6F, 0.8F)
+                    .clientTrackingRange(10)
+                    .updateInterval(1)
+                    .build("hover_car"));
 
     private ModEntities() {
     }

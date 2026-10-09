@@ -1,4 +1,4 @@
 {
   "replace": false,
-  "values": ["flightsuit:suit_station", "flightsuit:solar_panel", "flightsuit:generator", "flightsuit:battery"]
+  "values": ["flightsuit:suit_station", "flightsuit:solar_panel", "flightsuit:generator", "flightsuit:battery", "flightsuit:cleaner_dock"]
 }

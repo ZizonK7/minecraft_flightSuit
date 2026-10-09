@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.block.BatteryBlockEntity;
 import com.pfkfks.flightsuit.block.GeneratorBlockEntity;
 import com.pfkfks.flightsuit.block.SolarPanelBlockEntity;
 import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
+import com.pfkfks.flightsuit.cleaner.CleanerDockBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -26,6 +27,9 @@ public final class ModBlockEntities {
     @SuppressWarnings("DataFlowIssue")
     public static final RegistryObject<BlockEntityType<BatteryBlockEntity>> BATTERY = BLOCK_ENTITY_TYPES.register("battery",
             () -> BlockEntityType.Builder.of(BatteryBlockEntity::new, ModBlocks.BATTERY.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<CleanerDockBlockEntity>> CLEANER_DOCK = BLOCK_ENTITY_TYPES.register("cleaner_dock",
+            () -> BlockEntityType.Builder.of(CleanerDockBlockEntity::new, ModBlocks.CLEANER_DOCK.get()).build(null));
 
     private ModBlockEntities() {
     }

@@ -24,6 +24,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         SuitArmorModels.registerLayers(event);
+        event.registerLayerDefinition(HoverCarModel.LAYER, HoverCarModel::create);
     }
 
     @SubscribeEvent
@@ -36,6 +37,8 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.SUIT_PART.get(), SuitPartRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SUIT_STATION.get(), SuitStationRenderer::new);
         event.registerEntityRenderer(ModEntities.SUIT_COMPANION.get(), SuitCompanionRenderer::new);
+        event.registerEntityRenderer(ModEntities.CLEANER_ROBOT.get(), CleanerRobotRenderer::new);
+        event.registerEntityRenderer(ModEntities.HOVER_CAR.get(), HoverCarRenderer::new);
     }
 
     @SubscribeEvent
@@ -49,5 +52,6 @@ public final class ClientSetup {
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("helmet_targets", HelmetTargetOverlay.INSTANCE);
         event.registerAboveAll("suit_hud", SuitHudOverlay.INSTANCE);
+        event.registerAboveAll("hover_car_hud", HoverCarHudOverlay.INSTANCE);
     }
 }

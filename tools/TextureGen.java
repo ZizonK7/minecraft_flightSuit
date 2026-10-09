@@ -40,6 +40,97 @@ public class TextureGen {
         write(batteryTop(), new File(block, "battery_top.png"));
         write(glassesArmor(), new File(armor, "edith_glasses.png"));
         write(glassesIcon(), new File(item, "edith_glasses.png"));
+
+        File entity = new File(root, "entity");
+        entity.mkdirs();
+        write(cleanerDockTop(), new File(block, "cleaner_dock_top.png"));
+        write(cleanerDockSide(), new File(block, "cleaner_dock_side.png"));
+        write(cleanerRobotIcon(), new File(item, "cleaner_robot.png"));
+        write(carCapsuleIcon(), new File(item, "hover_car_capsule.png"));
+        write(hoverCar(), new File(entity, "hover_car.png"));
+    }
+
+    static BufferedImage cleanerDockTop() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, 0xFFD9DCDD);
+        border(img, 0, 0, 16, 16, 0xFF9DA2A4);
+        // Charging contacts and a status LED.
+        fill(img, 4, 3, 2, 6, GOLD);
+        fill(img, 10, 3, 2, 6, GOLD);
+        img.setRGB(7, 12, CYAN);
+        img.setRGB(8, 12, CYAN);
+        return img;
+    }
+
+    static BufferedImage cleanerDockSide() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, 0xFFBFC3C5);
+        fill(img, 0, 0, 16, 1, 0xFFE6E8E9);
+        fill(img, 0, 1, 16, 1, 0xFF8C9194);
+        return img;
+    }
+
+    static BufferedImage cleanerRobotIcon() {
+        BufferedImage img = img(16, 16);
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                // Octagon: a square with the corners cut.
+                int dx = Math.abs(x * 2 - 15), dy = Math.abs(y * 2 - 15);
+                if (dx <= 13 && dy <= 13 && dx + dy <= 20) {
+                    boolean rim = dx >= 12 || dy >= 12 || dx + dy >= 18;
+                    img.setRGB(x, y, rim ? 0xFFA9ADAA : 0xFFFBFBF8);
+                }
+            }
+        }
+        fill(img, 5, 2, 6, 2, 0xFF101416);   // front intake
+        fill(img, 6, 7, 4, 3, 0xFF767A78);   // top button
+        img.setRGB(4, 5, 0xFF2A2E30);
+        img.setRGB(11, 5, 0xFF2A2E30);
+        return img;
+    }
+
+    static BufferedImage carCapsuleIcon() {
+        BufferedImage img = img(16, 16);
+        int outline = 0xFF3A2A12, yellow = 0xFFF2C94C, yellowDark = 0xFFC79A2A, white = 0xFFF4F1E8, whiteDark = 0xFFC9C5BA;
+        for (int y = 4; y <= 11; y++) {
+            for (int x = 1; x <= 14; x++) {
+                double cx = x < 5 ? 5 : (x > 10 ? 10 : x);
+                double d = Math.hypot(x - cx, y - 7.5);
+                if (d > 4.0) continue;
+                int c = d > 3.2 ? outline : (x <= 7 ? (y > 8 ? whiteDark : white) : (y > 8 ? yellowDark : yellow));
+                img.setRGB(x, y, c);
+            }
+        }
+        img.setRGB(4, 5, 0xFFFFFFFF);
+        img.setRGB(11, 7, RED);   // the little capsule number dot
+        img.setRGB(11, 8, RED);
+        return img;
+    }
+
+    /** 128x64, laid out for HoverCarModel box UVs. */
+    static BufferedImage hoverCar() {
+        BufferedImage img = img(128, 64);
+        int yellow = 0xFFF2C94C, white = 0xFFF4F1E8, dark = 0xFF3A3E44, glass = 0xFF8FD8F0, glassHi = 0xFFD8F5FF;
+        // Hull (0,0) 20x6x34: sides yellow with a red stripe, top white, bottom dark.
+        fill(img, 0, 0, 108, 40, yellow);
+        fill(img, 34, 0, 20, 34, white);
+        fill(img, 54, 0, 20, 34, dark);
+        fill(img, 0, 36, 108, 1, RED);
+        fill(img, 0, 39, 108, 1, 0xFFC79A2A);
+        // Nose (0,40) 16x4x4.
+        fill(img, 0, 40, 40, 8, white);
+        fill(img, 0, 46, 40, 1, RED);
+        // Cabin bubble (40,40) 14x5x14.
+        fill(img, 40, 40, 56, 19, glass);
+        for (int i = 0; i < 6; i++) {
+            img.setRGB(44 + i, 55 - i, glassHi);
+        }
+        fill(img, 40, 58, 56, 1, white);
+        // Fins (96,40) 2x4x4.
+        fill(img, 96, 40, 12, 8, RED);
+        // Hover pads (96,52) 4x1x4.
+        fill(img, 96, 52, 16, 5, CYAN);
+        return img;
     }
 
     static BufferedImage plate(int base) {

@@ -1,6 +1,8 @@
 package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.car.HoverCarCapsuleItem;
+import com.pfkfks.flightsuit.cleaner.CleanerRobotItem;
 import com.pfkfks.flightsuit.suit.EdithGlassesItem;
 import com.pfkfks.flightsuit.suit.EnergyCellItem;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
@@ -35,6 +37,10 @@ public final class ModItems {
             () -> new EnergyCellItem(new Item.Properties().stacksTo(16)));
     public static final RegistryObject<EdithGlassesItem> EDITH_GLASSES = ITEMS.register("edith_glasses",
             () -> new EdithGlassesItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<CleanerRobotItem> CLEANER_ROBOT = ITEMS.register("cleaner_robot",
+            () -> new CleanerRobotItem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<HoverCarCapsuleItem> HOVER_CAR_CAPSULE = ITEMS.register("hover_car_capsule",
+            () -> new HoverCarCapsuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
     private ModItems() {
     }
