@@ -26,6 +26,8 @@ import java.util.List;
  */
 public class GrappleItem extends Item {
     private static final double RANGE = 32.0D;
+    /** Player data: game time until which a fall doesn't hurt (ThiefManager.onFall). */
+    public static final String SAFE_UNTIL = "flightsuit_grapple_safe";
 
     public GrappleItem(Properties properties) {
         super(properties);
@@ -46,6 +48,7 @@ public class GrappleItem extends Item {
         Vec3 motion = pull.normalize().scale(Math.min(2.4D, 0.6D + distance * 0.12D)).add(0.0D, 0.35D, 0.0D);
         player.setDeltaMovement(motion);
         player.fallDistance = 0.0F;
+        player.getPersistentData().putLong(SAFE_UNTIL, level.getGameTime() + 80L);
         player.hurtMarked = true;
         if (level instanceof ServerLevel server) {
             int points = Math.max(4, (int) distance);

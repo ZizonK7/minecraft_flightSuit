@@ -82,7 +82,7 @@ public final class ThiefManager {
             data.setDirty();
         }
         if (data.visit == null) {
-            if (day >= data.nextVisitDay && tod >= ThiefTuning.ARRIVE_FROM && tod < ThiefTuning.ARRIVE_UNTIL) {
+            if (day >= data.nextVisitDay && tod >= ThiefTuning.DUSK && tod < ThiefTuning.ARRIVE_UNTIL) {
                 start(server, data, day, null);
             }
         } else {
@@ -113,6 +113,7 @@ public final class ThiefManager {
         int crew = pickCrew(random);
         int planned = 1 + Integer.bitCount(crew) + random.nextInt(2);
         data.visit = new ThiefData.Visit(record.dimension, record.hall, record.key(), day, crew, planned);
+        data.visit.startedAt = server.overworld().getGameTime();
         data.nextVisitDay = day + ThiefTuning.MIN_GAP + random.nextInt(ThiefTuning.EXTRA_GAP + 1);
         data.setDirty();
         return true;
@@ -137,7 +138,8 @@ public final class ThiefManager {
             return;
         }
         ServerLevel level = server.getLevel(visit.dimension);
-        boolean night = day == visit.day && tod >= 13000L && tod < ThiefTuning.DAWN;
+        // Over at dawn - or when the night was slept away (the day moved on), or the clock is stuck.
+        boolean night = day == visit.day && tod < ThiefTuning.DAWN && server.overworld().getGameTime() - visit.startedAt < 24000L;
         if (!night || level == null) {
             end(server, data, level);
             return;
@@ -148,7 +150,7 @@ public final class ThiefManager {
             }
             return;
         }
-        if (!level.isPositionEntityTicking(visit.hall)) {
+        if (tod < ThiefTuning.ARRIVE_FROM || tod >= ThiefTuning.ARRIVE_UNTIL || !level.isPositionEntityTicking(visit.hall)) {
             return;
         }
         VillageHallBlockEntity hall = Villages.hallAt(level, visit.hall);
@@ -162,28 +164,42 @@ public final class ThiefManager {
 
     /** Someone is there to see it: the crew really comes in, from the edge of the village, a few chests each. */
     private static void spawnCrew(ServerLevel level, ThiefData data, ThiefData.Visit visit, VillageHallBlockEntity hall) {
-        visit.spawned = true;
-        data.setDirty();
         boolean batman = (visit.crew & ThiefType.BATMAN.bit()) != 0;
         List<BlockPos> chests = findTargets(level, hall, batman, visit.planned);
         if (chests.isEmpty()) {
+            // Nothing worth taking: they don't bother.
+            data.visit = null;
+            data.setDirty();
             return;
         }
+        visit.spawned = true;
+        visit.planned = chests.size();
+        data.setDirty();
         List<ThiefType> crew = new ArrayList<>();
         for (ThiefType type : ThiefType.values()) {
             if ((visit.crew & type.bit()) != 0) {
                 crew.add(type);
             }
         }
-        RandomSource random = level.random;
-        double angle = random.nextDouble() * Math.PI * 2.0D;
-        int ex = visit.hall.getX() + Mth.floor(Math.cos(angle) * (VillageTuning.RADIUS - 6));
-        int ez = visit.hall.getZ() + Mth.floor(Math.sin(angle) * (VillageTuning.RADIUS - 6));
+        // A locked station storage is Batman's (only his EMP opens it); the rest are shared out.
+        List<List<BlockPos>> shares = new ArrayList<>();
         for (int i = 0; i < crew.size(); i++) {
-            List<BlockPos> mine = new ArrayList<>();
-            for (int k = i; k < chests.size(); k += crew.size()) {
-                mine.add(chests.get(k));
+            shares.add(new ArrayList<>());
+        }
+        int next = 0;
+        for (BlockPos pos : chests) {
+            if (crew.contains(ThiefType.BATMAN) && level.getBlockEntity(pos) instanceof StationStorageBlockEntity storage && storage.isLocked()) {
+                shares.get(crew.indexOf(ThiefType.BATMAN)).add(pos);
+            } else {
+                shares.get(next++ % crew.size()).add(pos);
             }
+        }
+        RandomSource random = level.random;
+        BlockPos entry = entryPoint(level, visit.hall, random);
+        int ex = entry.getX();
+        int ez = entry.getZ();
+        for (int i = 0; i < crew.size(); i++) {
+            List<BlockPos> mine = shares.get(i);
             ThiefEntity thief = ThiefEntity.create(level, crew.get(i), visit.hall, mine);
             int x = ex + random.nextInt(5) - 2;
             int z = ez + random.nextInt(5) - 2;
@@ -193,6 +209,21 @@ public final class ThiefManager {
             }
         }
         data.setDirty();
+    }
+
+    /** Where they slip in: the edge of the village, on ground that is loaded and ticking (closer in if need be). */
+    private static BlockPos entryPoint(ServerLevel level, BlockPos hall, RandomSource random) {
+        for (int distance : new int[]{VillageTuning.RADIUS - 6, VillageTuning.RADIUS / 2, 12}) {
+            for (int tries = 0; tries < 6; tries++) {
+                double angle = random.nextDouble() * Math.PI * 2.0D;
+                int x = hall.getX() + Mth.floor(Math.cos(angle) * distance);
+                int z = hall.getZ() + Mth.floor(Math.sin(angle) * distance);
+                if (level.isPositionEntityTicking(new BlockPos(x, hall.getY(), z))) {
+                    return new BlockPos(x, hall.getY(), z);
+                }
+            }
+        }
+        return hall.offset(4, 0, 4);
     }
 
     /**
@@ -213,7 +244,8 @@ public final class ThiefManager {
             }
         }
         data.visit = null;
-        int remaining = visit.spotted ? 0 : Math.max(0, visit.planned - visit.done);
+        // A crew that really came took what it took; only a night nobody saw is worked out.
+        int remaining = visit.spawned ? 0 : visit.planned;
         if (remaining > 0 || visit.stolen > 0) {
             ThiefData.Pending pending = data.pending().computeIfAbsent(visit.villageKey, key -> new ThiefData.Pending());
             pending.crew |= visit.crew;
@@ -255,7 +287,9 @@ public final class ThiefManager {
         RandomSource random = level.random;
         int stolen = pending.stolen;
         Component crew = ThiefType.crewName(pending.crew);
-        if (pending.remaining > 0) {
+        boolean batman = (pending.crew & ThiefType.BATMAN.bit()) != 0;
+        List<BlockPos> targets = pending.remaining > 0 ? findTargets(level, hall, batman, pending.remaining) : List.of();
+        if (!targets.isEmpty()) {
             int guards = hall.getJobCount(ResidentJob.GUARD);
             int sensors = armedSensors(level, hall);
             double chance = Math.min(ThiefTuning.CATCH_MAX, guards * ThiefTuning.CATCH_PER_GUARD + sensors * ThiefTuning.CATCH_PER_SENSOR);
@@ -272,11 +306,12 @@ public final class ThiefManager {
                 hall.addNews(line);
                 hall.tellOwner(line.copy().withStyle(ChatFormatting.GREEN));
             } else {
-                boolean batman = (pending.crew & ThiefType.BATMAN.bit()) != 0;
-                for (BlockPos pos : findTargets(level, hall, batman, pending.remaining)) {
-                    Container container = containerOf(level.getBlockEntity(pos), true);
+                for (BlockPos pos : targets) {
+                    BlockEntity be = level.getBlockEntity(pos);
+                    Container container = containerOf(be, true);
                     if (container != null) {
-                        stolen += steal(container, someone(pending.crew, random), random, new ArrayList<>());
+                        ThiefType who = be instanceof StationStorageBlockEntity ? ThiefType.BATMAN : someone(pending.crew, random);
+                        stolen += steal(container, who, random, new ArrayList<>());
                     }
                 }
             }
@@ -332,6 +367,9 @@ public final class ThiefManager {
     }
 
     private static @Nullable ThiefData.Visit visitOf(ServerLevel level, ThiefEntity thief) {
+        if (thief.isTest()) {
+            return null;
+        }
         ThiefData.Visit visit = ThiefData.get(level.getServer()).visit;
         return visit != null && visit.dimension == level.dimension() && visit.hall.equals(thief.getHall()) ? visit : null;
     }
@@ -548,8 +586,31 @@ public final class ThiefManager {
     public static @Nullable ThiefEntity spawnHere(ServerLevel level, VillageHallBlockEntity hall, ThiefType type, BlockPos at) {
         List<BlockPos> targets = findTargets(level, hall, type == ThiefType.BATMAN, 3);
         ThiefEntity thief = ThiefEntity.create(level, type, hall.getBlockPos(), targets);
+        thief.markTest();
         thief.moveTo(at.getX() + 0.5D, at.getY(), at.getZ() + 0.5D, 0.0F, 0.0F);
         return level.addFreshEntity(thief) ? thief : null;
+    }
+
+    /** A village's hall is gone: forget its nights. */
+    public static void forgetVillage(MinecraftServer server, String villageKey) {
+        ThiefData data = ThiefData.get(server);
+        boolean changed = data.pending().remove(villageKey) != null;
+        if (data.visit != null && data.visit.villageKey.equals(villageKey)) {
+            data.visit = null;
+            changed = true;
+        }
+        if (changed) {
+            data.setDirty();
+        }
+    }
+
+    /** Grapple gun: no falling damage for a moment after a yank (GrappleItem tags the player). */
+    @SubscribeEvent
+    public static void onFall(net.minecraftforge.event.entity.living.LivingFallEvent event) {
+        if (event.getEntity() instanceof net.minecraft.world.entity.player.Player player
+                && player.getPersistentData().getLong(GrappleItem.SAFE_UNTIL) >= player.level().getGameTime()) {
+            event.setDamageMultiplier(0.0F);
+        }
     }
 
     /** For "/flightsuit thief when". */

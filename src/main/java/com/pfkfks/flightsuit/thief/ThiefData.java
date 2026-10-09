@@ -28,7 +28,9 @@ public class ThiefData extends SavedData {
         public final String villageKey;
         public final long day;
         public final int crew;
-        public final int planned;
+        public int planned;
+        /** Game time the visit began (a frozen clock can't keep it open forever). */
+        public long startedAt;
         public boolean spawned;
         /** How many of the crew actually came in (live nights). */
         public int out;
@@ -56,6 +58,7 @@ public class ThiefData extends SavedData {
             tag.putInt("Crew", crew);
             tag.putInt("Planned", planned);
             tag.putBoolean("Spawned", spawned);
+            tag.putLong("StartedAt", startedAt);
             tag.putInt("Out", out);
             tag.putBoolean("Spotted", spotted);
             tag.putInt("Done", done);
@@ -70,6 +73,7 @@ public class ThiefData extends SavedData {
             Visit visit = new Visit(dim, NbtUtils.readBlockPos(tag.getCompound("Hall")), tag.getString("Key"), tag.getLong("Day"),
                     tag.getInt("Crew"), tag.getInt("Planned"));
             visit.spawned = tag.getBoolean("Spawned");
+            visit.startedAt = tag.getLong("StartedAt");
             visit.out = tag.getInt("Out");
             visit.spotted = tag.getBoolean("Spotted");
             visit.done = tag.getInt("Done");

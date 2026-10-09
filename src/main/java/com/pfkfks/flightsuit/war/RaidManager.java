@@ -129,6 +129,7 @@ public final class RaidManager {
             data.endRaid(raid);
         }
         data.forgetVillage(key);
+        com.pfkfks.flightsuit.thief.ThiefManager.forgetVillage(level.getServer(), key);
     }
 
     private static void schedule(MinecraftServer server, WarData data, WarData.VillageRecord village) {

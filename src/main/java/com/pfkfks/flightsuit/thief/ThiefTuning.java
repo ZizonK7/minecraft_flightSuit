@@ -7,7 +7,9 @@ public final class ThiefTuning {
     /** After a visit, at least this many days of quiet, then up to EXTRA_GAP more (평균 1~2주에 한 번). */
     public static final int MIN_GAP = 5;
     public static final int EXTRA_GAP = 10;
-    /** They come between these times of day, and are gone by dawn. */
+    /** Tonight's visit is decided at dusk (before anyone can sleep the night away - beds work from ~12542). */
+    public static final long DUSK = 12000L;
+    /** They come in between these times of day, and are gone by dawn. */
     public static final long ARRIVE_FROM = 13500L;
     public static final long ARRIVE_UNTIL = 20000L;
     public static final long DAWN = 23000L;

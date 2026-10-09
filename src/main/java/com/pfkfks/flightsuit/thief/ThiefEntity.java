@@ -37,6 +37,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -71,6 +72,10 @@ public class ThiefEntity extends PathfinderMob {
     private int fleeTicks;
     private int jobTicks;
     private boolean gone;
+    /** Spawned by "/flightsuit thief spawn": not part of tonight's visit. */
+    private boolean test;
+    /** The chest or barrel standing open right now (closed again if they're caught or slip away). */
+    private @Nullable BlockPos openAt;
 
     public ThiefEntity(EntityType<? extends ThiefEntity> type, Level level) {
         super(type, level);
@@ -137,6 +142,12 @@ public class ThiefEntity extends PathfinderMob {
         goalSelector.addGoal(3, new FleeGoal());
         goalSelector.addGoal(4, new HeistGoal());
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        targetSelector.addGoal(1, new HurtByTargetGoal(this) {
+            @Override
+            public boolean canUse() {
+                return fightTicks > 0 && super.canUse();
+            }
+        });
     }
 
     public ThiefType getThiefType() {
@@ -149,6 +160,21 @@ public class ThiefEntity extends PathfinderMob {
 
     public @Nullable BlockPos getHall() {
         return hall;
+    }
+
+    boolean isTest() {
+        return test;
+    }
+
+    void markTest() {
+        test = true;
+    }
+
+    private void closeLid() {
+        if (openAt != null) {
+            ThiefManager.setLid(level(), openAt, false);
+            openAt = null;
+        }
     }
 
     void addLoot(ItemStack stack) {
@@ -227,9 +253,13 @@ public class ThiefEntity extends PathfinderMob {
         }
         say(server, Component.translatable("thief.flightsuit.spotted", type.displayName(), how).withStyle(ChatFormatting.LIGHT_PURPLE));
         ThiefManager.onSpotted(server, this);
+        LivingEntity nearest = by;
         for (ResidentEntity fighter : server.getEntitiesOfClass(ResidentEntity.class, getBoundingBox().inflate(24.0D),
-                r -> r.getJob().isFighter() && !r.isDowned() && !r.isBaby() && !r.isWanderer())) {
+                r -> r.getJob().isFighter() && !r.isDowned() && !r.isBaby() && !r.isWanderer() && !r.isSleeping())) {
             fighter.setTarget(this);
+            if (nearest == null || fighter.distanceToSqr(this) < nearest.distanceToSqr(this)) {
+                nearest = fighter;
+            }
         }
         switch (type) {
             case BATMAN -> {
@@ -248,8 +278,10 @@ public class ThiefEntity extends PathfinderMob {
             case ROBIN -> {
                 fightTicks = ThiefTuning.ROBIN_FIGHT_TICKS;
                 setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STICK));
-                if (by != null) {
-                    setTarget(by);
+                if (nearest != null) {
+                    setTarget(nearest);
+                } else {
+                    fightTicks = 0;
                 }
                 say(server, line("fight"));
             }
@@ -294,6 +326,7 @@ public class ThiefEntity extends PathfinderMob {
             return;
         }
         gone = true;
+        closeLid();
         server.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1.0D, getZ(), 12, 0.3D, 0.6D, 0.3D, 0.02D);
         ThiefManager.onEscaped(server, this);
         discard();
@@ -313,7 +346,7 @@ public class ThiefEntity extends PathfinderMob {
             escape(server);
             return;
         }
-        if (getNavigation().isDone() || tickCount % 40 == 0) {
+        if (tickCount % 20 == 0 || getNavigation().isDone() && tickCount % 5 == 0) {
             Vec3 goal = position().add(away.normalize().scale(16.0D));
             getNavigation().moveTo(goal.x, getY(), goal.z, speed);
         }
@@ -326,7 +359,7 @@ public class ThiefEntity extends PathfinderMob {
 
         @Override
         public boolean canUse() {
-            return isSpotted() && fightTicks <= 0;
+            return isSpotted() && (fightTicks <= 0 || getTarget() == null);
         }
 
         @Override
@@ -365,9 +398,7 @@ public class ThiefEntity extends PathfinderMob {
 
         @Override
         public void stop() {
-            if (open && targetIndex < targets.size()) {
-                ThiefManager.setLid(level(), targets.get(targetIndex), false);
-            }
+            closeLid();
             open = false;
             lootTicks = 0;
         }
@@ -388,7 +419,7 @@ public class ThiefEntity extends PathfinderMob {
             }
             Vec3 at = Vec3.atCenterOf(target);
             if (distanceToSqr(at) > 2.4D * 2.4D) {
-                if (getNavigation().isDone() || walkTicks % 40 == 0) {
+                if (walkTicks % 20 == 0 || getNavigation().isDone() && walkTicks % 5 == 0) {
                     getNavigation().moveTo(at.x, target.getY(), at.z, 0.85D);
                 }
                 if (++walkTicks > 20 * 30) {
@@ -400,11 +431,12 @@ public class ThiefEntity extends PathfinderMob {
             getLookControl().setLookAt(at.x, at.y, at.z);
             if (!open) {
                 open = true;
+                openAt = target;
                 ThiefManager.setLid(server, target, true);
             }
             if (++lootTicks >= ThiefTuning.LOOT_TICKS) {
                 ThiefManager.robLive(server, ThiefEntity.this, target);
-                ThiefManager.setLid(server, target, false);
+                closeLid();
                 next();
             }
         }
@@ -421,12 +453,12 @@ public class ThiefEntity extends PathfinderMob {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (!level().isClientSide && !isSpotted() && level() instanceof ServerLevel server) {
-            LivingEntity by = source.getEntity() instanceof LivingEntity living ? living : null;
-            spot(server, by, by != null ? Component.translatable("thief.flightsuit.seen_by_player", by.getName())
-                    : Component.translatable("thief.flightsuit.seen_by_sensor"));
+        boolean hurt = super.hurt(source, amount);
+        // Only someone actually hitting them gives them away (not a cactus or a fall).
+        if (hurt && !isSpotted() && source.getEntity() instanceof LivingEntity by && level() instanceof ServerLevel server) {
+            spot(server, by, Component.translatable("thief.flightsuit.seen_by_player", by.getName()));
         }
-        return super.hurt(source, amount);
+        return hurt;
     }
 
     /** Beaten: drops everything taken and a gadget, and is gone in a puff of smoke. */
@@ -440,6 +472,7 @@ public class ThiefEntity extends PathfinderMob {
             return;
         }
         gone = true;
+        closeLid();
         setHealth(1.0F);
         int recovered = 0;
         for (ItemStack stack : loot) {
