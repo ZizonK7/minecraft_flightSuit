@@ -10,7 +10,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Nanotech Mark 50 (DESIGN.md 4-4 Mark 50, 4-16): nanites knit the worn pieces back together - each damaged piece
- * mends a point every two seconds, and the chest battery trickles back while it's not in use.
+ * mends a point every two seconds, and the chest battery trickles back (20 FE every two seconds).
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class NanotechHandler {

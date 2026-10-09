@@ -82,6 +82,14 @@ public final class ThanosSaga {
 
     // ---------------------------------------------------------------- Titan
 
+    /** Titan's dusk never ends: no sleeping there (the bed doesn't blow up, it just won't let you). */
+    @SubscribeEvent
+    public static void onSleep(net.minecraftforge.event.entity.player.PlayerSleepInBedEvent event) {
+        if (event.getEntity().level().dimension() == Planet.TITAN.dimension()) {
+            event.setResult(net.minecraft.world.entity.player.Player.BedSleepingProblem.NOT_POSSIBLE_HERE);
+        }
+    }
+
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.level instanceof ServerLevel level)
@@ -137,7 +145,7 @@ public final class ThanosSaga {
                 wanted = true;
             }
         }
-        List<ThanosForceEntity> there = level.getEntitiesOfClass(ThanosForceEntity.class, new AABB(post).inflate(48.0D),
+        List<ThanosForceEntity> there = level.getEntitiesOfClass(ThanosForceEntity.class, new AABB(post).inflate(96.0D),
                 entity -> entity.getForce() == keeper && !entity.isRaider());
         if (!wanted) {
             if (!anyoneWithin(level, post, 96.0D)) {
@@ -242,7 +250,8 @@ public final class ThanosSaga {
             }
         }
         if (best == null) {
-            player.sendSystemMessage(Component.translatable("thanos.flightsuit.goal_titan_done").withStyle(ChatFormatting.AQUA));
+            player.sendSystemMessage(Component.translatable((mask & InfinityStone.TIME.bit()) != 0 ? "thanos.flightsuit.goal_titan_all"
+                    : "thanos.flightsuit.goal_titan_done").withStyle(ChatFormatting.AQUA));
             return;
         }
         BlockPos at = center(world, best) != null ? center(world, best) : best.around(site);

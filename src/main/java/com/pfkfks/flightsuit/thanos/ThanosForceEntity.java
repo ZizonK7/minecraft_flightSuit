@@ -196,6 +196,12 @@ public class ThanosForceEntity extends Monster {
         return super.getDimensions(pose).scale(getForce().scale());
     }
 
+    /** Red Skull only talks: nothing should pick him as a target. */
+    @Override
+    public boolean canBeSeenAsEnemy() {
+        return getForce().role() != ThanosForce.Role.NPC && super.canBeSeenAsEnemy();
+    }
+
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;

@@ -11,9 +11,10 @@ import org.jetbrains.annotations.Nullable;
 public enum ThanosForce {
     CHITAURI("chitauri", Role.MINION, 32.0D, 5.0D, 0.30D, 1.0F, null),
     EBONY_MAW("ebony_maw", Role.BOSS, 260.0D, 6.0D, 0.28D, 1.0F, InfinityStone.SPACE),
-    PROXIMA_MIDNIGHT("proxima_midnight", Role.BOSS, 300.0D, 11.0D, 0.36D, 1.05F, InfinityStone.REALITY),
-    CORVUS_GLAIVE("corvus_glaive", Role.BOSS, 280.0D, 12.0D, 0.33D, 1.05F, InfinityStone.MIND),
-    CULL_OBSIDIAN("cull_obsidian", Role.BOSS, 460.0D, 15.0D, 0.27D, 1.4F, InfinityStone.POWER),
+    // Base damage: their weapons add on top (trident +8, netherite sword +7, netherite axe +9).
+    PROXIMA_MIDNIGHT("proxima_midnight", Role.BOSS, 300.0D, 4.0D, 0.36D, 1.05F, InfinityStone.REALITY),
+    CORVUS_GLAIVE("corvus_glaive", Role.BOSS, 280.0D, 5.0D, 0.33D, 1.05F, InfinityStone.MIND),
+    CULL_OBSIDIAN("cull_obsidian", Role.BOSS, 460.0D, 6.0D, 0.27D, 1.4F, InfinityStone.POWER),
     THANOS("thanos", Role.FINAL, 1200.0D, 16.0D, 0.30D, 1.35F, null),
     RED_SKULL("red_skull", Role.NPC, 40.0D, 0.0D, 0.2D, 1.0F, InfinityStone.SOUL);
 

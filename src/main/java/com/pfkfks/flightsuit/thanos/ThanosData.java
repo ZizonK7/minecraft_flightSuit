@@ -37,6 +37,8 @@ public class ThanosData extends SavedData {
         public long waveAt;
         public int wave;
         public boolean won;
+        /** This raid's Thanos (so a stray copy, or one from an earlier raid, means nothing). */
+        public @Nullable UUID thanos;
 
         public Raid(UUID player, ResourceKey<Level> dimension, BlockPos center, boolean city, String villageKey) {
             this.player = player;
@@ -56,6 +58,9 @@ public class ThanosData extends SavedData {
             tag.putLong("StartedAt", startedAt);
             tag.putLong("WaveAt", waveAt);
             tag.putInt("Wave", wave);
+            if (thanos != null) {
+                tag.putUUID("Thanos", thanos);
+            }
             return tag;
         }
 
@@ -69,6 +74,7 @@ public class ThanosData extends SavedData {
             raid.startedAt = tag.getLong("StartedAt");
             raid.waveAt = tag.getLong("WaveAt");
             raid.wave = tag.getInt("Wave");
+            raid.thanos = tag.hasUUID("Thanos") ? tag.getUUID("Thanos") : null;
             return raid;
         }
     }

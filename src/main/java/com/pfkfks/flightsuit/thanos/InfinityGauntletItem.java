@@ -83,10 +83,12 @@ public class InfinityGauntletItem extends Item {
                 force -> force.getForce().role() != ThanosForce.Role.NPC)) {
             force.dust(level);
         }
+        // Only enemies: the player's own soldiers, generals and prisoners (Three Kingdoms "monsters") are spared.
         for (Monster monster : level.getEntitiesOfClass(Monster.class, player.getBoundingBox().inflate(48.0D),
-                monster -> !(monster instanceof ThanosForceEntity))) {
+                monster -> !(monster instanceof ThanosForceEntity) && (!(monster instanceof com.pfkfks.flightsuit.war.RaidMember member)
+                        || member.role() == com.pfkfks.flightsuit.war.WarRole.RAID && !member.isNoThreat()))) {
             level.sendParticles(ParticleTypes.ASH, monster.getX(), monster.getY() + 1.0D, monster.getZ(), 20, 0.3D, 0.6D, 0.3D, 0.02D);
-            monster.kill();
+            monster.hurt(player.damageSources().playerAttack(player), Float.MAX_VALUE);
         }
         // The price.
         player.setHealth(2.0F);

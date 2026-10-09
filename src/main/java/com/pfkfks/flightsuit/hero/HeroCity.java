@@ -353,6 +353,10 @@ public final class HeroCity {
 
     /** A hero (or agent) withdrew beaten. Heroes beaten by the player's side count toward the city falling. */
     public static void onHeroBeaten(ServerLevel level, CityHeroEntity hero, @Nullable Entity killer) {
+        if (hero.getTags().contains("flightsuit_thanos_ally")) {
+            // Fighting Thanos at an ally's village: down for this battle, not away from the city.
+            return;
+        }
         HeroData data = HeroData.get(level.getServer());
         long day = level.getDayTime() / 24000L;
         HeroType type = hero.getHeroType();
@@ -401,8 +405,9 @@ public final class HeroCity {
         data.setDirty();
         stockVault(level, vault(data));
         // The Time Stone is kept in the vault too (DESIGN 4-16: 시간 강탈 - or Captain's gift to an ally).
-        if (level.getBlockEntity(vault(data).get(0)) instanceof Container chest) {
-            chest.setItem(13, new ItemStack(com.pfkfks.flightsuit.registry.ModItems.stone(com.pfkfks.flightsuit.thanos.InfinityStone.TIME)));
+        net.minecraft.world.item.Item timeStone = com.pfkfks.flightsuit.registry.ModItems.stone(com.pfkfks.flightsuit.thanos.InfinityStone.TIME);
+        if (level.getBlockEntity(vault(data).get(0)) instanceof Container chest && !chest.hasAnyOf(java.util.Set.of(timeStone))) {
+            chest.setItem(13, new ItemStack(timeStone));
             chest.setChanged();
         }
         for (CityHeroEntity hero : level.getEntitiesOfClass(CityHeroEntity.class, area(data))) {

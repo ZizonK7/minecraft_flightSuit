@@ -54,4 +54,4 @@
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`, `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).

@@ -100,11 +100,10 @@ public final class ThanosRaid {
             tickRaid(server, data, data.raid);
             return;
         }
-        if (tod < 13000L || tod > 20000L) {
-            return;
-        }
+        // From dusk (before anyone can sleep the night away - beds work from ~12542); a missed night doesn't save you.
+        boolean evening = tod >= 12000L && tod <= 20000L;
         for (Map.Entry<UUID, Long> entry : new ArrayList<>(data.raidDay.entrySet())) {
-            if (day >= entry.getValue() && begin(server, data, entry.getKey(), day)) {
+            if ((evening && day >= entry.getValue() || day > entry.getValue()) && begin(server, data, entry.getKey(), day)) {
                 return;
             }
         }
@@ -195,8 +194,13 @@ public final class ThanosRaid {
                 for (int i = 0; i < 8; i++) {
                     spawn(level, raid, ThanosForce.CHITAURI, angle, 0);
                 }
-                if (HeroData.get(server).trust(raid.player) >= 70 && !raid.city) {
+                HeroData heroes = HeroData.get(server);
+                long today = server.overworld().getDayTime() / 24000L;
+                if (heroes.trust(raid.player) >= 70 && !raid.city && !heroes.isFallen(today)) {
                     for (HeroType hero : new HeroType[]{HeroType.CAPTAIN, HeroType.IRON_MAN, HeroType.THOR, HeroType.HULK}) {
+                        if (!heroes.isHome(hero, today)) {
+                            continue;
+                        }
                         CityHeroEntity ally = CityHeroEntity.create(level, hero, raid.center);
                         BlockPos at = ground(level, raid.center.offset(random.nextInt(9) - 4, 0, random.nextInt(9) - 4));
                         ally.moveTo(at.getX() + 0.5D, at.getY(), at.getZ() + 0.5D, random.nextFloat() * 360.0F, 0.0F);
@@ -227,17 +231,19 @@ public final class ThanosRaid {
             case 2 -> {
                 if (blackOrder == 0 || now - raid.waveAt > 20L * 90) {
                     int his = InfinityStone.ALL & ~ThanosSaga.stones(server, raid.player);
-                    spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D, his);
+                    raid.thanos = spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D, his);
                     announce(level, raid, ThanosForce.THANOS.line("go"));
                     announce(level, raid, Component.translatable("thanos.flightsuit.his_stones", InfinityStone.list(his)).withStyle(ChatFormatting.DARK_PURPLE));
                     next(data, raid, now);
                 }
             }
             default -> {
-                if (thanos == 0 && !raid.won) {
-                    // He wandered off or his chunk unloaded: he comes back.
-                    spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D,
+                Entity him = raid.thanos == null ? null : level.getEntity(raid.thanos);
+                if ((him == null || him.isRemoved()) && !raid.won) {
+                    // His chunk unloaded (or he was lost): he comes back.
+                    raid.thanos = spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D,
                             InfinityStone.ALL & ~ThanosSaga.stones(server, raid.player));
+                    data.setDirty();
                 }
             }
         }
@@ -249,7 +255,7 @@ public final class ThanosRaid {
         data.setDirty();
     }
 
-    private static void spawn(ServerLevel level, ThanosData.Raid raid, ThanosForce force, double angle, int stones) {
+    private static UUID spawn(ServerLevel level, ThanosData.Raid raid, ThanosForce force, double angle, int stones) {
         RandomSource random = level.random;
         double a = angle + (random.nextDouble() - 0.5D) * 0.6D;
         int x = raid.center.getX() + Mth.floor(Math.cos(a) * 36.0D) + random.nextInt(5) - 2;
@@ -259,6 +265,9 @@ public final class ThanosRaid {
         entity.restrictTo(raid.center, 64);
         entity.addTag(ThanosForceEntity.RAID_TAG);
         entity.moveTo(at.getX() + 0.5D, at.getY(), at.getZ() + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+        // With nobody in reach they press on into the village.
+        BlockPos objective = raid.center;
+        entity.goalSelector.addGoal(4, new com.pfkfks.flightsuit.war.ai.MarchOnVillageGoal(entity, () -> entity.getTarget() == null ? objective : null));
         level.addFreshEntity(entity);
         if (force == ThanosForce.THANOS) {
             for (int i = 0; i < 2; i++) {
@@ -270,6 +279,7 @@ public final class ThanosRaid {
                 }
             }
         }
+        return entity.getUUID();
     }
 
     private static BlockPos ground(ServerLevel level, BlockPos pos) {
@@ -292,18 +302,22 @@ public final class ThanosRaid {
     static void onBeaten(ServerLevel level, ThanosForceEntity entity) {
         ThanosData data = ThanosData.get(level.getServer());
         ThanosData.Raid raid = data.raid;
-        if (raid == null || entity.getForce() != ThanosForce.THANOS || raid.won) {
+        if (raid == null || entity.getForce() != ThanosForce.THANOS || raid.won || !entity.getUUID().equals(raid.thanos)) {
             return;
         }
         raid.won = true;
         win(level.getServer(), data, raid, level);
     }
 
+    /** Every raider and helper, wherever they wandered off to. */
     private static void clear(ServerLevel level, ThanosData.Raid raid) {
-        for (Entity entity : level.getEntitiesOfClass(Entity.class, arena(raid),
-                e -> e instanceof ThanosForceEntity force && force.isRaider() || e.getTags().contains(ALLY_TAG))) {
-            entity.discard();
+        List<Entity> gone = new ArrayList<>();
+        for (Entity entity : level.getAllEntities()) {
+            if (entity instanceof ThanosForceEntity force && force.isRaider() || entity.getTags().contains(ALLY_TAG)) {
+                gone.add(entity);
+            }
         }
+        gone.forEach(Entity::discard);
     }
 
     private static void win(MinecraftServer server, ThanosData data, ThanosData.Raid raid, ServerLevel level) {
@@ -335,7 +349,7 @@ public final class ThanosRaid {
         }
         player.sendSystemMessage(Component.translatable("thanos.flightsuit.reward").withStyle(ChatFormatting.GOLD));
         EdithAlert.send(player, Component.translatable("thanos.flightsuit.edith_won_title").withStyle(ChatFormatting.GOLD),
-                Component.translatable("thanos.flightsuit.reward"), null, null, EdithAlert.CYAN, true);
+                Component.translatable("thanos.flightsuit.reward"), null, null, EdithAlert.CYAN, false);
     }
 
     @SubscribeEvent
@@ -375,6 +389,7 @@ public final class ThanosRaid {
                 snapped.returnDay = day + SNAP_DAYS;
                 for (int i = 0; i < people.size() / 2; i++) {
                     ResidentEntity resident = people.get(i);
+                    resident.stopRiding();
                     CompoundTag saved = new CompoundTag();
                     if (resident.save(saved)) {
                         snapped.residents.add(saved);
