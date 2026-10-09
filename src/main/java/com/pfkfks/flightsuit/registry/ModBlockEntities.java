@@ -4,6 +4,7 @@ import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.block.BatteryBlockEntity;
 import com.pfkfks.flightsuit.block.GeneratorBlockEntity;
 import com.pfkfks.flightsuit.block.SolarPanelBlockEntity;
+import com.pfkfks.flightsuit.block.StationStorageBlockEntity;
 import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
 import com.pfkfks.flightsuit.cleaner.CleanerDockBlockEntity;
 import com.pfkfks.flightsuit.village.VillageHallBlockEntity;
@@ -34,6 +35,9 @@ public final class ModBlockEntities {
     @SuppressWarnings("DataFlowIssue")
     public static final RegistryObject<BlockEntityType<VillageHallBlockEntity>> VILLAGE_HALL = BLOCK_ENTITY_TYPES.register("village_hall",
             () -> BlockEntityType.Builder.of(VillageHallBlockEntity::new, ModBlocks.VILLAGE_HALL.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<StationStorageBlockEntity>> STATION_STORAGE = BLOCK_ENTITY_TYPES.register("station_storage",
+            () -> BlockEntityType.Builder.of(StationStorageBlockEntity::new, ModBlocks.STATION_STORAGE.get()).build(null));
 
     private ModBlockEntities() {
     }

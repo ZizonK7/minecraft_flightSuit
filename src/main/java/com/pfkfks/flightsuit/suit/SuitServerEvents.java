@@ -250,5 +250,6 @@ public final class SuitServerEvents {
         SuitWeapons.forget(id);
         CounterHandler.forget(id);
         StealthHandler.forget(id);
+        RemoteStorage.forget(id);
     }
 }

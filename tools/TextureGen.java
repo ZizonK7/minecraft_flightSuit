@@ -60,6 +60,8 @@ public class TextureGen {
         write(hallStoneSide(true), new File(block, "village_hall_2_front.png"));
         write(hallStoneTop(), new File(block, "village_hall_2_top.png"));
         write(blueprintIcon(), new File(item, "blueprint.png"));
+        write(storageSide(), new File(block, "station_storage_side.png"));
+        write(storageTop(), new File(block, "station_storage_top.png"));
     }
 
     static final int STONE = 0xFF8E8E8E, STONE_DARK = 0xFF666666, STONE_LIGHT = 0xFFAAAAAA, MORTAR = 0xFF55524E;
@@ -423,6 +425,35 @@ public class TextureGen {
         }
         fill(img, 1, 2, 1, 12, GOLD_DARK);
         fill(img, 14, 2, 1, 12, GOLD_DARK);
+        return img;
+    }
+
+    /** Station storage: dark vault plating, a cyan hologram readout band and a gold-rimmed lock seam. */
+    static BufferedImage storageSide() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, METAL);
+        border(img, 0, 0, 16, 16, EDGE);
+        fill(img, 1, 1, 14, 1, METAL_LIGHT);
+        // Hologram readout: a dark screen with glowing item rows.
+        fill(img, 2, 3, 12, 6, EDGE);
+        for (int y = 4; y < 8; y += 2) {
+            fill(img, 3, y, 4, 1, CYAN);
+            fill(img, 8, y, 2, 1, CYAN_DARK);
+            fill(img, 11, y, 2, 1, y == 4 ? CYAN_GLOW : CYAN);
+        }
+        // Lower drawer with the lock seam.
+        fill(img, 2, 10, 12, 1, METAL_DARK);
+        fill(img, 2, 13, 12, 1, METAL_DARK);
+        fill(img, 7, 11, 2, 2, GOLD);
+        img.setRGB(7, 11, GOLD_DARK);
+        return img;
+    }
+
+    static BufferedImage storageTop() {
+        BufferedImage img = plate(METAL_DARK);
+        border(img, 3, 3, 10, 10, GOLD_DARK);
+        fill(img, 6, 6, 4, 4, EDGE);
+        fill(img, 7, 7, 2, 2, CYAN_GLOW);
         return img;
     }
 

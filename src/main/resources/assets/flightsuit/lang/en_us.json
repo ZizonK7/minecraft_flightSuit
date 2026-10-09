@@ -331,5 +331,13 @@
   "message.flightsuit.blueprint_pinned_clear": "Spot pinned. %s blocks will be bulldozed first (they go to the storage). Right-click the same spot again to confirm, sneak to turn.",
   "board.flightsuit.alarm_hint": "Sneak + right-click the hall: call it off",
   "news.flightsuit.alarm_off": "Alarm called off",
-  "message.flightsuit.alarm_off": "Alarm called off."
+  "message.flightsuit.alarm_off": "Alarm called off.",
+  "block.flightsuit.station_storage": "Station Storage",
+  "container.flightsuit.station_storage": "Station Storage · %s",
+  "container.flightsuit.station_storage.locked": "Locked",
+  "container.flightsuit.station_storage.unpowered": "No power · Unlocked",
+  "message.flightsuit.storage_sorted": "Sorted · %s / %s slots · Power %s / %s FE",
+  "message.flightsuit.remote_stored": "Sent to station storage: %s ×%s",
+  "message.flightsuit.remote_storage_full": "Station storage is full · Left on the ground",
+  "message.flightsuit.remote_no_storage": "No station storage · Left on the ground (place one within 8 blocks of the suit station)"
 }

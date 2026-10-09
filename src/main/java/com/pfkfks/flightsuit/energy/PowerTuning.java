@@ -25,4 +25,9 @@ public final class PowerTuning {
     /** Every 10 ticks: durability points restored per damaged piece, and the FE that costs. */
     public static final int STATION_REPAIR_POINTS = 2;
     public static final int STATION_REPAIR_COST = 100;
+
+    /** Station storage: a small buffer that keeps the vault locked; upkeep is FE/tick. */
+    public static final int STORAGE_CAPACITY = 20_000;
+    public static final int STORAGE_INPUT = 200;
+    public static final int STORAGE_UPKEEP = 2;
 }

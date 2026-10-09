@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "flightsuit:block/station_storage_top",
+    "side": "flightsuit:block/station_storage_side"
+  }
+}

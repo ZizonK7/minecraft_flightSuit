@@ -16,11 +16,15 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -35,9 +39,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Remote piloting (DESIGN.md 4-7, A안 - Iron Man 3's remote suit): from the suit wheel, take direct control
@@ -89,6 +95,12 @@ public final class RemoteLink {
             this.pitch = pitch;
         }
     }
+
+    /** A block a pilot just broke: its drops spawn this same tick, around its centre. */
+    private record BreakCapture(ResourceKey<Level> dimension, Vec3 center, long gameTime, UUID player) {
+    }
+
+    private static final List<BreakCapture> BREAK_DROPS = new CopyOnWriteArrayList<>();
 
     /** By player UUID. Concurrent: in single player the client thread can read this too (interaction events). */
     private static final Map<UUID, Session> SESSIONS = new ConcurrentHashMap<>();
@@ -377,9 +389,42 @@ public final class RemoteLink {
         refuse(event.getEntity(), event);
     }
 
+    /**
+     * Digging is allowed (the suit's own hands - unlike placing, which would need the body's inventory). What the
+     * block drops is caught as it spawns, this same tick, and sent to the station storage (RemoteStorage).
+     */
     @SubscribeEvent
     public static void onBreak(BlockEvent.BreakEvent event) {
-        refuse(event.getPlayer(), event);
+        if (event.getPlayer() instanceof ServerPlayer player && isActive(player) && player.level() instanceof ServerLevel level) {
+            long now = level.getGameTime();
+            BREAK_DROPS.removeIf(capture -> capture.gameTime() != now);
+            BREAK_DROPS.add(new BreakCapture(level.dimension(), Vec3.atCenterOf(event.getPos()), now, player.getUUID()));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (BREAK_DROPS.isEmpty() || !(event.getEntity() instanceof ItemEntity item) || !(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        long now = level.getGameTime();
+        for (BreakCapture capture : BREAK_DROPS) {
+            if (capture.gameTime() != now || !capture.dimension().equals(level.dimension())
+                    || item.position().distanceToSqr(capture.center()) > 1.5D * 1.5D) {
+                continue;
+            }
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(capture.player());
+            if (player == null || !isActive(player)) {
+                return;
+            }
+            ItemStack left = RemoteStorage.deliver(player, item.getItem().copy());
+            if (left.isEmpty()) {
+                event.setCanceled(true);
+            } else {
+                item.setItem(left);
+            }
+            return;
+        }
     }
 
     @SubscribeEvent
@@ -389,10 +434,21 @@ public final class RemoteLink {
         }
     }
 
+    /** What the suit walks over goes to the station storage, never into the body's inventory; no storage = stays put. */
     @SubscribeEvent
     public static void onPickup(EntityItemPickupEvent event) {
-        if (isActive(event.getEntity())) {
-            event.setCanceled(true);
+        if (!isActive(event.getEntity())) {
+            return;
+        }
+        event.setCanceled(true);
+        ItemEntity item = event.getItem();
+        if (event.getEntity() instanceof ServerPlayer player && item.isAlive() && !item.getItem().isEmpty()) {
+            ItemStack left = RemoteStorage.deliver(player, item.getItem().copy());
+            if (left.isEmpty()) {
+                item.discard();
+            } else {
+                item.setItem(left);
+            }
         }
     }
 

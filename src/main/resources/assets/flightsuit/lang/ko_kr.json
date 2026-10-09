@@ -331,5 +331,13 @@
   "message.flightsuit.blueprint_pinned_clear": "자리를 잡았습니다. 블록 %s개를 밀어 내고 짓습니다 (치운 블록은 창고로). 같은 곳을 한 번 더 누르면 확정, 웅크리고 누르면 회전.",
   "board.flightsuit.alarm_hint": "회관을 웅크리고 우클릭: 경보 해제",
   "news.flightsuit.alarm_off": "경보 해제",
-  "message.flightsuit.alarm_off": "경보를 해제했습니다."
+  "message.flightsuit.alarm_off": "경보를 해제했습니다.",
+  "block.flightsuit.station_storage": "스테이션 창고",
+  "container.flightsuit.station_storage": "스테이션 창고 · %s",
+  "container.flightsuit.station_storage.locked": "잠김",
+  "container.flightsuit.station_storage.unpowered": "전력 없음 · 잠금 해제",
+  "message.flightsuit.storage_sorted": "정리 완료 · %s / %s칸 · 전력 %s / %s FE",
+  "message.flightsuit.remote_stored": "스테이션 창고로 전송: %s ×%s",
+  "message.flightsuit.remote_storage_full": "스테이션 창고가 꽉 찼습니다 · 바닥에 남김",
+  "message.flightsuit.remote_no_storage": "스테이션 창고 없음 · 바닥에 남김 (슈트 스테이션 8칸 안에 설치)"
 }

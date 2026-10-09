@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["IRI", "CBC", "IGI"],
+  "key": {"I": {"item": "minecraft:iron_ingot"}, "R": {"item": "minecraft:redstone"}, "C": {"tag": "forge:chests/wooden"}, "B": {"item": "flightsuit:battery"}, "G": {"item": "minecraft:gold_ingot"}},
+  "result": {"item": "flightsuit:station_storage", "count": 1}
+}

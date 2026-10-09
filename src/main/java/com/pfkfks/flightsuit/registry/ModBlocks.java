@@ -6,6 +6,7 @@ import com.pfkfks.flightsuit.cleaner.CleanerDockBlock;
 import com.pfkfks.flightsuit.block.GeneratorBlock;
 import com.pfkfks.flightsuit.block.SolarPanelBlock;
 import com.pfkfks.flightsuit.block.StationFrameBlock;
+import com.pfkfks.flightsuit.block.StationStorageBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlock;
 import com.pfkfks.flightsuit.village.VillageHallBlock;
 import net.minecraft.world.item.BlockItem;
@@ -35,6 +36,8 @@ public final class ModBlocks {
             () -> new GeneratorBlock(metal().lightLevel(state -> state.getValue(GeneratorBlock.LIT) ? 13 : 0)));
     public static final RegistryObject<BatteryBlock> BATTERY = register("battery",
             () -> new BatteryBlock(metal()));
+    public static final RegistryObject<StationStorageBlock> STATION_STORAGE = register("station_storage",
+            () -> new StationStorageBlock(metal()));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
     /** Blast-proof, so a creeper can't take the whole village down with it. */
