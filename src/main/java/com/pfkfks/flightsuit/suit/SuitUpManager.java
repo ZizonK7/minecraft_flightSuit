@@ -626,6 +626,9 @@ public final class SuitUpManager {
                 // Hit the ground mid-assembly: superhero landing instead of a brake.
                 level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY(), player.getZ(), 1, 0, 0, 0, 0);
                 level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.6F, 1.4F);
+            } else if (!WornSuit.of(player).canFly()) {
+                // No thrusters (Mark 4): no brake - keep falling; the full set takes the landing.
+                player.fallDistance = 0.0F;
             } else {
                 // Repulsor brake: kill the fall and hand over to hover flight.
                 SuitServerEvents.grantFlightNow(player);

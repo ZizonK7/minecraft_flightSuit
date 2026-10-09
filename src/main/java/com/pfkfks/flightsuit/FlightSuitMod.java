@@ -11,6 +11,7 @@ import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.registry.ModItems;
 import com.pfkfks.flightsuit.suit.SuitType;
 import com.pfkfks.flightsuit.suit.WornSuit;
+import com.pfkfks.flightsuit.village.ResidentEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -48,6 +49,8 @@ public class FlightSuitMod {
                         output.accept(ModBlocks.CLEANER_DOCK.get());
                         output.accept(ModItems.CLEANER_ROBOT.get());
                         output.accept(ModItems.HOVER_CAR_CAPSULE.get());
+                        output.accept(ModBlocks.VILLAGE_HALL.get());
+                        output.accept(ModItems.RESIDENT_SPAWN_EGG.get());
                         for (SuitType type : SuitType.values()) {
                             output.accept(ModItems.capsuleFor(type).createFilledCapsule());
                             output.accept(ModItems.capsuleFor(type));
@@ -76,6 +79,7 @@ public class FlightSuitMod {
         event.put(ModEntities.SUIT_COMPANION.get(), SuitCompanionEntity.createAttributes().build());
         event.put(ModEntities.CLEANER_ROBOT.get(), CleanerRobotEntity.createAttributes().build());
         event.put(ModEntities.REMOTE_BODY.get(), RemoteBodyEntity.createAttributes().build());
+        event.put(ModEntities.RESIDENT.get(), ResidentEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

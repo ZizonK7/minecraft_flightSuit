@@ -100,6 +100,10 @@ public class SuitArmorItem extends ArmorItem {
                 .withStyle(ChatFormatting.GRAY));
         if (suitType.suitClass() == SuitClass.STEALTH) {
             tooltip.add(Component.translatable("tooltip.flightsuit.class.stealth").withStyle(ChatFormatting.DARK_PURPLE));
+        } else if (suitType.suitClass() == SuitClass.PHANTOM) {
+            tooltip.add(Component.translatable("tooltip.flightsuit.class.phantom").withStyle(ChatFormatting.GOLD));
+        } else if (suitType.suitClass() == SuitClass.HERO) {
+            tooltip.add(Component.translatable("tooltip.flightsuit.class.hero").withStyle(ChatFormatting.GREEN));
         }
     }
 

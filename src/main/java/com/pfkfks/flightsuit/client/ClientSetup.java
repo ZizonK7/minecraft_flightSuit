@@ -3,6 +3,8 @@ package com.pfkfks.flightsuit.client;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.registry.ModEntities;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -30,6 +32,12 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void addLayers(EntityRenderersEvent.AddLayers event) {
         SuitArmorModels.bake(event.getEntityModels());
+        for (String skin : event.getSkins()) {
+            LivingEntityRenderer<?, ?> renderer = event.getSkin(skin);
+            if (renderer instanceof PlayerRenderer player) {
+                player.addLayer(new HeroRenderer.SwordLayer(player, event.getContext().getItemInHandRenderer()));
+            }
+        }
     }
 
     @SubscribeEvent
@@ -40,6 +48,10 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.CLEANER_ROBOT.get(), CleanerRobotRenderer::new);
         event.registerEntityRenderer(ModEntities.HOVER_CAR.get(), HoverCarRenderer::new);
         event.registerEntityRenderer(ModEntities.REMOTE_BODY.get(), RemoteBodyRenderer::new);
+        event.registerEntityRenderer(ModEntities.MISSILE.get(), MissileRenderer::new);
+        event.registerEntityRenderer(ModEntities.CARD.get(), CardRenderer::new);
+        event.registerEntityRenderer(ModEntities.RESIDENT.get(), ResidentRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 
     @SubscribeEvent
@@ -48,6 +60,8 @@ public final class ClientSetup {
         event.register(ModKeys.COMMAND_ATTACK);
         event.register(ModKeys.COUNTER);
         event.register(ModKeys.SUIT_WHEEL);
+        event.register(ModKeys.SKILL_1);
+        event.register(ModKeys.SKILL_2);
     }
 
     @SubscribeEvent

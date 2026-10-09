@@ -27,8 +27,8 @@ public final class ModNetwork {
         int id = 0;
         CHANNEL.registerMessage(id++, SuitToggleC2SPacket.class, SuitToggleC2SPacket::encode, SuitToggleC2SPacket::decode,
                 SuitToggleC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(id++, RepulsorC2SPacket.class, RepulsorC2SPacket::encode, RepulsorC2SPacket::decode,
-                RepulsorC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, WeaponC2SPacket.class, WeaponC2SPacket::encode, WeaponC2SPacket::decode,
+                WeaponC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, ThrustStateC2SPacket.class, ThrustStateC2SPacket::encode, ThrustStateC2SPacket::decode,
                 ThrustStateC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, SuitAnimS2CPacket.class, SuitAnimS2CPacket::encode, SuitAnimS2CPacket::decode,
@@ -47,6 +47,20 @@ public final class ModNetwork {
                 EdithStatusS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, RemoteLinkS2CPacket.class, RemoteLinkS2CPacket::encode, RemoteLinkS2CPacket::decode,
                 RemoteLinkS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, BeamStateS2CPacket.class, BeamStateS2CPacket::encode, BeamStateS2CPacket::decode,
+                BeamStateS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, WeaponStatusS2CPacket.class, WeaponStatusS2CPacket::encode, WeaponStatusS2CPacket::decode,
+                WeaponStatusS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, CardDuelS2CPacket.class, CardDuelS2CPacket::encode, CardDuelS2CPacket::decode,
+                CardDuelS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, CardDuelC2SPacket.class, CardDuelC2SPacket::encode, CardDuelC2SPacket::decode,
+                CardDuelC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, ClawshotS2CPacket.class, ClawshotS2CPacket::encode, ClawshotS2CPacket::decode,
+                ClawshotS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ResidentScreenS2CPacket.class, ResidentScreenS2CPacket::encode, ResidentScreenS2CPacket::decode,
+                ResidentScreenS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ResidentActionC2SPacket.class, ResidentActionC2SPacket::encode, ResidentActionC2SPacket::decode,
+                ResidentActionC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static void sendToServer(Object packet) {

@@ -25,8 +25,9 @@ import java.util.Optional;
 /**
  * PlayerAnimator glue. Every player gets two layers:
  * - pose (priority 1000): looping flight pose (hover / boost), switched by server broadcasts;
- * - action (priority 1100): one-shots on top (suit-up, repulsor), which win over the pose while playing.
- * Parts an animation doesn't key stay vanilla, so e.g. the repulsor only takes over the right arm.
+ * - action (priority 1100): one-shots on top (suit-up, missiles) and held poses (shield, firing the primary
+ *   weapon), which win over the flight pose while playing.
+ * Parts an animation doesn't key stay vanilla, so e.g. firing only takes over the right arm.
  *
  * Also spawns thruster particles for every player in a flight pose, since that state is already here.
  */
@@ -40,6 +41,8 @@ public final class SuitAnimator {
     private static final ResourceLocation LAYERS_KEY = new ResourceLocation(FlightSuitMod.MODID, "suit_layers");
     /** Looping guard pose while the nano shield is up (not a SuitAnim one-shot - it lasts as long as the key is held). */
     private static final String SHIELD_HOLD = "shield_hold";
+    /** Looping right-palm aim while the primary weapon fires (beam or card stream). */
+    private static final String AIM_HOLD = "aim_hold";
 
     private SuitAnimator() {
     }
@@ -59,6 +62,7 @@ public final class SuitAnimator {
         FlightPose currentPose = FlightPose.NONE;
         SuitAnim currentAction;
         boolean shielding;
+        boolean aiming;
 
         Layers(AbstractClientPlayer player) {
             // Boost: lie along the look direction like an elytra glide (body pitch = -90 - xRot).
@@ -68,9 +72,9 @@ public final class SuitAnimator {
                 }
                 return Optional.of(new AdjustmentModifier.PartModifier(new Vec3f(-player.getXRot() * DEG, 0.0F, 0.0F), Vec3f.ZERO));
             }));
-            // Repulsor: aim the raised right arm where the player looks (vanilla bow-aim formula).
+            // Firing: aim the raised right arm where the player looks (vanilla bow-aim formula).
             action.addModifierLast(new AdjustmentModifier(part -> {
-                if (currentAction != SuitAnim.REPULSOR_RIGHT || !"rightArm".equals(part)) {
+                if (!aiming || !"rightArm".equals(part)) {
                     return Optional.empty();
                 }
                 return Optional.of(new AdjustmentModifier.PartModifier(new Vec3f(player.getXRot() * DEG, 0.0F, 0.0F), Vec3f.ZERO));
@@ -142,6 +146,25 @@ public final class SuitAnimator {
                         new KeyframeAnimationPlayer(animation), true);
             }
         } else if (layers.currentAction == null) {
+            layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(4, Ease.INOUTSINE), null);
+        }
+    }
+
+    /** Primary weapon firing / stopped: holds the right palm out along the look direction meanwhile. */
+    public static void setAiming(AbstractClientPlayer player, boolean active) {
+        Layers layers = layersOf(player);
+        if (layers == null || layers.aiming == active) {
+            return;
+        }
+        layers.aiming = active;
+        if (active) {
+            KeyframeAnimation animation = animation(AIM_HOLD);
+            if (animation != null) {
+                layers.currentAction = null;
+                layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.OUTQUAD),
+                        new KeyframeAnimationPlayer(animation), true);
+            }
+        } else if (layers.currentAction == null && !layers.shielding) {
             layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(4, Ease.INOUTSINE), null);
         }
     }

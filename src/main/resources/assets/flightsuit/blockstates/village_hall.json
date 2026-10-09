@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north,stage=1": {"model": "flightsuit:block/village_hall", "y": 0},
+    "facing=east,stage=1": {"model": "flightsuit:block/village_hall", "y": 90},
+    "facing=south,stage=1": {"model": "flightsuit:block/village_hall", "y": 180},
+    "facing=west,stage=1": {"model": "flightsuit:block/village_hall", "y": 270},
+    "facing=north,stage=2": {"model": "flightsuit:block/village_hall_2", "y": 0},
+    "facing=east,stage=2": {"model": "flightsuit:block/village_hall_2", "y": 90},
+    "facing=south,stage=2": {"model": "flightsuit:block/village_hall_2", "y": 180},
+    "facing=west,stage=2": {"model": "flightsuit:block/village_hall_2", "y": 270},
+    "facing=north,stage=3": {"model": "flightsuit:block/village_hall_2", "y": 0},
+    "facing=east,stage=3": {"model": "flightsuit:block/village_hall_2", "y": 90},
+    "facing=south,stage=3": {"model": "flightsuit:block/village_hall_2", "y": 180},
+    "facing=west,stage=3": {"model": "flightsuit:block/village_hall_2", "y": 270}
+  }
+}

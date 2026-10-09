@@ -3,9 +3,12 @@ package com.pfkfks.flightsuit.registry;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.car.HoverCarEntity;
 import com.pfkfks.flightsuit.cleaner.CleanerRobotEntity;
+import com.pfkfks.flightsuit.entity.CardEntity;
+import com.pfkfks.flightsuit.entity.MissileEntity;
 import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
+import com.pfkfks.flightsuit.village.ResidentEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -52,6 +55,28 @@ public final class ModEntities {
                     .noSave()
                     .clientTrackingRange(10)
                     .build("remote_body"));
+
+    public static final RegistryObject<EntityType<MissileEntity>> MISSILE = ENTITY_TYPES.register("missile",
+            () -> EntityType.Builder.<MissileEntity>of(MissileEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .noSave()
+                    .clientTrackingRange(8)
+                    .updateInterval(1)
+                    .build("missile"));
+
+    public static final RegistryObject<EntityType<CardEntity>> CARD = ENTITY_TYPES.register("card",
+            () -> EntityType.Builder.<CardEntity>of(CardEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .noSave()
+                    .clientTrackingRange(8)
+                    .updateInterval(1)
+                    .build("card"));
+
+    public static final RegistryObject<EntityType<ResidentEntity>> RESIDENT = ENTITY_TYPES.register("resident",
+            () -> EntityType.Builder.<ResidentEntity>of(ResidentEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.8F)
+                    .clientTrackingRange(10)
+                    .build("resident"));
 
     private ModEntities() {
     }

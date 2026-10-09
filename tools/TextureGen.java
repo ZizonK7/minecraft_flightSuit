@@ -50,6 +50,148 @@ public class TextureGen {
         write(cleanerRobotIcon(), new File(item, "cleaner_robot.png"));
         write(carCapsuleIcon(), new File(item, "hover_car_capsule.png"));
         write(stationArm(), new File(entity, "station_arm.png"));
+        write(card(0xFFF6F4EE, GOLD, RED), new File(entity, "card_blanche.png"));
+        write(card(0xFF1A1620, 0xFF8A4FD8, 0xFFF6F4EE), new File(entity, "card_noir.png"));
+        write(masterSword(), new File(item, "master_sword.png"));
+        write(hallSide(false), new File(block, "village_hall_side.png"));
+        write(hallSide(true), new File(block, "village_hall_front.png"));
+        write(hallTop(), new File(block, "village_hall_top.png"));
+        write(hallStoneSide(false), new File(block, "village_hall_2_side.png"));
+        write(hallStoneSide(true), new File(block, "village_hall_2_front.png"));
+        write(hallStoneTop(), new File(block, "village_hall_2_top.png"));
+        write(blueprintIcon(), new File(item, "blueprint.png"));
+    }
+
+    static final int STONE = 0xFF8E8E8E, STONE_DARK = 0xFF666666, STONE_LIGHT = 0xFFAAAAAA, MORTAR = 0xFF55524E;
+
+    /** Stage 2 hall (마을): stone brick courses with a timber lintel; the front keeps the red banner. */
+    static BufferedImage hallStoneSide(boolean front) {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, STONE);
+        for (int row = 0; row < 4; row++) {
+            int y = row * 4;
+            fill(img, 0, y + 3, 16, 1, MORTAR);
+            fill(img, 0, y, 16, 1, STONE_LIGHT);
+            int offset = row % 2 == 0 ? 0 : 4;
+            for (int x = offset; x < 16; x += 8) {
+                fill(img, x, y, 1, 3, MORTAR);
+            }
+            fill(img, (offset + 6) % 16, y + 1, 1, 2, STONE_DARK);
+        }
+        fill(img, 0, 0, 16, 2, BEAM);
+        if (front) {
+            fill(img, 4, 3, 8, 10, RED);
+            border(img, 4, 3, 8, 10, 0xFF7E1B17);
+            fill(img, 4, 13, 2, 1, RED);
+            fill(img, 10, 13, 2, 1, RED);
+            for (int r = 0; r < 3; r++) {
+                fill(img, 7 - r, 5 + r, 2 + r * 2, 1, GOLD);
+            }
+            fill(img, 6, 8, 4, 3, GOLD);
+            fill(img, 7, 9, 2, 2, GOLD_DARK);
+        }
+        return img;
+    }
+
+    static BufferedImage hallStoneTop() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, STONE);
+        border(img, 0, 0, 16, 16, MORTAR);
+        fill(img, 3, 3, 10, 10, STONE_LIGHT);
+        border(img, 3, 3, 10, 10, STONE_DARK);
+        fill(img, 7, 6, 2, 4, GOLD);
+        return img;
+    }
+
+    /** Blueprint: a rolled-out blue sheet with a white house drawn on it. */
+    static BufferedImage blueprintIcon() {
+        BufferedImage img = img(16, 16);
+        int paper = 0xFF2F6FB8, dark = 0xFF1D4A82, line = 0xFFE8F2FF;
+        fill(img, 2, 3, 12, 10, paper);
+        border(img, 2, 3, 12, 10, dark);
+        fill(img, 1, 3, 1, 10, 0xFFD9C9A3);
+        fill(img, 14, 3, 1, 10, 0xFFD9C9A3);
+        for (int r = 0; r < 3; r++) {
+            px(img, 7 - r, 5 + r, line);
+            px(img, 8 + r, 5 + r, line);
+        }
+        fill(img, 5, 8, 1, 3, line);
+        fill(img, 10, 8, 1, 3, line);
+        fill(img, 5, 10, 6, 1, line);
+        px(img, 8, 9, line);
+        return img;
+    }
+
+    static final int WOOD = 0xFFA8794A, WOOD_DARK = 0xFF7A5430, WOOD_LIGHT = 0xFFC49463, BEAM = 0xFF4A3220;
+
+    /** Village hall: plank wall in a dark timber frame; the front carries a red banner with a gold house. */
+    static BufferedImage hallSide(boolean front) {
+        BufferedImage img = img(16, 16);
+        for (int y = 0; y < 16; y++) {
+            fill(img, 0, y, 16, 1, y % 4 == 3 ? WOOD_DARK : (y % 4 == 0 ? WOOD_LIGHT : WOOD));
+        }
+        // Plank seams, staggered per row.
+        for (int row = 0; row < 4; row++) {
+            px(img, row % 2 == 0 ? 5 : 10, row * 4 + 1, WOOD_DARK);
+            px(img, row % 2 == 0 ? 5 : 10, row * 4 + 2, WOOD_DARK);
+        }
+        border(img, 0, 0, 16, 16, BEAM);
+        fill(img, 0, 0, 16, 2, BEAM);
+        if (front) {
+            fill(img, 4, 3, 8, 10, RED);
+            fill(img, 4, 13, 2, 1, RED);
+            fill(img, 10, 13, 2, 1, RED);
+            border(img, 4, 3, 8, 10, 0xFF7E1B17);
+            // House: roof triangle and body.
+            for (int r = 0; r < 3; r++) {
+                fill(img, 7 - r, 5 + r, 2 + r * 2, 1, GOLD);
+            }
+            fill(img, 6, 8, 4, 3, GOLD);
+            fill(img, 7, 9, 2, 2, GOLD_DARK);
+        }
+        return img;
+    }
+
+    static BufferedImage hallTop() {
+        BufferedImage img = img(16, 16);
+        for (int x = 0; x < 16; x++) {
+            fill(img, x, 0, 1, 16, x % 4 == 3 ? WOOD_DARK : (x % 4 == 0 ? WOOD_LIGHT : WOOD));
+        }
+        border(img, 0, 0, 16, 16, BEAM);
+        fill(img, 7, 1, 2, 14, BEAM);
+        return img;
+    }
+
+    /** Mark 4's Master Sword (display item): steel blade up to the top right, purple guard, gold gem and pommel. */
+    static BufferedImage masterSword() {
+        BufferedImage img = img(16, 16);
+        int edge = 0xFF3B4150, steel = 0xFFEEF3F8, shade = 0xFFA7B4C6;
+        int guard = 0xFF5146B8, guardDark = 0xFF2E2878, grip = 0xFF2B3A86;
+        for (int r = 0; r <= 9; r++) {
+            px(img, 14 - r, r, edge);
+            px(img, 15 - r, r, steel);
+            px(img, 16 - r, r, shade);
+            px(img, 17 - r, r, edge);
+        }
+        for (int k = -3; k <= 3; k++) {
+            px(img, 5 + k, 10 + k, guard);
+            px(img, 6 + k, 10 + k, guardDark);
+        }
+        px(img, 5, 10, GOLD);
+        px(img, 6, 10, GOLD_DARK);
+        px(img, 4, 11, grip);
+        px(img, 3, 12, grip);
+        px(img, 2, 13, grip);
+        px(img, 1, 14, GOLD);
+        px(img, 2, 14, GOLD_DARK);
+        px(img, 1, 13, GOLD_DARK);
+        return img;
+    }
+
+    static void px(BufferedImage img, int x, int y, int c) {
+        if (x >= 0 && y >= 0 && x < img.getWidth() && y < img.getHeight()) {
+            img.setRGB(x, y, c);
+        }
     }
 
     static BufferedImage cleanerDockTop() {
@@ -193,6 +335,21 @@ public class TextureGen {
         fill(img, 0, 7, 16, 1, 0xFFB7BDC4);
         img.setRGB(3, 3, 0xFF9AA1AA);
         img.setRGB(12, 12, 0xFF9AA1AA);
+        return img;
+    }
+
+    /** Phantom's thrown card (10x14 in a 16x16, rest transparent): face, border, and a diamond pip. */
+    static BufferedImage card(int face, int trim, int pip) {
+        BufferedImage img = img(16, 16);
+        fill(img, 3, 1, 10, 14, face);
+        border(img, 3, 1, 10, 14, trim);
+        border(img, 4, 2, 8, 12, face);
+        for (int dy = -3; dy <= 3; dy++) {
+            int half = 2 - Math.abs(dy) * 2 / 3;
+            fill(img, 8 - half, 8 + dy, half * 2, 1, pip);
+        }
+        img.setRGB(5, 3, pip);
+        img.setRGB(10, 12, pip);
         return img;
     }
 

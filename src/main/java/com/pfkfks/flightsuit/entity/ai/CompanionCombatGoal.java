@@ -4,7 +4,10 @@ import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.suit.RepulsorHandler;
 import com.pfkfks.flightsuit.suit.SuitTuning;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -22,6 +25,9 @@ public class CompanionCombatGoal extends Goal {
     private static final int FIRE_COOLDOWN = 20;
     private static final int MELEE_COOLDOWN = 15;
     private static final float COMPANION_REPULSOR_DAMAGE = 6.0F;
+    /** Mark 4: beyond this it clawshots onto the target; slashes this often up close. */
+    private static final double CLAW_DISTANCE = 9.0D;
+    private static final int SWORD_COOLDOWN = 12;
 
     private final SuitCompanionEntity suit;
     private int fireCooldown;
@@ -56,6 +62,10 @@ public class CompanionCombatGoal extends Goal {
         }
         suit.getLookControl().setLookAt(target, 60.0F, 60.0F);
         double distance = suit.distanceTo(target);
+        if (suit.isGrounded()) {
+            swordFight(target, distance);
+            return;
+        }
 
         // Firing position: on the line from the target to the suit, STANDOFF away and a bit above.
         Vec3 away = suit.position().subtract(target.position());
@@ -88,6 +98,36 @@ public class CompanionCombatGoal extends Goal {
                             && entity != suit.getOwner());
             suit.markAiming();
             fireCooldown = FIRE_COOLDOWN;
+        }
+    }
+
+    /**
+     * Mark 4 fights on foot with the sword: clawshot onto a target that's far off and in sight (arriving with
+     * a slash), otherwise run it down and cut.
+     */
+    private void swordFight(LivingEntity target, double distance) {
+        if (meleeCooldown > 0) {
+            meleeCooldown--;
+        }
+        if (distance > CLAW_DISTANCE && suit.getSensing().hasLineOfSight(target)
+                && suit.clawTo(target.getBoundingBox().getCenter(), target)) {
+            return;
+        }
+        if (distance > 2.6D) {
+            if (suit.tickCount % 5 == 0) {
+                suit.getNavigation().moveTo(target, 1.5D);
+            }
+            return;
+        }
+        suit.getNavigation().stop();
+        if (meleeCooldown <= 0) {
+            suit.swing(InteractionHand.MAIN_HAND);
+            if (suit.doHurtTarget(target)) {
+                Vec3 at = target.getBoundingBox().getCenter();
+                ((ServerLevel) suit.level()).sendParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
+            suit.level().playSound(null, suit.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.NEUTRAL, 0.8F, 1.1F);
+            meleeCooldown = SWORD_COOLDOWN;
         }
     }
 }

@@ -6,7 +6,6 @@ import com.pfkfks.flightsuit.network.CounterC2SPacket;
 import com.pfkfks.flightsuit.suit.CounterHandler;
 import com.pfkfks.flightsuit.suit.SuitTuning;
 import com.pfkfks.flightsuit.network.ModNetwork;
-import com.pfkfks.flightsuit.network.RepulsorC2SPacket;
 import com.pfkfks.flightsuit.network.SuitToggleC2SPacket;
 import com.pfkfks.flightsuit.network.SuitWheelC2SPacket;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
@@ -19,7 +18,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,7 +27,6 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
 import net.minecraftforge.client.event.RenderArmEvent;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -57,10 +54,12 @@ public final class ClientEvents {
             ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
         SuitFlightClient.tick(player);
+        WeaponInput.tick(minecraft, player);
         RemoteLinkClient.tick(player);
         CinematicCamera.tick();
         if (!minecraft.isPaused()) {
             SuitAnimator.spawnThrusterParticles(minecraft.level);
+            ClientWeapons.tick(minecraft.level);
             spawnCloakShimmer(minecraft);
         }
     }
@@ -137,17 +136,6 @@ public final class ClientEvents {
         }
     }
 
-    /** Empty-hand right click on air fires the palm repulsor (needs the chestplate - it carries the arms). */
-    @SubscribeEvent
-    public static void onRightClickEmpty(PlayerInteractEvent.RightClickEmpty event) {
-        if (event.getHand() != InteractionHand.MAIN_HAND || event.getEntity() != Minecraft.getInstance().player) {
-            return;
-        }
-        if (event.getEntity().getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem) {
-            ModNetwork.sendToServer(new RepulsorC2SPacket());
-        }
-    }
-
     /**
      * Vanilla never draws armor on the first-person arm, so the bare skin shows. With a suit chestplate on,
      * draw the suit's arm in its place instead. Pose mirrors PlayerRenderer#renderHand (setupAnim at age 0
@@ -200,5 +188,7 @@ public final class ClientEvents {
         CinematicCamera.reset();
         SuitFlightClient.reset();
         RemoteLinkClient.reset();
+        WeaponInput.reset();
+        ClientWeapons.reset();
     }
 }

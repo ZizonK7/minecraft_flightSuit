@@ -4,7 +4,10 @@ import com.pfkfks.flightsuit.entity.ai.CompanionCombatGoal;
 import com.pfkfks.flightsuit.entity.ai.CompanionFollowGoal;
 import com.pfkfks.flightsuit.entity.ai.CompanionTargetGoal;
 import com.pfkfks.flightsuit.entity.ai.SuitMoveControl;
+import com.pfkfks.flightsuit.network.ClawshotS2CPacket;
+import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.registry.ModEntities;
+import com.pfkfks.flightsuit.registry.ModItems;
 import com.pfkfks.flightsuit.suit.RemoteLink;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
@@ -38,6 +41,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -91,6 +95,11 @@ public class SuitCompanionEntity extends PathfinderMob {
     public int openTicks;
     /** Client: 0-5, eases the laid-out flight pose in and out. */
     public int flightPoseTicks;
+    /** Mark 4 (no thrusters): reeling itself in along its clawshot to this point, or to {@link #clawTarget}. */
+    private Vec3 clawPos;
+    private LivingEntity clawTarget;
+    private int clawTicks;
+    private int clawCooldown;
 
     public SuitCompanionEntity(EntityType<? extends SuitCompanionEntity> type, Level level) {
         super(type, level);
@@ -101,6 +110,8 @@ public class SuitCompanionEntity extends PathfinderMob {
             // Always drop the real pieces, undamaged by the drop roll, if the entity is ever removed by death.
             this.setDropChance(slot, 2.0F);
         }
+        // Mark 4's Master Sword is only for show; never drop it.
+        this.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -179,9 +190,93 @@ public class SuitCompanionEntity extends PathfinderMob {
         return entityData.get(AIMING);
     }
 
+    /**
+     * A suit without thrusters (Mark 4): walks while it follows and fights, and only takes to the air empty and
+     * out of combat - flying in when sent for, flying home. Decided by the chest piece.
+     */
+    public boolean isGrounded() {
+        return getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem armor && !armor.getSuitType().suitClass().canFly();
+    }
+
+    public boolean isReeling() {
+        return clawPos != null;
+    }
+
+    /**
+     * Mark 4: latch the clawshot onto a point (or a monster, followed as it moves) and reel in along it.
+     * @return false while a reel is under way or the claw is still cooling down
+     */
+    public boolean clawTo(Vec3 point, LivingEntity target) {
+        if (clawPos != null || clawCooldown > 0) {
+            return false;
+        }
+        clawPos = point;
+        clawTarget = target;
+        clawTicks = 0;
+        getNavigation().stop();
+        level().playSound(null, blockPosition(), SoundEvents.CROSSBOW_SHOOT, SoundSource.NEUTRAL, 0.9F, 1.4F);
+        level().playSound(null, point.x, point.y, point.z, SoundEvents.CHAIN_PLACE, SoundSource.NEUTRAL, 1.0F, 1.3F);
+        return true;
+    }
+
+    /** Pulled along the chain; a hooked monster gets a slash on arrival. Replaces the AI while it lasts. */
+    private void tickClaw() {
+        if (clawTarget != null) {
+            if (!clawTarget.isAlive() || clawTarget.level() != level()) {
+                endClaw();
+                return;
+            }
+            clawPos = clawTarget.getBoundingBox().getCenter();
+        }
+        Vec3 body = position().add(0.0D, getBbHeight() * 0.5D, 0.0D);
+        Vec3 to = clawPos.subtract(body);
+        double stop = clawTarget != null ? clawTarget.getBbWidth() / 2.0D + 1.2D : 1.0D;
+        double dist = to.length();
+        if (dist <= stop || ++clawTicks > 50) {
+            setDeltaMovement(Vec3.ZERO);
+            if (clawTarget != null && dist <= stop) {
+                swing(InteractionHand.MAIN_HAND);
+                doHurtTarget(clawTarget);
+                Vec3 at = clawTarget.getBoundingBox().getCenter();
+                ((ServerLevel) level()).sendParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
+            endClaw();
+            return;
+        }
+        setDeltaMovement(to.normalize().scale(Math.max(0.3D, Math.min(1.4D, dist - stop + 0.3D))));
+        Vec3 look = clawPos.subtract(getEyePosition());
+        float yaw = (float) (Math.atan2(look.z, look.x) * (180.0D / Math.PI)) - 90.0F;
+        setYRot(yaw);
+        setYBodyRot(yaw);
+        setYHeadRot(yaw);
+        fallDistance = 0.0F;
+        sendClaw(true);
+    }
+
+    private void endClaw() {
+        clawPos = null;
+        clawTarget = null;
+        clawCooldown = 30;
+        sendClaw(false);
+    }
+
+    private void sendClaw(boolean active) {
+        ModNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY.with(() -> this),
+                new ClawshotS2CPacket(getId(), active, clawPos == null ? position() : clawPos));
+    }
+
+    /** Runs after the goals (which stand down while reeling - see isBusy) and before the move control (which keeps out of it). */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        if (clawPos != null) {
+            tickClaw();
+        }
+    }
+
     /** Busy with something that overrides normal follow/fight behavior. */
     public boolean isBusy() {
-        return boarding || arriving || held || homeTicks >= 0 || !isPowered();
+        return boarding || arriving || held || homeTicks >= 0 || clawPos != null || !isPowered();
     }
 
     public boolean isBoarding() {
@@ -362,6 +457,12 @@ public class SuitCompanionEntity extends PathfinderMob {
         if (aimTicks > 0 && --aimTicks == 0) {
             entityData.set(AIMING, false);
         }
+        if (clawCooldown > 0) {
+            clawCooldown--;
+        }
+        if (tickCount % 20 == 0) {
+            syncSword();
+        }
         tickPower();
         entityData.set(FLYING, isPowered() && isNoGravity());
         if (held) {
@@ -417,6 +518,17 @@ public class SuitCompanionEntity extends PathfinderMob {
         setXRot(pitch);
     }
 
+    /** Mark 4 companions carry the Master Sword in hand (for show; the slash itself is the AI's doing). */
+    private void syncSword() {
+        boolean wants = isGrounded();
+        ItemStack hand = getMainHandItem();
+        if (wants && hand.isEmpty()) {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.MASTER_SWORD.get()));
+        } else if (!wants && hand.is(ModItems.MASTER_SWORD.get())) {
+            setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
+    }
+
     private void tickPower() {
         // Parked: owner gone or far away and nothing to do - land and idle without spending power.
         Player owner = getOwner();
@@ -427,14 +539,16 @@ public class SuitCompanionEntity extends PathfinderMob {
             setNoGravity(false);
             return;
         }
-        if (isPowered() && !isNoGravity()) {
-            setNoGravity(true);
+        // A grounded suit only leaves the ground travelling on its own (flying in or home) or on its clawshot.
+        boolean airborne = !isGrounded() || arriving || homeTicks >= 0 || clawPos != null;
+        if (isPowered() && isNoGravity() != airborne) {
+            setNoGravity(airborne);
         }
         boolean moving = getDeltaMovement().lengthSqr() > 0.01D;
         boolean powered = drain(moving ? MOVE_DRAIN : IDLE_DRAIN);
         if (powered != isPowered()) {
             entityData.set(POWERED, powered);
-            setNoGravity(powered);
+            setNoGravity(powered && airborne);
             if (!powered) {
                 setTarget(null);
                 level().playSound(null, blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.NEUTRAL, 0.8F, 0.8F);
@@ -467,7 +581,13 @@ public class SuitCompanionEntity extends PathfinderMob {
         // Line up just in front of the owner, facing the same way - back toward them, ready to open.
         Vec3 forward = Vec3.directionFromRotation(0.0F, owner.getYRot());
         Vec3 spot = owner.position().add(forward.scale(1.8D));
-        getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 3.0D);
+        if (isGrounded()) {
+            if (boardingTicks % 10 == 1) {
+                getNavigation().moveTo(spot.x, spot.y, spot.z, 1.3D);
+            }
+        } else {
+            getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 3.0D);
+        }
         getLookControl().setLookAt(spot.add(forward.scale(10.0D)));
         boolean inPlace = position().distanceTo(spot) < 0.5D;
         if (inPlace || boardingTicks > 100 || SuitUpManager.isFallingOrAirborne(serverOwner)) {

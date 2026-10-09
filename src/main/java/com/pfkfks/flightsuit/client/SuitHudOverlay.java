@@ -5,7 +5,10 @@ import com.pfkfks.flightsuit.suit.EdithGlassesItem;
 import com.pfkfks.flightsuit.suit.FlightPose;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
+import com.pfkfks.flightsuit.suit.SuitClass;
+import com.pfkfks.flightsuit.suit.SuitTuning;
 import com.pfkfks.flightsuit.suit.SuitType;
+import com.pfkfks.flightsuit.suit.SuitWeapons;
 import com.pfkfks.flightsuit.suit.WornSuit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -55,7 +58,7 @@ public final class SuitHudOverlay implements IGuiOverlay {
 
         SuitType type = WornSuit.primaryType(player);
         String name = worn.fullSet() ? type.hudName() : type.hudName() + " (PARTIAL)";
-        graphics.fill(x - 3, y - 3, x + 124, y + 53, 0x66000000);
+        graphics.fill(x - 3, y - 3, x + 124, y + 64, 0x66000000);
         graphics.drawString(font, name, x, y, CYAN, true);
 
         // H C L B piece lights, colored by each piece's durability; the weakest piece's % underneath.
@@ -92,6 +95,40 @@ public final class SuitHudOverlay implements IGuiOverlay {
         graphics.drawString(font, energy + " FE", barX, y + 20, TEXT, false);
 
         graphics.drawString(font, status(player, worn, energy), x, y + 42, energy <= 0 ? WARN : TEXT, false);
+        Component weapons = weaponLine(player);
+        if (weapons != null) {
+            graphics.drawString(font, weapons, x, y + 53, CAUTION, false);
+        }
+    }
+
+    /** The class's weapons at a glance: skill cooldowns, the phantom's card gauge and spade buff, the hero's full-health edge. */
+    private static Component weaponLine(LocalPlayer player) {
+        SuitClass suitClass = SuitWeapons.armedClass(player);
+        if (suitClass == null) {
+            return null;
+        }
+        return switch (suitClass) {
+            case STANDARD -> Component.translatable("hud.flightsuit.weapon.missiles", ready(ClientWeapons.skill1Ready));
+            case STEALTH -> Component.translatable("hud.flightsuit.weapon.cryo");
+            case PHANTOM -> {
+                float spade = ClientWeapons.secondsLeft(ClientWeapons.spadeUntil);
+                Component line = Component.translatable("hud.flightsuit.weapon.cards", ClientWeapons.gauge, SuitTuning.JUDGMENT_GAUGE,
+                        ready(ClientWeapons.skill2Ready));
+                yield spade > 0.0F ? line.copy().append(Component.literal(String.format(" ♠%.0fs", spade))) : line;
+            }
+            case HERO -> {
+                Component line = Component.translatable("hud.flightsuit.weapon.hero", ready(ClientWeapons.skill1Ready),
+                        ready(ClientWeapons.skill2Ready));
+                // Full health: the sword looses beams and X becomes the great spin.
+                yield player.getHealth() >= player.getMaxHealth() - 0.01F
+                        ? line.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : line;
+            }
+        };
+    }
+
+    private static Component ready(long readyTick) {
+        float left = ClientWeapons.secondsLeft(readyTick);
+        return left <= 0.0F ? Component.translatable("hud.flightsuit.weapon.ready") : Component.literal(String.format("%.1fs", left));
     }
 
     /**
@@ -168,9 +205,9 @@ public final class SuitHudOverlay implements IGuiOverlay {
             return Component.translatable("hud.flightsuit.hover");
         }
         if (worn.fullSet()) {
-            return Component.translatable("hud.flightsuit.flight_ready");
+            return Component.translatable(worn.canFly() ? "hud.flightsuit.flight_ready" : "hud.flightsuit.on_foot");
         }
-        if (worn.boots()) {
+        if (WornSuit.hasThrusterBoots(player)) {
             return Component.translatable("hud.flightsuit.thrusters");
         }
         return Component.translatable("hud.flightsuit.partial");

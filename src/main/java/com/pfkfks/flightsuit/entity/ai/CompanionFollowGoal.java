@@ -3,6 +3,8 @@ package com.pfkfks.flightsuit.entity.ai;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -13,6 +15,7 @@ import java.util.EnumSet;
  * moved more than {@link #LEAVE_DISTANCE} away does it fly back to their right side (faster the further
  * it is), then settles again. Left far behind, it streaks back in flight (teleporting only across huge gaps).
  * While the owner is remote-piloting another suit, it stands guard by the body they left instead.
+ * A suit without thrusters (Mark 4) walks back instead, clawshotting across where it can't walk.
  */
 public class CompanionFollowGoal extends Goal {
     /** Beyond this it streaks back in flight (rather than flying in normally). */
@@ -71,7 +74,9 @@ public class CompanionFollowGoal extends Goal {
         if (!repositioning && ownerDistance > LEAVE_DISTANCE) {
             repositioning = true;
         }
-        if (repositioning) {
+        if (suit.isGrounded()) {
+            walkOver(owner, spot, ownerDistance);
+        } else if (repositioning) {
             double distance = suit.position().distanceTo(spot);
             if (distance < 0.6D) {
                 repositioning = false;
@@ -81,5 +86,32 @@ public class CompanionFollowGoal extends Goal {
         }
         Vec3 gaze = owner.getEyePosition().add(owner.getLookAngle().scale(12.0D));
         suit.getLookControl().setLookAt(gaze.x, gaze.y, gaze.z);
+    }
+
+    /**
+     * Mark 4 (no thrusters): walks - runs when far - along a ground path. Where there is no path (the owner
+     * climbed a cliff, crossed a gap), it clawshots over to them if it can see them standing on something.
+     */
+    private void walkOver(LivingEntity owner, Vec3 spot, double ownerDistance) {
+        if (!repositioning) {
+            return;
+        }
+        PathNavigation navigation = suit.getNavigation();
+        if (suit.position().distanceTo(spot) < 1.0D) {
+            repositioning = false;
+            navigation.stop();
+            return;
+        }
+        if (suit.tickCount % 10 != 0 && !navigation.isDone()) {
+            return;
+        }
+        Path path = navigation.createPath(spot.x, spot.y, spot.z, 0);
+        if (path != null && path.canReach()) {
+            navigation.moveTo(path, Math.max(1.0D, Math.min(1.8D, ownerDistance / 6.0D)));
+        } else if (owner.onGround() && suit.hasLineOfSight(owner)) {
+            suit.clawTo(spot.add(0.0D, 1.0D, 0.0D), null);
+        } else if (path != null) {
+            navigation.moveTo(path, 1.4D);
+        }
     }
 }

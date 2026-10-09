@@ -7,6 +7,7 @@ import com.pfkfks.flightsuit.block.GeneratorBlock;
 import com.pfkfks.flightsuit.block.SolarPanelBlock;
 import com.pfkfks.flightsuit.block.StationFrameBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlock;
+import com.pfkfks.flightsuit.village.VillageHallBlock;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -36,6 +37,10 @@ public final class ModBlocks {
             () -> new BatteryBlock(metal()));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
+    /** Blast-proof, so a creeper can't take the whole village down with it. */
+    public static final RegistryObject<VillageHallBlock> VILLAGE_HALL = register("village_hall",
+            () -> new VillageHallBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F, 1200.0F)
+                    .sound(SoundType.WOOD)));
 
     private ModBlocks() {
     }

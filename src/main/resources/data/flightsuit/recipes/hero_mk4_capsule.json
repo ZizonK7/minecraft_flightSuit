@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "flightsuit:ryan_mk1_capsule"
+    },
+    {
+      "item": "minecraft:emerald"
+    }
+  ],
+  "result": {
+    "item": "flightsuit:hero_mk4_capsule"
+  }
+}

@@ -1,5 +1,6 @@
 package com.pfkfks.flightsuit.entity.ai;
 
+import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.control.MoveControl;
@@ -20,6 +21,10 @@ public class SuitMoveControl extends MoveControl {
 
     @Override
     public void tick() {
+        if (mob instanceof SuitCompanionEntity suit && suit.isReeling()) {
+            // Mark 4 on its clawshot: the chain sets the velocity.
+            return;
+        }
         if (!mob.isNoGravity()) {
             // Powered down: let gravity and vanilla physics take over.
             super.tick();

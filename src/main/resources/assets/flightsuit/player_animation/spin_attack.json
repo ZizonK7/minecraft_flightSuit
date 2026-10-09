@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "name": "spin_attack",
+  "author": "flightsuit",
+  "description": "Spin attack: crouch, sword arm swung out to the side, one full turn of the whole body.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 10,
+    "stopTick": 14,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "LINEAR", "body": {"yaw": 0}},
+      {"tick": 3, "easing": "LINEAR", "body": {"yaw": -120}},
+      {"tick": 6, "easing": "LINEAR", "body": {"yaw": -240}},
+      {"tick": 9, "easing": "OUTQUAD", "body": {"yaw": -360}},
+      {"tick": 10, "easing": "LINEAR", "body": {"yaw": -360}},
+      {"tick": 1, "easing": "OUTQUAD", "rightArm": {"pitch": -20, "yaw": 0, "roll": 85}},
+      {"tick": 10, "easing": "LINEAR", "rightArm": {"pitch": -20, "yaw": 0, "roll": 85}},
+      {"tick": 1, "easing": "OUTQUAD", "leftArm": {"pitch": 10, "yaw": 0, "roll": -35}},
+      {"tick": 10, "easing": "LINEAR", "leftArm": {"pitch": 10, "yaw": 0, "roll": -35}},
+      {"tick": 1, "easing": "OUTQUAD", "rightLeg": {"pitch": -25}},
+      {"tick": 10, "easing": "LINEAR", "rightLeg": {"pitch": -25}},
+      {"tick": 1, "easing": "OUTQUAD", "leftLeg": {"pitch": 20}},
+      {"tick": 10, "easing": "LINEAR", "leftLeg": {"pitch": 20}},
+      {"tick": 1, "easing": "OUTQUAD", "torso": {"pitch": 15}},
+      {"tick": 10, "easing": "LINEAR", "torso": {"pitch": 15}}
+    ]
+  }
+}

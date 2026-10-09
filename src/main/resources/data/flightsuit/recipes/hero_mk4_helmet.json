@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "flightsuit:ryan_mk1_helmet"
+    },
+    {
+      "item": "minecraft:emerald"
+    },
+    {
+      "item": "minecraft:green_dye"
+    },
+    {
+      "item": "minecraft:leather"
+    }
+  ],
+  "result": {
+    "item": "flightsuit:hero_mk4_helmet"
+  }
+}

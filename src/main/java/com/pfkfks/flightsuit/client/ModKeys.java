@@ -43,6 +43,24 @@ public final class ModKeys {
             CATEGORY
     );
 
+    /** X: suit skill 1 (Mark 1 missiles, Mark 3 Judgment Draw). */
+    public static final KeyMapping SKILL_1 = new KeyMapping(
+            "key.flightsuit.skill_1",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_X,
+            CATEGORY
+    );
+
+    /** C: suit skill 2 (Mark 3 Rose Carte Finale). */
+    public static final KeyMapping SKILL_2 = new KeyMapping(
+            "key.flightsuit.skill_2",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_C,
+            CATEGORY
+    );
+
     private ModKeys() {
     }
 }

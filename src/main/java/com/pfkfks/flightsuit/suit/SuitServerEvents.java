@@ -63,6 +63,7 @@ public final class SuitServerEvents {
         }
         SuitUpManager.tick(player);
         RemoteLink.tick(player);
+        SuitWeapons.tick(player);
         CounterHandler.tick(player);
 
         WornSuit worn = WornSuit.of(player);
@@ -98,7 +99,7 @@ public final class SuitServerEvents {
     private static void tickFlight(ServerPlayer player, WornSuit worn, CompoundTag data) {
         Abilities abilities = player.getAbilities();
         // No "not suiting up" gate: the mid-air suit-up hands over to flight before its sequence ends.
-        boolean canFly = worn.fullSet() && SuitEnergy.available(player, EquipmentSlot.CHEST) > 0;
+        boolean canFly = worn.canFly() && SuitEnergy.available(player, EquipmentSlot.CHEST) > 0;
         boolean granted = data.getBoolean(GRANTED_FLIGHT_TAG);
 
         if (canFly && !granted && !abilities.mayfly) {
@@ -112,7 +113,7 @@ public final class SuitServerEvents {
 
         // Creative players already have mayfly (so nothing was granted) but still fly "in the suit";
         // tryDrain is free for them, so this only ever revokes flight we granted.
-        if (worn.fullSet() && abilities.flying) {
+        if (worn.canFly() && abilities.flying) {
             int cost = player.isSprinting() ? SuitTuning.BOOST_COST : SuitTuning.HOVER_COST;
             if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, cost) && granted) {
                 revokeFlight(player, data);
@@ -122,6 +123,12 @@ public final class SuitServerEvents {
 
     /** Mid-air suit-up brake: grant suit flight right away and switch it on, without waiting for the next tick. */
     public static void grantFlightNow(ServerPlayer player) {
+        WornSuit worn = WornSuit.of(player);
+        if (worn.fullSet() && !worn.canFly()) {
+            // A grounded suit just drops you; the full set takes the landing (see onFall).
+            player.fallDistance = 0.0F;
+            return;
+        }
         Abilities abilities = player.getAbilities();
         if (!abilities.mayfly) {
             abilities.mayfly = true;
@@ -223,6 +230,7 @@ public final class SuitServerEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Back into the body before the player is saved, so they log in where they left it.
             RemoteLink.end(player, RemoteLink.End.LOGOUT);
+            CardDuel.forget(player);
             SuitUpManager.finishNow(player);
             forget(player.getUUID());
         }
@@ -239,7 +247,7 @@ public final class SuitServerEvents {
         THRUSTING.remove(id);
         POSES.remove(id);
         SuitUpManager.forget(id);
-        RepulsorHandler.forget(id);
+        SuitWeapons.forget(id);
         CounterHandler.forget(id);
         StealthHandler.forget(id);
     }

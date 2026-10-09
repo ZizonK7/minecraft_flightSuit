@@ -28,6 +28,9 @@ public final class ClientPacketHandler {
         }
         SuitAnim anim = SuitAnim.byId(packet.value);
         SuitAnimator.playOneShot(player, anim);
+        if (anim == SuitAnim.SPIN_ATTACK) {
+            HeroRenderer.showSword(player.getId(), 14);
+        }
         if (player == minecraft.player) {
             // Ground / station rig: watch the pieces (and the arms) from the front. Fall / boarding: from behind,
             // to see the suit dive onto your back, or its back open as you step in.

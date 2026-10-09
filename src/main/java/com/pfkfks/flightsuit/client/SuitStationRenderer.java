@@ -16,14 +16,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -173,11 +170,11 @@ public class SuitStationRenderer implements BlockEntityRenderer<SuitStationBlock
         bend = bend.lengthSqr() < 1.0E-6D ? new Vec3(0.0D, 1.0D, 0.0D) : bend.normalize();
         Vec3 elbow = root.add(dir.scale(along)).add(bend.scale(height));
 
-        cube(poseStack, consumer, root, 0.2F, DARK_COLOR, light);
-        segment(poseStack, consumer, root, elbow, 0.12F, ARM_COLOR, light);
-        cube(poseStack, consumer, elbow, 0.15F, JOINT_COLOR, light);
-        segment(poseStack, consumer, elbow, wrist, 0.1F, ARM_COLOR, light);
-        cube(poseStack, consumer, wrist, 0.11F, JOINT_COLOR, light);
+        BoxDraw.cube(poseStack, consumer, root, 0.2F, DARK_COLOR, light);
+        BoxDraw.segment(poseStack, consumer, root, elbow, 0.12F, ARM_COLOR, light);
+        BoxDraw.cube(poseStack, consumer, elbow, 0.15F, JOINT_COLOR, light);
+        BoxDraw.segment(poseStack, consumer, elbow, wrist, 0.1F, ARM_COLOR, light);
+        BoxDraw.cube(poseStack, consumer, wrist, 0.11F, JOINT_COLOR, light);
         claw(poseStack, consumer, wrist, wrist.subtract(elbow).normalize(), open, light);
     }
 
@@ -186,58 +183,9 @@ public class SuitStationRenderer implements BlockEntityRenderer<SuitStationBlock
         poseStack.pushPose();
         poseStack.translate(wrist.x, wrist.y, wrist.z);
         poseStack.mulPose(new Quaternionf().rotationTo(new Vector3f(0.0F, 0.0F, 1.0F), along.toVector3f()));
-        box(poseStack, consumer, -open - 0.03F, -0.025F, 0.02F, -open + 0.01F, 0.025F, 0.17F, DARK_COLOR, light);
-        box(poseStack, consumer, open - 0.01F, -0.025F, 0.02F, open + 0.03F, 0.025F, 0.17F, DARK_COLOR, light);
-        box(poseStack, consumer, -0.02F, 0.055F, -0.02F, 0.02F, 0.07F, 0.02F, GLOW_COLOR, LightTexture.FULL_BRIGHT);
+        BoxDraw.box(poseStack, consumer, -open - 0.03F, -0.025F, 0.02F, -open + 0.01F, 0.025F, 0.17F, DARK_COLOR, light);
+        BoxDraw.box(poseStack, consumer, open - 0.01F, -0.025F, 0.02F, open + 0.03F, 0.025F, 0.17F, DARK_COLOR, light);
+        BoxDraw.box(poseStack, consumer, -0.02F, 0.055F, -0.02F, 0.02F, 0.07F, 0.02F, GLOW_COLOR, LightTexture.FULL_BRIGHT);
         poseStack.popPose();
-    }
-
-    private static void segment(PoseStack poseStack, VertexConsumer consumer, Vec3 from, Vec3 to, float thickness, int[] color, int light) {
-        Vec3 d = to.subtract(from);
-        float length = (float) d.length();
-        if (length < 1.0E-4F) {
-            return;
-        }
-        poseStack.pushPose();
-        poseStack.translate(from.x, from.y, from.z);
-        poseStack.mulPose(new Quaternionf().rotationTo(new Vector3f(0.0F, 0.0F, 1.0F), d.normalize().toVector3f()));
-        float h = thickness / 2.0F;
-        box(poseStack, consumer, -h, -h, 0.0F, h, h, length, color, light);
-        poseStack.popPose();
-    }
-
-    private static void cube(PoseStack poseStack, VertexConsumer consumer, Vec3 center, float size, int[] color, int light) {
-        float h = size / 2.0F;
-        box(poseStack, consumer, (float) center.x - h, (float) center.y - h, (float) center.z - h,
-                (float) center.x + h, (float) center.y + h, (float) center.z + h, color, light);
-    }
-
-    private static void box(PoseStack poseStack, VertexConsumer consumer, float x0, float y0, float z0, float x1, float y1, float z1,
-                            int[] color, int light) {
-        PoseStack.Pose last = poseStack.last();
-        Matrix4f pose = last.pose();
-        Matrix3f normal = last.normal();
-        // down, up, north (-z), south (+z), west (-x), east (+x)
-        quad(pose, normal, consumer, color, light, 0, -1, 0, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1);
-        quad(pose, normal, consumer, color, light, 0, 1, 0, x0, y1, z1, x1, y1, z1, x1, y1, z0, x0, y1, z0);
-        quad(pose, normal, consumer, color, light, 0, 0, -1, x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0);
-        quad(pose, normal, consumer, color, light, 0, 0, 1, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1);
-        quad(pose, normal, consumer, color, light, -1, 0, 0, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0);
-        quad(pose, normal, consumer, color, light, 1, 0, 0, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1);
-    }
-
-    private static void quad(Matrix4f pose, Matrix3f normal, VertexConsumer consumer, int[] color, int light, float nx, float ny, float nz,
-                             float ax, float ay, float az, float bx, float by, float bz,
-                             float cx, float cy, float cz, float dx, float dy, float dz) {
-        vertex(pose, normal, consumer, color, light, nx, ny, nz, ax, ay, az, 0.0F, 1.0F);
-        vertex(pose, normal, consumer, color, light, nx, ny, nz, bx, by, bz, 1.0F, 1.0F);
-        vertex(pose, normal, consumer, color, light, nx, ny, nz, cx, cy, cz, 1.0F, 0.0F);
-        vertex(pose, normal, consumer, color, light, nx, ny, nz, dx, dy, dz, 0.0F, 0.0F);
-    }
-
-    private static void vertex(Matrix4f pose, Matrix3f normal, VertexConsumer consumer, int[] color, int light,
-                               float nx, float ny, float nz, float x, float y, float z, float u, float v) {
-        consumer.vertex(pose, x, y, z).color(color[0], color[1], color[2], 255).uv(u, v)
-                .overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(normal, nx, ny, nz).endVertex();
     }
 }

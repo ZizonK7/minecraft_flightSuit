@@ -30,7 +30,7 @@ public final class SuitFlightClient {
     }
 
     private static void tickBoost(LocalPlayer player, WornSuit worn) {
-        if (!worn.fullSet() || !player.getAbilities().flying || !player.isSprinting() || player.input.forwardImpulse <= 0.0F) {
+        if (!worn.canFly() || !player.getAbilities().flying || !player.isSprinting() || player.input.forwardImpulse <= 0.0F) {
             return;
         }
         Vec3 look = player.getLookAngle();
@@ -50,7 +50,7 @@ public final class SuitFlightClient {
             airThrustTicks = 0;
             thrustArmed = false;
         }
-        boolean canThrust = worn.boots() && !worn.fullSet()
+        boolean canThrust = WornSuit.hasThrusterBoots(player) && !worn.fullSet()
                 && !player.getAbilities().flying
                 && !player.onGround() && !player.isInWater() && !player.isPassenger()
                 && SuitEnergy.available(player, EquipmentSlot.FEET) > 0;

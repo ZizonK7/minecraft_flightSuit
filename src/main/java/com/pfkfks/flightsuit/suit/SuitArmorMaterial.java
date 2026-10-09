@@ -12,6 +12,10 @@ public enum SuitArmorMaterial implements ArmorMaterial {
     MARK_1("flightsuit:mark_1", 33, 3, 8, 6, 3, 10, 2.0F, 0.1F),
     /** Stealth: lighter plating, a little less protection. */
     MARK_2("flightsuit:mark_2", 28, 2, 7, 5, 2, 12, 1.0F, 0.0F),
+    /** Phantom: a light, tailored coat - quick rather than tough. */
+    MARK_3("flightsuit:mark_3", 30, 3, 7, 6, 3, 15, 1.5F, 0.0F),
+    /** Hero of Twilight: plate over chainmail - a frontline swordsman, sturdier than Mark 1. */
+    MARK_4("flightsuit:mark_4", 35, 3, 8, 6, 3, 12, 2.5F, 0.1F),
     /** EDITH glasses: no protection, zero durability = unbreakable. */
     EDITH("flightsuit:edith", 0, 0, 0, 0, 0, 15, 0.0F, 0.0F);
 

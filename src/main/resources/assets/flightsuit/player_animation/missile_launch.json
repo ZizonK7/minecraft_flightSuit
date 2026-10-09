@@ -1,0 +1,69 @@
+{
+  "version": 3,
+  "name": "missile_launch",
+  "author": "flightsuit",
+  "description": "Micro-missile salvo: shoulders squared and arms back so the shoulder pods have a clear line, head up.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 14,
+    "stopTick": 18,
+    "isLoop": false,
+    "returnTick": 1,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {
+        "tick": 3,
+        "easing": "OUTQUAD",
+        "rightArm": {
+          "pitch": 20,
+          "yaw": 0,
+          "roll": 15
+        }
+      },
+      {
+        "tick": 3,
+        "easing": "OUTQUAD",
+        "leftArm": {
+          "pitch": 20,
+          "yaw": 0,
+          "roll": -15
+        }
+      },
+      {
+        "tick": 3,
+        "easing": "OUTQUAD",
+        "head": {
+          "pitch": -15,
+          "yaw": 0
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "LINEAR",
+        "rightArm": {
+          "pitch": 20,
+          "yaw": 0,
+          "roll": 15
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "LINEAR",
+        "leftArm": {
+          "pitch": 20,
+          "yaw": 0,
+          "roll": -15
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "LINEAR",
+        "head": {
+          "pitch": -15,
+          "yaw": 0
+        }
+      }
+    ]
+  }
+}

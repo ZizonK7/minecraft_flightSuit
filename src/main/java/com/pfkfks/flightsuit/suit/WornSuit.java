@@ -30,6 +30,17 @@ public record WornSuit(boolean helmet, boolean chest, boolean legs, boolean boot
         return fullSetType != null;
     }
 
+    /** A full set of a suit that flies (Mark 4 fights on foot). */
+    public boolean canFly() {
+        return fullSetType != null && fullSetType.suitClass().canFly();
+    }
+
+    /** Boots whose thrusters work on their own (not a grounded suit's boots). */
+    public static boolean hasThrusterBoots(Player player) {
+        SuitType feet = typeIn(player, EquipmentSlot.FEET);
+        return feet != null && feet.suitClass().canFly();
+    }
+
     /** Any single suit type present, preferring the chest piece - used for HUD naming. */
     public static SuitType primaryType(Player player) {
         for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.CHEST, EquipmentSlot.HEAD, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {

@@ -6,7 +6,9 @@ package com.pfkfks.flightsuit.suit;
  */
 public enum SuitType {
     RYAN_MK1("ryan_mk1", "RYAN MARK 1", SuitClass.STANDARD, SuitArmorMaterial.MARK_1),
-    RYAN_MK2("ryan_mk2", "CHOONSIK MARK 2 STEALTH", SuitClass.STEALTH, SuitArmorMaterial.MARK_2);
+    RYAN_MK2("ryan_mk2", "CHOONSIK MARK 2 STEALTH", SuitClass.STEALTH, SuitArmorMaterial.MARK_2),
+    PHANTOM_MK3("phantom_mk3", "PHANTOM MARK 3", SuitClass.PHANTOM, SuitArmorMaterial.MARK_3),
+    HERO_MK4("hero_mk4", "HERO OF TWILIGHT MARK 4", SuitClass.HERO, SuitArmorMaterial.MARK_4);
 
     private final String id;
     private final String hudName;

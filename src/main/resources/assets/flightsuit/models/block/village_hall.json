@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "flightsuit:block/village_hall_top",
+    "front": "flightsuit:block/village_hall_front",
+    "side": "flightsuit:block/village_hall_side"
+  }
+}

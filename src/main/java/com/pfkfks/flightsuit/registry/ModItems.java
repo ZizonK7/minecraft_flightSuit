@@ -8,10 +8,12 @@ import com.pfkfks.flightsuit.suit.EnergyCellItem;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
 import com.pfkfks.flightsuit.suit.SuitType;
+import com.pfkfks.flightsuit.village.BlueprintItem;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -56,6 +58,15 @@ public final class ModItems {
             () -> new CleanerRobotItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<HoverCarCapsuleItem> HOVER_CAR_CAPSULE = ITEMS.register("hover_car_capsule",
             () -> new HoverCarCapsuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    /** Display only: what the Mark 4 hero swings, drawn in the empty hand (not in the creative tab, no recipe). */
+    public static final RegistryObject<Item> MASTER_SWORD = ITEMS.register("master_sword",
+            () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    /** Handed out by the architects; which building is in its NBT (not in the creative tab). */
+    public static final RegistryObject<BlueprintItem> BLUEPRINT = ITEMS.register("blueprint",
+            () -> new BlueprintItem(new Item.Properties().stacksTo(1)));
+    /** Test helper: drops a wanderer heading for the village it is used in. */
+    public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));
 
     private ModItems() {
     }
