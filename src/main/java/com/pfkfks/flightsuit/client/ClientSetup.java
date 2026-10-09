@@ -53,6 +53,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.RESIDENT.get(), ResidentRenderer::new);
         event.registerEntityRenderer(ModEntities.KINGDOM_SOLDIER.get(), KingdomSoldierRenderer::new);
         event.registerEntityRenderer(ModEntities.GENERAL.get(), GeneralRenderer::new);
+        event.registerEntityRenderer(ModEntities.CITY_HERO.get(), CityHeroRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 

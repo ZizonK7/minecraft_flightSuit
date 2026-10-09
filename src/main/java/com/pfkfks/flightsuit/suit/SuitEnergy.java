@@ -13,12 +13,26 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class SuitEnergy {
     private static final String TAG = "SuitEnergy";
+    private static final String UPGRADE_TAG = "SuitUpgrade";
+    /** Iron Man's capacity upgrades (DESIGN 4-13): each one adds a quarter to the piece's battery. */
+    public static final int MAX_UPGRADE = 2;
 
     private SuitEnergy() {
     }
 
     public static int capacity(ItemStack stack) {
-        return stack.getItem() instanceof SuitArmorItem armor ? armor.getEnergyCapacity() : 0;
+        if (!(stack.getItem() instanceof SuitArmorItem armor)) {
+            return 0;
+        }
+        return armor.getEnergyCapacity() * (4 + upgradeLevel(stack)) / 4;
+    }
+
+    public static int upgradeLevel(ItemStack stack) {
+        return stack.getTag() == null ? 0 : Math.max(0, Math.min(MAX_UPGRADE, stack.getTag().getInt(UPGRADE_TAG)));
+    }
+
+    public static void setUpgradeLevel(ItemStack stack, int level) {
+        stack.getOrCreateTag().putInt(UPGRADE_TAG, Math.max(0, Math.min(MAX_UPGRADE, level)));
     }
 
     public static int get(ItemStack stack) {

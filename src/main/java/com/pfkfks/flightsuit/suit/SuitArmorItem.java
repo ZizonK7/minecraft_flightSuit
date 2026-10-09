@@ -90,7 +90,7 @@ public class SuitArmorItem extends ArmorItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.flightsuit.energy", SuitEnergy.get(stack), getEnergyCapacity())
+        tooltip.add(Component.translatable("tooltip.flightsuit.energy", SuitEnergy.get(stack), SuitEnergy.capacity(stack))
                 .withStyle(ChatFormatting.AQUA));
         int max = stack.getMaxDamage();
         int left = max - stack.getDamageValue();

@@ -8,6 +8,7 @@ import com.pfkfks.flightsuit.entity.MissileEntity;
 import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
+import com.pfkfks.flightsuit.hero.CityHeroEntity;
 import com.pfkfks.flightsuit.village.ResidentEntity;
 import com.pfkfks.flightsuit.war.GeneralEntity;
 import com.pfkfks.flightsuit.war.KingdomSoldierEntity;
@@ -91,6 +92,12 @@ public final class ModEntities {
                     .sized(0.65F, 1.95F)
                     .clientTrackingRange(12)
                     .build("general"));
+
+    public static final RegistryObject<EntityType<CityHeroEntity>> CITY_HERO = ENTITY_TYPES.register("city_hero",
+            () -> EntityType.Builder.<CityHeroEntity>of(CityHeroEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(12)
+                    .build("city_hero"));
 
     private ModEntities() {
     }

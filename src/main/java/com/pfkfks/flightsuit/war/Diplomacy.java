@@ -656,6 +656,7 @@ public final class Diplomacy {
                         overworld ? dir : Component.literal("?"), rough).withStyle(ChatFormatting.GRAY));
             }
         }
+        player.sendSystemMessage(com.pfkfks.flightsuit.hero.HeroCity.listLine(player));
         for (Request request : data.requests().values()) {
             if (request.player.equals(player.getUUID())) {
                 player.sendSystemMessage(describe(data, request));

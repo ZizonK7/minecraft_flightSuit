@@ -85,6 +85,7 @@ public class FlightSuitMod {
         event.put(ModEntities.RESIDENT.get(), ResidentEntity.createAttributes().build());
         event.put(ModEntities.KINGDOM_SOLDIER.get(), com.pfkfks.flightsuit.war.KingdomSoldierEntity.createAttributes().build());
         event.put(ModEntities.GENERAL.get(), com.pfkfks.flightsuit.war.GeneralEntity.createAttributes().build());
+        event.put(ModEntities.CITY_HERO.get(), com.pfkfks.flightsuit.hero.CityHeroEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

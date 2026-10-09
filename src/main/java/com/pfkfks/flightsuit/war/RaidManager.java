@@ -95,6 +95,7 @@ public final class RaidManager {
             bringPrisoners(level, data, record, hall);
         }
         Diplomacy.onVillageLoaded(level, data, record, hall);
+        com.pfkfks.flightsuit.hero.HeroCity.onVillageLoaded(level, record.key(), hall);
     }
 
     /** Prisoners taken at a fortress arrive at the village: soldiers join as residents, generals as defenders. */
