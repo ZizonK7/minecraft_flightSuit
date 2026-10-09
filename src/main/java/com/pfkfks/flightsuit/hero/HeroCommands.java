@@ -48,6 +48,8 @@ public final class HeroCommands {
                         .executes(ctx -> HeroCity.ironManService(ctx.getSource().getPlayerOrException(),
                                 StringArgumentType.getString(ctx, "service")) ? 1 : 0))));
         event.getDispatcher().register(Commands.literal("flightsuit")
+                // Every registration of the root carries the op check: Brigadier keeps whichever came first.
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("hero")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("tp").executes(HeroCommands::tp))

@@ -97,6 +97,7 @@ public final class RaidManager {
         Diplomacy.onVillageLoaded(level, data, record, hall);
         com.pfkfks.flightsuit.hero.HeroCity.onVillageLoaded(level, record.key(), hall);
         com.pfkfks.flightsuit.thief.ThiefManager.onVillageLoaded(level, record.key(), hall);
+        com.pfkfks.flightsuit.thanos.ThanosRaid.onVillageLoaded(level, record.key(), hall);
     }
 
     /** Prisoners taken at a fortress arrive at the village: soldiers join as residents, generals as defenders. */

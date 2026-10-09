@@ -43,14 +43,15 @@
 - 슈트 배터리 용량은 항상 `SuitEnergy.capacity(stack)` (아이언맨 업그레이드 포함). `SuitArmorItem.getEnergyCapacity()`를 직접 쓰지 말 것.
 - 1.20.1에서 goalSelector는 엔티티마다 2틱에 한 번 돈다. `canUse`에 `tickCount % N` 같은 짝수 의존 조건을 쓰지 말 것 (`getRandom().nextInt(reducedTickDelay(N))` 사용). `customServerAiStep`은 매 틱이라 괜찮음.
 - 차원: 행성은 데이터팩 차원 (`data/flightsuit/dimension/*.json`). `RemoteLink.start(player, suitLevel, ...)`로 다른 차원의 슈트에 접속할 수 있음 (세션 등록은 순간이동 뒤에 - 세션이 있으면 차원 이동을 막으므로).
+- `/flightsuit` 루트를 새로 등록할 때는 루트에도 `.requires(op)`를 붙일 것 (Brigadier는 먼저 등록된 루트의 조건을 유지 - 하나라도 빠지면 등록 순서에 따라 전부 열림).
 - 주인에게 알림: 채팅 + `EdithAlert.send(...)` (안경/슈트 헬멧이 있으면 HUD 경고창).
 
 ## 진행 상태 (2026-10-10)
 
 - M1~M9: 사용자 인게임 테스트 통과 (M9 마지막 수정 일부 재확인 필요, DESIGN.md 참고).
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼): **구현, 인게임 테스트 전**.
-- 다음: M16 타노스 사가.
+- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **구현, 인게임 테스트 전**.
+- 다음: 로드맵 끝. 사용자 테스트 피드백 반영이 우선.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).

@@ -560,7 +560,8 @@ public final class HeroCity {
                 }
                 standing.gift = true;
                 data.setDirty();
-                SuitType[] types = SuitType.values();
+                // Any suit but the Mark 50 - that one is earned against Thanos.
+                SuitType[] types = java.util.Arrays.stream(SuitType.values()).filter(t -> t != SuitType.NANO_MK50).toArray(SuitType[]::new);
                 SuitType pick = types[player.getRandom().nextInt(types.length)];
                 give(player, ModItems.capsuleFor(pick).createFilledCapsule());
                 player.sendSystemMessage(tony.line("gift", Component.literal(pick.hudName())));

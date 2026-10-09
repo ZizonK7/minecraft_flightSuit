@@ -32,6 +32,8 @@ public final class ThiefCommands {
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("flightsuit")
+                // Every registration of the root carries the op check: Brigadier keeps whichever came first.
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("thief")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("now").executes(ThiefCommands::now))

@@ -340,6 +340,8 @@ public final class DragonBalls {
                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(new String[]{"strength", "suit", "treasure", "senzu"}, builder))
                 .executes(ctx -> wish(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "wish")) ? 1 : 0)));
         event.getDispatcher().register(Commands.literal("flightsuit")
+                // Every registration of the root carries the op check: Brigadier keeps whichever came first.
+                .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("dragonballs")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("give").executes(ctx -> {

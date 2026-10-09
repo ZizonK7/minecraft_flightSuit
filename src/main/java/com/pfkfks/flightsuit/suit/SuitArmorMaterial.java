@@ -16,6 +16,8 @@ public enum SuitArmorMaterial implements ArmorMaterial {
     MARK_3("flightsuit:mark_3", 30, 3, 7, 6, 3, 15, 1.5F, 0.0F),
     /** Hero of Twilight: plate over chainmail - a frontline swordsman, sturdier than Mark 1. */
     MARK_4("flightsuit:mark_4", 35, 3, 8, 6, 3, 12, 2.5F, 0.1F),
+    /** Nanotech Mark 50 (the reward for beating Thanos): the toughest plating, and it repairs itself (NanotechHandler). */
+    MARK_50("flightsuit:mark_50", 40, 4, 9, 7, 4, 15, 3.0F, 0.15F),
     /** EDITH glasses: no protection, zero durability = unbreakable. */
     EDITH("flightsuit:edith", 0, 0, 0, 0, 0, 15, 0.0F, 0.0F);
 

@@ -97,6 +97,9 @@ public final class ModItems {
         }
     }
 
+    public static final RegistryObject<com.pfkfks.flightsuit.thanos.InfinityGauntletItem> INFINITY_GAUNTLET = ITEMS.register("infinity_gauntlet",
+            () -> new com.pfkfks.flightsuit.thanos.InfinityGauntletItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
+
     public static Item stone(com.pfkfks.flightsuit.thanos.InfinityStone stone) {
         return STONES.get(stone).get();
     }

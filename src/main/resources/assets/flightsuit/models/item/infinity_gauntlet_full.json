@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "flightsuit:item/infinity_gauntlet_full"
+  }
+}

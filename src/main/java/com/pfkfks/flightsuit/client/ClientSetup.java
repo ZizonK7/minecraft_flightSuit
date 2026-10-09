@@ -24,6 +24,10 @@ public final class ClientSetup {
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.DRAGON_BALL.get(),
                 new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "stars"),
                 (stack, level, entity, seed) -> com.pfkfks.flightsuit.planet.dbz.DragonBallItem.stars(stack) / 10.0F));
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.INFINITY_GAUNTLET.get(),
+                new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "full"),
+                (stack, level, entity, seed) -> com.pfkfks.flightsuit.thanos.InfinityGauntletItem.stones(stack)
+                        == com.pfkfks.flightsuit.thanos.InfinityStone.ALL ? 1.0F : 0.0F));
     }
 
     @SubscribeEvent
