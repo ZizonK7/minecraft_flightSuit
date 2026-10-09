@@ -60,6 +60,8 @@ public class FlightSuitMod {
                         output.accept(ModItems.BATARANG.get());
                         output.accept(ModItems.GRAPPLE.get());
                         output.accept(ModItems.SMOKE_BOMB.get());
+                        output.accept(ModItems.SCOUTER.get());
+                        output.accept(ModItems.SENZU_BEAN.get());
                         for (SuitType type : SuitType.values()) {
                             output.accept(ModItems.capsuleFor(type).createFilledCapsule());
                             output.accept(ModItems.capsuleFor(type));
@@ -93,6 +95,7 @@ public class FlightSuitMod {
         event.put(ModEntities.GENERAL.get(), com.pfkfks.flightsuit.war.GeneralEntity.createAttributes().build());
         event.put(ModEntities.CITY_HERO.get(), com.pfkfks.flightsuit.hero.CityHeroEntity.createAttributes().build());
         event.put(ModEntities.THIEF.get(), com.pfkfks.flightsuit.thief.ThiefEntity.createAttributes().build());
+        event.put(ModEntities.DBZ_FIGHTER.get(), com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

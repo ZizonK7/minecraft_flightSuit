@@ -76,6 +76,12 @@ public final class ModItems {
             () -> new GrappleItem(new Item.Properties().durability(200).rarity(Rarity.RARE)));
     public static final RegistryObject<SmokeBombItem> SMOKE_BOMB = ITEMS.register("smoke_bomb",
             () -> new SmokeBombItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
+    /** Dragon Ball Earth (DESIGN.md 4-16): Raditz's scouter, Korin's senzu beans. */
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.ScouterItem> SCOUTER = ITEMS.register("scouter",
+            () -> new com.pfkfks.flightsuit.planet.dbz.ScouterItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.SenzuBeanItem> SENZU_BEAN = ITEMS.register("senzu_bean",
+            () -> new com.pfkfks.flightsuit.planet.dbz.SenzuBeanItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)
+                    .food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(20).saturationMod(1.0F).alwaysEat().fast().build())));
     /** Test helper: drops a wanderer heading for the village it is used in. */
     public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));

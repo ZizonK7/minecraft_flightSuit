@@ -29,6 +29,7 @@
 | `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
 | `planet/` | 우주·행성: Planet(차원 키), PlanetData(SavedData: 착륙 지점, 플레이어별 집 발사대·스토리 진행, 행성별 월드 상태), LaunchPadBlock/Entity, SpaceshipEntity(상승·하강·착륙), SpaceTravel(`/spaceship launch|return|remote`, 우주 건너기), PlanetStory |
+| `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드 |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |

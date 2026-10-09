@@ -107,6 +107,12 @@ public final class ModEntities {
                     .updateInterval(1)
                     .build("spaceship"));
 
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity>> DBZ_FIGHTER = ENTITY_TYPES.register("dbz_fighter",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity>of(com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.9F)
+                    .clientTrackingRange(12)
+                    .build("dbz_fighter"));
+
     public static final RegistryObject<EntityType<ThiefEntity>> THIEF = ENTITY_TYPES.register("thief",
             () -> EntityType.Builder.<ThiefEntity>of(ThiefEntity::new, MobCategory.MISC)
                     .sized(0.6F, 1.8F)

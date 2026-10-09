@@ -57,6 +57,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.CITY_HERO.get(), CityHeroRenderer::new);
         event.registerEntityRenderer(ModEntities.THIEF.get(), ThiefRenderer::new);
         event.registerEntityRenderer(ModEntities.SPACESHIP.get(), SpaceshipRenderer::new);
+        event.registerEntityRenderer(ModEntities.DBZ_FIGHTER.get(), DbzFighterRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 

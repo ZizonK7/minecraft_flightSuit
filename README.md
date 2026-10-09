@@ -287,6 +287,14 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각, Mark 3는 Mark 1 
 - 행성에 있는 동안에도 마을이 습격당하거나 경보가 울리면 이디스가 알려 줍니다.
 - 레시피: 발사대 = 철 블록 5, 아크 원자로, 배터리 2, 레드스톤 블록
 
+**드래곤볼 지구 - 1장 사이어인 편** (`/planet`으로 지금 목표와 방향·거리를 볼 수 있음)
+
+- **볼거리**: 착륙 지점 동쪽 가까이 **캡슐 코퍼레이션**(흰 돔, 부르마), 남서쪽 약 190칸 해변의 **거북하우스**(분홍 집, 야자수, 손오공), 북동쪽 약 220칸의 **라데츠가 떨어진 크레이터**(사이어인 포드). 가까이 가면 그 자리에 지어집니다.
+- **이야기**: 착륙 → 부르마와 대화 (선두콩 2개) → 손오공과 대화 → 크레이터에서 **라데츠** (손오공이 함께 싸움) → 보상 **스카우터** → 다음 날부터 크레이터에 사이어인 도착: **재배맨** 6마리 → **내파** → **베지터** (손오공 합류) → 1장 클리어 (선두콩 3, 다이아몬드 8, 아크 원자로 2). 크레이터를 96칸 넘게 떠나면 전투는 처음부터 다시.
+- **보스 기술**: 라데츠 기탄(체력 절반 아래에선 두 발)·순간 돌진, 내파 주변 폭발(밀쳐냄)·기탄, 베지터 연속 기탄·**갤릭포**(2초 모았다가 직선 큰 피해), 재배맨은 체력이 낮으면 자폭. 손오공은 **에네르기파**. 보스와 손오공은 죽지 않고 물러납니다.
+- **밤의 황무지**: 캡슐 코퍼레이션·거북하우스 근처가 아니면 밤에 재배맨이 1~2마리씩 나타납니다.
+- **스카우터**: 어느 손에 들든 바라보는 대상(64칸)의 전투력을 표시 (9000 이상이면 경고). **선두콩**: 먹으면 체력·배고픔 모두 회복.
+
 ### 테스트 명령어 (치트 필요)
 
 - `/flightsuit durability <0-100>`: 입은 슈트와 16칸 안의 내 동료 슈트의 내구도를 %로 설정합니다. `0`이면 다음 피격에 강제 이탈합니다.
@@ -360,6 +368,7 @@ src/main/java/com/pfkfks/flightsuit/
   car/       호버카
   war/       삼국지: 나라·장수(Kingdom, General), 병사·장수 엔티티(역할 RAID/GARRISON/ALLY, 누가 누구와 싸우는지는 WarTargets), 습격(RaidManager), 성채(FortressBuilder·FortressManager), 외교·의뢰(Diplomacy, Request, Standing), 성채 전투(Battle), 원정(Army), 저장(WarData), 화공, 명령어, AI(war/ai)
   hero/      히어로 시티: 히어로 종류(HeroType), 히어로·요원 엔티티(CityHeroEntity), 도시 구조물(HeroCityBuilder), 위치·건설·관계·아이언맨 작업실·의뢰·악당 습격·함락(HeroCity), 저장(HeroData), 명령어(HeroCommands)
+  planet/dbz/ 드래곤볼 지구: 인물(DbzCharacter, DbzFighterEntity: NPC·동료·보스·재배맨), 볼거리(DbzLandmarks), 열린 세계·크레이터 전투(DbzEarth), 스카우터, 선두콩
   planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock), 우주선(SpaceshipEntity), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
   thief/     배트맨 일당: 도둑 종류(ThiefType), 도둑 엔티티(ThiefEntity: 몰래 털기·발견·EMP·도주), 일정·계산 처리·상자 털기(ThiefManager), 저장(ThiefData), 배트랭·갈고리 총·연막탄, 명령어
   village/   마을: 회관(VillageHallBlockEntity), 주민(ResidentEntity)과 직업·재능, 건축(VillageWorks: 복구·주문·개축·건의, Blueprint 설계도, Construction), 설계도 아이템, 피해 기록, 주민 AI(village/ai)
