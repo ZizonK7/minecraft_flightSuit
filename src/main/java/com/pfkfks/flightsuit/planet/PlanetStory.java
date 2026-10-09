@@ -109,10 +109,16 @@ public final class PlanetStory {
                 if (stage == DbzStage.ARRIVED) {
                     player.sendSystemMessage(who.line("welcome", player.getName()));
                     give(player, new ItemStack(ModItems.SENZU_BEAN.get(), 2));
+                    give(player, new ItemStack(ModItems.DRAGON_RADAR.get()));
+                    player.sendSystemMessage(who.line("radar"));
                     setStage(player, DbzStage.MET_BULMA);
                     objective(player);
                 } else {
                     player.sendSystemMessage(who.line(stage.name().toLowerCase(java.util.Locale.ROOT)));
+                    if (!player.getInventory().contains(new ItemStack(ModItems.DRAGON_RADAR.get()))) {
+                        give(player, new ItemStack(ModItems.DRAGON_RADAR.get()));
+                        player.sendSystemMessage(who.line("radar"));
+                    }
                 }
             }
             case GOKU -> {

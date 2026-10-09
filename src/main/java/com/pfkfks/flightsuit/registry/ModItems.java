@@ -82,6 +82,10 @@ public final class ModItems {
     public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.SenzuBeanItem> SENZU_BEAN = ITEMS.register("senzu_bean",
             () -> new com.pfkfks.flightsuit.planet.dbz.SenzuBeanItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)
                     .food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(20).saturationMod(1.0F).alwaysEat().fast().build())));
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.DragonBallItem> DRAGON_BALL = ITEMS.register("dragon_ball",
+            () -> new com.pfkfks.flightsuit.planet.dbz.DragonBallItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.DragonRadarItem> DRAGON_RADAR = ITEMS.register("dragon_radar",
+            () -> new com.pfkfks.flightsuit.planet.dbz.DragonRadarItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
     /** Test helper: drops a wanderer heading for the village it is used in. */
     public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));

@@ -61,6 +61,10 @@ public class DbzSkinGen {
         }
         ImageIO.write(icon(SCOUTER, Map.of('G', 0xFF3ADB5A, 'g', 0xFF1E8A34, 'V', 0xFFC8CDD8, 'v', 0xFF8C93A0, 'R', 0xFFD03A2A)), "png", new File(item, "scouter.png"));
         ImageIO.write(icon(SENZU, Map.of('G', 0xFF6FBF3A, 'g', 0xFF3E8A24, 'h', 0xFFB8E68A)), "png", new File(item, "senzu_bean.png"));
+        for (int stars = 1; stars <= 7; stars++) {
+            ImageIO.write(dragonBall(stars), "png", new File(item, "dragon_ball_" + stars + ".png"));
+        }
+        ImageIO.write(icon(RADAR, Map.of('W', 0xFFF2F1EC, 'w', 0xFFC8C8C2, 'G', 0xFF2E7A3A, 'g', 0xFF56C068, 'Y', 0xFFF2C230, 'K', 0xFF1E1E24)), "png", new File(item, "dragon_radar.png"));
     }
 
     static void limbs(String armRows, String legRows) {
@@ -214,6 +218,54 @@ public class DbzSkinGen {
             "................",
             "................",
             "................"};
+
+    static final String[] RADAR = {
+            "................",
+            ".......KK.......",
+            ".....wWWWWw.....",
+            "....wWWWWWWw....",
+            "...wWGGGGGGWw...",
+            "..wWGgGGgGGGWw..",
+            "..wWGGGGGGGGWw..",
+            "..wWGGgYGgGGWw..",
+            "..wWGGgGGGGGWw..",
+            "..wWGGGGGgGGWw..",
+            "..wWGgGGGGGGWw..",
+            "...wWGGGGGGWw...",
+            "....wWWWWWWw....",
+            ".....wwwwww.....",
+            "................",
+            "................"};
+
+    /** An orange crystal ball with 1-7 red stars, a white highlight top-left. */
+    static BufferedImage dragonBall(int stars) {
+        BufferedImage img = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double dx = x - 7.5, dy = y - 7.5;
+                double r = Math.sqrt(dx * dx + dy * dy);
+                if (r > 7.2) continue;
+                int c = r > 6.3 ? 0xFFC8661E : (dx + dy < -4 ? 0xFFFFB04A : 0xFFF28A2A);
+                if (Math.abs(dx + 3.5) < 1.1 && Math.abs(dy + 3.5) < 1.1) c = 0xFFFFF4D8;
+                img.setRGB(x, y, c);
+            }
+        }
+        int[][][] layouts = {
+                {{7, 7}},
+                {{5, 7}, {9, 8}},
+                {{5, 6}, {9, 6}, {7, 10}},
+                {{5, 5}, {9, 5}, {5, 9}, {9, 9}},
+                {{4, 5}, {10, 5}, {7, 7}, {4, 10}, {10, 10}},
+                {{4, 5}, {7, 4}, {10, 5}, {4, 9}, {7, 10}, {10, 9}},
+                {{4, 5}, {7, 4}, {10, 5}, {7, 7}, {4, 9}, {7, 10}, {10, 9}}};
+        for (int[] star : layouts[stars - 1]) {
+            img.setRGB(star[0], star[1], 0xFFD0202A);
+            img.setRGB(star[0] + 1, star[1], 0xFFD0202A);
+            img.setRGB(star[0], star[1] + 1, 0xFFD0202A);
+            img.setRGB(star[0] + 1, star[1] + 1, 0xFF9A1018);
+        }
+        return img;
+    }
 
     static BufferedImage icon(String[] rows, Map<Character, Integer> colours) {
         BufferedImage img = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);

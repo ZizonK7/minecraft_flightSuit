@@ -64,6 +64,7 @@ public final class DbzEarth {
             return;
         }
         CompoundTag world = data.world(Planet.DBZ_EARTH);
+        DragonBalls.tick(level, data, site);
         for (DbzLandmarks mark : DbzLandmarks.values()) {
             BlockPos column = mark.around(site);
             if (!world.contains(mark.id()) && anyoneWithin(level, column, 96.0D) && level.isLoaded(column)) {

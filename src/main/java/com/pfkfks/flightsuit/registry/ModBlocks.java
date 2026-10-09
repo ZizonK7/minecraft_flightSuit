@@ -43,6 +43,10 @@ public final class ModBlocks {
             () -> new SecuritySensorBlock(metal()));
     public static final RegistryObject<com.pfkfks.flightsuit.planet.LaunchPadBlock> LAUNCH_PAD = register("launch_pad",
             () -> new com.pfkfks.flightsuit.planet.LaunchPadBlock(metal().lightLevel(state -> 7)));
+    /** Not in the creative tab: the balls are placed by the planet (DragonBalls). */
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.DragonBallBlock> DRAGON_BALL = BLOCKS.register("dragon_ball",
+            () -> new com.pfkfks.flightsuit.planet.dbz.DragonBallBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE)
+                    .strength(-1.0F, 3_600_000.0F).noLootTable().noOcclusion().lightLevel(state -> 9).sound(SoundType.GLASS)));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
     /** Blast-proof, so a creeper can't take the whole village down with it. */

@@ -62,6 +62,7 @@ public class FlightSuitMod {
                         output.accept(ModItems.SMOKE_BOMB.get());
                         output.accept(ModItems.SCOUTER.get());
                         output.accept(ModItems.SENZU_BEAN.get());
+                        output.accept(ModItems.DRAGON_RADAR.get());
                         for (SuitType type : SuitType.values()) {
                             output.accept(ModItems.capsuleFor(type).createFilledCapsule());
                             output.accept(ModItems.capsuleFor(type));

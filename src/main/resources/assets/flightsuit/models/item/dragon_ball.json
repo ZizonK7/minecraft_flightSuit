@@ -1,0 +1,44 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "flightsuit:item/dragon_ball_1"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "flightsuit:stars": 0.2
+      },
+      "model": "flightsuit:item/dragon_ball_2"
+    },
+    {
+      "predicate": {
+        "flightsuit:stars": 0.3
+      },
+      "model": "flightsuit:item/dragon_ball_3"
+    },
+    {
+      "predicate": {
+        "flightsuit:stars": 0.4
+      },
+      "model": "flightsuit:item/dragon_ball_4"
+    },
+    {
+      "predicate": {
+        "flightsuit:stars": 0.5
+      },
+      "model": "flightsuit:item/dragon_ball_5"
+    },
+    {
+      "predicate": {
+        "flightsuit:stars": 0.6
+      },
+      "model": "flightsuit:item/dragon_ball_6"
+    },
+    {
+      "predicate": {
+        "flightsuit:stars": 0.7
+      },
+      "model": "flightsuit:item/dragon_ball_7"
+    }
+  ]
+}

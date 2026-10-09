@@ -29,7 +29,7 @@
 | `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
 | `planet/` | 우주·행성: Planet(차원 키), PlanetData(SavedData: 착륙 지점, 플레이어별 집 발사대·스토리 진행, 행성별 월드 상태), LaunchPadBlock/Entity, SpaceshipEntity(상승·하강·착륙), SpaceTravel(`/spaceship launch|return|remote`, 우주 건너기), PlanetStory |
-| `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
+| `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드 |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |
@@ -47,9 +47,9 @@
 ## 진행 상태 (2026-10-10)
 
 - M1~M9: 사용자 인게임 테스트 통과 (M9 마지막 수정 일부 재확인 필요, DESIGN.md 참고).
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서): **구현, 인게임 테스트 전**.
-- 다음: M15 우주선·드래곤볼 행성 → M16 타노스 사가.
+- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼): **구현, 인게임 테스트 전**.
+- 다음: M16 타노스 사가.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).

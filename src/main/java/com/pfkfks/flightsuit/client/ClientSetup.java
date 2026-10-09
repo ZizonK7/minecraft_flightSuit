@@ -21,6 +21,9 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(SuitAnimator::init);
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.DRAGON_BALL.get(),
+                new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "stars"),
+                (stack, level, entity, seed) -> com.pfkfks.flightsuit.planet.dbz.DragonBallItem.stars(stack) / 10.0F));
     }
 
     @SubscribeEvent

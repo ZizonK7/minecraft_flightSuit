@@ -1,0 +1,25 @@
+{
+  "variants": {
+    "stars=1": {
+      "model": "flightsuit:block/dragon_ball_1"
+    },
+    "stars=2": {
+      "model": "flightsuit:block/dragon_ball_2"
+    },
+    "stars=3": {
+      "model": "flightsuit:block/dragon_ball_3"
+    },
+    "stars=4": {
+      "model": "flightsuit:block/dragon_ball_4"
+    },
+    "stars=5": {
+      "model": "flightsuit:block/dragon_ball_5"
+    },
+    "stars=6": {
+      "model": "flightsuit:block/dragon_ball_6"
+    },
+    "stars=7": {
+      "model": "flightsuit:block/dragon_ball_7"
+    }
+  }
+}

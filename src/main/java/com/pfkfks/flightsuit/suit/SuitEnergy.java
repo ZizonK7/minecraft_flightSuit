@@ -14,8 +14,9 @@ import net.minecraft.world.item.ItemStack;
 public final class SuitEnergy {
     private static final String TAG = "SuitEnergy";
     private static final String UPGRADE_TAG = "SuitUpgrade";
-    /** Iron Man's capacity upgrades (DESIGN 4-13): each one adds a quarter to the piece's battery. */
-    public static final int MAX_UPGRADE = 2;
+    /** Capacity upgrades: each adds a quarter to the piece's battery. Iron Man does two (DESIGN 4-13); Shenron a third. */
+    public static final int IRON_MAN_MAX = 2;
+    public static final int MAX_UPGRADE = 3;
 
     private SuitEnergy() {
     }

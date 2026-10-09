@@ -521,7 +521,7 @@ public final class HeroCity {
                     return false;
                 }
                 int level = SuitEnergy.upgradeLevel(chest);
-                if (level >= SuitEnergy.MAX_UPGRADE) {
+                if (level >= SuitEnergy.IRON_MAN_MAX) {
                     player.sendSystemMessage(tony.line("maxed"));
                     return false;
                 }
