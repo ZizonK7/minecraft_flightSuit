@@ -1,12 +1,17 @@
 package com.pfkfks.flightsuit.client;
 
+import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
 import com.pfkfks.flightsuit.network.SuitAnimS2CPacket;
 import com.pfkfks.flightsuit.suit.FlightPose;
 import com.pfkfks.flightsuit.suit.SuitAnim;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 
 public final class ClientPacketHandler {
+    /** Latest main-station summary for the EDITH HUD (null until the first one arrives). */
+    public static EdithStatusS2CPacket edithStatus;
+
     private ClientPacketHandler() {
     }
 
@@ -21,8 +26,17 @@ public final class ClientPacketHandler {
         }
         SuitAnim anim = SuitAnim.byId(packet.value);
         SuitAnimator.playOneShot(player, anim);
-        if (anim == SuitAnim.SUIT_UP_GROUND && player == minecraft.player) {
-            CinematicCamera.start(packet.durationTicks);
+        if (player == minecraft.player) {
+            // Ground: watch the pieces arrive from the front. Fall: from behind, to see the suit dive onto your back.
+            if (anim == SuitAnim.SUIT_UP_GROUND || anim == SuitAnim.SUIT_UP_STATION) {
+                CinematicCamera.start(packet.durationTicks, CameraType.THIRD_PERSON_FRONT);
+            } else if (anim == SuitAnim.SUIT_UP_FALL) {
+                CinematicCamera.start(packet.durationTicks, CameraType.THIRD_PERSON_BACK);
+            }
         }
+    }
+
+    public static void handleEdithStatus(EdithStatusS2CPacket packet) {
+        edithStatus = packet;
     }
 }

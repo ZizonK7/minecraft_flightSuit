@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["GRG", "IAI", "III"],
+  "key": {"G": {"item": "minecraft:gold_ingot"}, "R": {"item": "minecraft:redstone_block"}, "I": {"item": "minecraft:iron_ingot"}, "A": {"item": "flightsuit:arc_reactor"}},
+  "result": {"item": "flightsuit:suit_station", "count": 1}
+}

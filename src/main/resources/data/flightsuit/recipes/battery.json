@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["ICI", "RBR", "ICI"],
+  "key": {"I": {"item": "minecraft:iron_ingot"}, "C": {"item": "minecraft:copper_ingot"}, "R": {"item": "minecraft:redstone"}, "B": {"item": "minecraft:redstone_block"}},
+  "result": {"item": "flightsuit:battery", "count": 1}
+}

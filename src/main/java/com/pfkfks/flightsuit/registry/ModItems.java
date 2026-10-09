@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.suit.EdithGlassesItem;
 import com.pfkfks.flightsuit.suit.EnergyCellItem;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
@@ -32,6 +33,8 @@ public final class ModItems {
             () -> new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<EnergyCellItem> ENERGY_CELL = ITEMS.register("energy_cell",
             () -> new EnergyCellItem(new Item.Properties().stacksTo(16)));
+    public static final RegistryObject<EdithGlassesItem> EDITH_GLASSES = ITEMS.register("edith_glasses",
+            () -> new EdithGlassesItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     private ModItems() {
     }

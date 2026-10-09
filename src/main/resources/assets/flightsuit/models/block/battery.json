@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "flightsuit:block/battery_top",
+    "side": "flightsuit:block/battery_side"
+  }
+}

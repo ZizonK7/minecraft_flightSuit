@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -33,6 +34,7 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.SUIT_PART.get(), SuitPartRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SUIT_STATION.get(), SuitStationRenderer::new);
     }
 
     @SubscribeEvent

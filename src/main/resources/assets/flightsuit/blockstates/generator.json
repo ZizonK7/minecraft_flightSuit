@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,lit=false": {"model": "flightsuit:block/generator", "y": 0},
+    "facing=east,lit=false": {"model": "flightsuit:block/generator", "y": 90},
+    "facing=south,lit=false": {"model": "flightsuit:block/generator", "y": 180},
+    "facing=west,lit=false": {"model": "flightsuit:block/generator", "y": 270},
+    "facing=north,lit=true": {"model": "flightsuit:block/generator_on", "y": 0},
+    "facing=east,lit=true": {"model": "flightsuit:block/generator_on", "y": 90},
+    "facing=south,lit=true": {"model": "flightsuit:block/generator_on", "y": 180},
+    "facing=west,lit=true": {"model": "flightsuit:block/generator_on", "y": 270}
+  }
+}

@@ -15,13 +15,13 @@ public final class CinematicCamera {
     private CinematicCamera() {
     }
 
-    public static void start(int ticks) {
+    public static void start(int ticks, CameraType view) {
         Minecraft minecraft = Minecraft.getInstance();
         if (remainingTicks <= 0) {
             previous = minecraft.options.getCameraType();
         }
         remainingTicks = Math.max(remainingTicks, ticks);
-        minecraft.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+        minecraft.options.setCameraType(view);
     }
 
     public static boolean isActive() {

@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "name": "suit_up_fall",
+  "author": "flightsuit",
+  "description": "Avengers Mark VII style mid-air suit-up: spread-eagle face-down fall while the whole suit dives onto the back. Held pose must match the FALL_* constants in client/SuitUpPose.java.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 18,
+    "stopTick": 24,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 4, "easing": "OUTQUAD", "body": {"pitch": -60}},
+      {"tick": 4, "easing": "OUTQUAD", "head": {"pitch": -35, "yaw": 0}},
+      {"tick": 4, "easing": "OUTBACK", "rightArm": {"pitch": 0, "yaw": 0, "roll": 110}},
+      {"tick": 4, "easing": "OUTBACK", "leftArm": {"pitch": 0, "yaw": 0, "roll": -110}},
+      {"tick": 4, "easing": "OUTQUAD", "rightLeg": {"pitch": 0, "roll": 20}},
+      {"tick": 4, "easing": "OUTQUAD", "leftLeg": {"pitch": 0, "roll": -20}},
+      {"tick": 18, "easing": "LINEAR", "body": {"pitch": -60}},
+      {"tick": 18, "easing": "LINEAR", "head": {"pitch": -35, "yaw": 0}},
+      {"tick": 18, "easing": "LINEAR", "rightArm": {"pitch": 0, "yaw": 0, "roll": 110}},
+      {"tick": 18, "easing": "LINEAR", "leftArm": {"pitch": 0, "yaw": 0, "roll": -110}},
+      {"tick": 18, "easing": "LINEAR", "rightLeg": {"pitch": 0, "roll": 20}},
+      {"tick": 18, "easing": "LINEAR", "leftLeg": {"pitch": 0, "roll": -20}}
+    ]
+  }
+}

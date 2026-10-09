@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.suit;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.SuitAnimS2CPacket;
 import net.minecraft.nbt.CompoundTag;
@@ -68,6 +69,9 @@ public final class SuitServerEvents {
         tickFlight(player, worn, data);
         tickThrust(player, worn);
         updatePose(player, worn);
+        if (player.tickCount % 20 == 0 && EdithGlassesItem.has(player)) {
+            ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), EdithStatusS2CPacket.of(player));
+        }
     }
 
     private static void tickNightVision(ServerPlayer player, WornSuit worn, CompoundTag data) {
@@ -90,9 +94,8 @@ public final class SuitServerEvents {
 
     private static void tickFlight(ServerPlayer player, WornSuit worn, CompoundTag data) {
         Abilities abilities = player.getAbilities();
-        boolean canFly = worn.fullSet()
-                && SuitEnergy.available(player, EquipmentSlot.CHEST) > 0
-                && !SuitUpManager.isSuitingUp(player);
+        // No "not suiting up" gate: the mid-air suit-up hands over to flight before its sequence ends.
+        boolean canFly = worn.fullSet() && SuitEnergy.available(player, EquipmentSlot.CHEST) > 0;
         boolean granted = data.getBoolean(GRANTED_FLIGHT_TAG);
 
         if (canFly && !granted && !abilities.mayfly) {
@@ -112,6 +115,19 @@ public final class SuitServerEvents {
                 revokeFlight(player, data);
             }
         }
+    }
+
+    /** Mid-air suit-up brake: grant suit flight right away and switch it on, without waiting for the next tick. */
+    public static void grantFlightNow(ServerPlayer player) {
+        Abilities abilities = player.getAbilities();
+        if (!abilities.mayfly) {
+            abilities.mayfly = true;
+            abilities.setFlyingSpeed(SuitTuning.SUIT_FLYING_SPEED);
+            player.getPersistentData().putBoolean(GRANTED_FLIGHT_TAG, true);
+        }
+        abilities.flying = true;
+        player.fallDistance = 0.0F;
+        player.onUpdateAbilities();
     }
 
     private static void revokeFlight(ServerPlayer player, CompoundTag data) {

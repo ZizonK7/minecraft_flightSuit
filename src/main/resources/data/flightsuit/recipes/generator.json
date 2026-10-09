@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["III", "CFC", "IRI"],
+  "key": {"I": {"item": "minecraft:iron_ingot"}, "C": {"item": "minecraft:copper_ingot"}, "F": {"item": "minecraft:furnace"}, "R": {"item": "minecraft:redstone"}},
+  "result": {"item": "flightsuit:generator", "count": 1}
+}

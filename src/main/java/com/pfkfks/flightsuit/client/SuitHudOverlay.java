@@ -1,5 +1,7 @@
 package com.pfkfks.flightsuit.client;
 
+import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
+import com.pfkfks.flightsuit.suit.EdithGlassesItem;
 import com.pfkfks.flightsuit.suit.FlightPose;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
 import com.pfkfks.flightsuit.suit.SuitType;
@@ -26,6 +28,7 @@ public final class SuitHudOverlay implements IGuiOverlay {
     private static final int DIM = 0xFF3A4A55;
     private static final int TEXT = 0xFFDDF6FF;
     private static final int WARN = 0xFFFF6A4D;
+    private static final int DIM_TEXT = 0xFF8FA9B5;
 
     private SuitHudOverlay() {
     }
@@ -39,6 +42,9 @@ public final class SuitHudOverlay implements IGuiOverlay {
         }
         WornSuit worn = WornSuit.of(player);
         if (!worn.any()) {
+            if (EdithGlassesItem.isWearing(player)) {
+                renderEdith(minecraft, player, graphics);
+            }
             return;
         }
         Font font = minecraft.font;
@@ -74,6 +80,54 @@ public final class SuitHudOverlay implements IGuiOverlay {
         graphics.drawString(font, energy + " FE", barX, y + 20, TEXT, false);
 
         graphics.drawString(font, status(player, worn, energy), x, y + 31, energy <= 0 ? WARN : TEXT, false);
+    }
+
+    /**
+     * Glasses-only command HUD (DESIGN.md 4-1 "지휘용 HUD"): clock, position, and the main suit waiting at
+     * its station - name, charge, distance and station power.
+     */
+    private static void renderEdith(Minecraft minecraft, LocalPlayer player, GuiGraphics graphics) {
+        Font font = minecraft.font;
+        int x = 6;
+        int y = 6;
+        graphics.fill(x - 3, y - 3, x + 170, y + 52, 0x55000000);
+        graphics.drawString(font, "E.D.I.T.H.", x, y, CYAN, true);
+
+        long time = player.level().getDayTime();
+        int hours = (int) ((time / 1000L + 6L) % 24L);
+        int minutes = (int) ((time % 1000L) * 60L / 1000L);
+        String clock = String.format("DAY %d  %02d:%02d   %d %d %d", time / 24000L + 1, hours, minutes,
+                player.getBlockX(), player.getBlockY(), player.getBlockZ());
+        graphics.drawString(font, clock, x, y + 11, TEXT, false);
+
+        EdithStatusS2CPacket status = ClientPacketHandler.edithStatus;
+        Component suitLine;
+        Component stationLine;
+        int suitColor = TEXT;
+        if (status == null || status.state == EdithStatusS2CPacket.NO_STATION) {
+            suitLine = Component.translatable("hud.flightsuit.edith.no_station");
+            stationLine = Component.translatable("hud.flightsuit.edith.no_station_hint");
+            suitColor = WARN;
+        } else if (status.state == EdithStatusS2CPacket.OTHER_DIMENSION) {
+            suitLine = Component.translatable("hud.flightsuit.edith.other_dimension");
+            stationLine = Component.empty();
+            suitColor = WARN;
+        } else if (status.state == EdithStatusS2CPacket.NO_SIGNAL) {
+            suitLine = Component.translatable("hud.flightsuit.edith.no_signal");
+            stationLine = Component.translatable("hud.flightsuit.edith.station_distance", status.distance);
+        } else {
+            if (status.suitName.isEmpty()) {
+                suitLine = Component.translatable("hud.flightsuit.edith.station_empty");
+                suitColor = WARN;
+            } else {
+                suitLine = Component.translatable("hud.flightsuit.edith.main_suit", status.suitName, status.suitChargePercent);
+                suitColor = CYAN;
+            }
+            stationLine = Component.translatable("hud.flightsuit.edith.station", status.distance, status.stationEnergy);
+        }
+        graphics.drawString(font, suitLine, x, y + 22, suitColor, false);
+        graphics.drawString(font, stationLine, x, y + 32, TEXT, false);
+        graphics.drawString(font, Component.translatable("hud.flightsuit.edith.call_hint"), x, y + 42, DIM_TEXT, false);
     }
 
     private static Component status(LocalPlayer player, WornSuit worn, int energy) {

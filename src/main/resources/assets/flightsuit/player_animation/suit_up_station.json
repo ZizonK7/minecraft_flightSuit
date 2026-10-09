@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "name": "suit_up_station",
+  "author": "flightsuit",
+  "description": "Standing on the station platform while the suit is assembled around you: arms a little out for the sleeves, steady stance. Held pose must match the STATION_* constants in client/SuitUpPose.java.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 28,
+    "stopTick": 34,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 4, "easing": "OUTQUAD", "rightArm": {"pitch": 0, "yaw": 0, "roll": 25}},
+      {"tick": 4, "easing": "OUTQUAD", "leftArm": {"pitch": 0, "yaw": 0, "roll": -25}},
+      {"tick": 4, "easing": "OUTQUAD", "rightLeg": {"pitch": 0, "roll": 3}},
+      {"tick": 4, "easing": "OUTQUAD", "leftLeg": {"pitch": 0, "roll": -3}},
+      {"tick": 4, "easing": "OUTQUAD", "head": {"pitch": 0, "yaw": 0}},
+      {"tick": 28, "easing": "LINEAR", "rightArm": {"pitch": 0, "yaw": 0, "roll": 25}},
+      {"tick": 28, "easing": "LINEAR", "leftArm": {"pitch": 0, "yaw": 0, "roll": -25}},
+      {"tick": 28, "easing": "LINEAR", "rightLeg": {"pitch": 0, "roll": 3}},
+      {"tick": 28, "easing": "LINEAR", "leftLeg": {"pitch": 0, "roll": -3}},
+      {"tick": 28, "easing": "LINEAR", "head": {"pitch": 0, "yaw": 0}}
+    ]
+  }
+}

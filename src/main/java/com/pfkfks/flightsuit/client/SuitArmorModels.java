@@ -32,7 +32,10 @@ public final class SuitArmorModels {
     public static final ModelLayerLocation LEGGINGS = layer("leggings");
     public static final ModelLayerLocation BOOTS = layer("boots");
 
+    public static final ModelLayerLocation GLASSES = layer("edith_glasses");
+
     private static final Map<EquipmentSlot, HumanoidModel<LivingEntity>> BAKED = new EnumMap<>(EquipmentSlot.class);
+    private static HumanoidModel<LivingEntity> glassesModel;
 
     private SuitArmorModels() {
     }
@@ -46,6 +49,7 @@ public final class SuitArmorModels {
         event.registerLayerDefinition(CHESTPLATE, () -> create(0.40F));
         event.registerLayerDefinition(LEGGINGS, () -> create(0.30F));
         event.registerLayerDefinition(BOOTS, () -> create(0.50F));
+        event.registerLayerDefinition(GLASSES, SuitArmorModels::createGlasses);
     }
 
     /** Re-bakes on every resource reload (AddLayers fires each time). */
@@ -54,6 +58,38 @@ public final class SuitArmorModels {
         BAKED.put(EquipmentSlot.CHEST, new HumanoidModel<>(models.bakeLayer(CHESTPLATE)));
         BAKED.put(EquipmentSlot.LEGS, new HumanoidModel<>(models.bakeLayer(LEGGINGS)));
         BAKED.put(EquipmentSlot.FEET, new HumanoidModel<>(models.bakeLayer(BOOTS)));
+        glassesModel = new HumanoidModel<>(models.bakeLayer(GLASSES));
+    }
+
+    public static HumanoidModel<LivingEntity> glasses() {
+        if (glassesModel == null) {
+            bake(Minecraft.getInstance().getEntityModels());
+        }
+        return glassesModel;
+    }
+
+    /**
+     * EDITH glasses: a thin frame across the eyes, two lenses and temple arms, just outside the skin's hat
+     * layer. Every other part is empty. UVs match textures/models/armor/edith_glasses.png (tools/TextureGen).
+     */
+    public static LayerDefinition createGlasses() {
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        root.addOrReplaceChild("head", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-4.6F, -5.0F, -4.9F, 9.2F, 1.0F, 1.0F)   // brow bar
+                .texOffs(0, 4).addBox(-3.8F, -4.0F, -4.8F, 3.0F, 2.0F, 1.0F)   // lens
+                .texOffs(0, 4).addBox(0.8F, -4.0F, -4.8F, 3.0F, 2.0F, 1.0F)    // lens
+                .texOffs(0, 8).addBox(-0.8F, -4.0F, -4.85F, 1.6F, 1.0F, 1.0F)  // bridge
+                .texOffs(0, 12).addBox(-4.9F, -5.0F, -4.6F, 1.0F, 1.0F, 5.0F)  // temple
+                .texOffs(0, 12).addBox(3.9F, -5.0F, -4.6F, 1.0F, 1.0F, 5.0F),  // temple
+                PartPose.ZERO);
+        root.addOrReplaceChild("hat", CubeListBuilder.create(), PartPose.ZERO);
+        root.addOrReplaceChild("body", CubeListBuilder.create(), PartPose.ZERO);
+        root.addOrReplaceChild("right_arm", CubeListBuilder.create(), PartPose.offset(-5.0F, 2.0F, 0.0F));
+        root.addOrReplaceChild("left_arm", CubeListBuilder.create(), PartPose.offset(5.0F, 2.0F, 0.0F));
+        root.addOrReplaceChild("right_leg", CubeListBuilder.create(), PartPose.offset(-1.9F, 12.0F, 0.0F));
+        root.addOrReplaceChild("left_leg", CubeListBuilder.create(), PartPose.offset(1.9F, 12.0F, 0.0F));
+        return LayerDefinition.create(mesh, 32, 32);
     }
 
     public static HumanoidModel<LivingEntity> forSlot(EquipmentSlot slot) {

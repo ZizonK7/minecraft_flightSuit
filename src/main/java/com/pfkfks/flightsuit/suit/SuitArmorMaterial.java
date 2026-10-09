@@ -9,7 +9,9 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 /** Diamond-tier protection; durability matters later for forced ejection (DESIGN.md 4-2). */
 public enum SuitArmorMaterial implements ArmorMaterial {
-    MARK_1("flightsuit:mark_1", 33, 3, 8, 6, 3, 10, 2.0F, 0.1F);
+    MARK_1("flightsuit:mark_1", 33, 3, 8, 6, 3, 10, 2.0F, 0.1F),
+    /** EDITH glasses: no protection, zero durability = unbreakable. */
+    EDITH("flightsuit:edith", 0, 0, 0, 0, 0, 15, 0.0F, 0.0F);
 
     private final String name;
     private final int durabilityMultiplier;
@@ -62,7 +64,7 @@ public enum SuitArmorMaterial implements ArmorMaterial {
 
     @Override
     public SoundEvent getEquipSound() {
-        return SoundEvents.ARMOR_EQUIP_NETHERITE;
+        return this == EDITH ? SoundEvents.ARMOR_EQUIP_GENERIC : SoundEvents.ARMOR_EQUIP_NETHERITE;
     }
 
     @Override

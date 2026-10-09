@@ -1,0 +1,32 @@
+package com.pfkfks.flightsuit.registry;
+
+import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.block.BatteryBlockEntity;
+import com.pfkfks.flightsuit.block.GeneratorBlockEntity;
+import com.pfkfks.flightsuit.block.SolarPanelBlockEntity;
+import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+
+public final class ModBlockEntities {
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, FlightSuitMod.MODID);
+
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<SuitStationBlockEntity>> SUIT_STATION = BLOCK_ENTITY_TYPES.register("suit_station",
+            () -> BlockEntityType.Builder.of(SuitStationBlockEntity::new, ModBlocks.SUIT_STATION.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<SolarPanelBlockEntity>> SOLAR_PANEL = BLOCK_ENTITY_TYPES.register("solar_panel",
+            () -> BlockEntityType.Builder.of(SolarPanelBlockEntity::new, ModBlocks.SOLAR_PANEL.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<GeneratorBlockEntity>> GENERATOR = BLOCK_ENTITY_TYPES.register("generator",
+            () -> BlockEntityType.Builder.of(GeneratorBlockEntity::new, ModBlocks.GENERATOR.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<BatteryBlockEntity>> BATTERY = BLOCK_ENTITY_TYPES.register("battery",
+            () -> BlockEntityType.Builder.of(BatteryBlockEntity::new, ModBlocks.BATTERY.get()).build(null));
+
+    private ModBlockEntities() {
+    }
+}

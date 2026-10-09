@@ -3,7 +3,9 @@ package com.pfkfks.flightsuit.suit;
 /** One-shot body animations, by PlayerAnimator name (assets/flightsuit/player_animation/*.json). */
 public enum SuitAnim {
     SUIT_UP_GROUND("suit_up_ground"),
-    REPULSOR_RIGHT("repulsor_right");
+    REPULSOR_RIGHT("repulsor_right"),
+    SUIT_UP_FALL("suit_up_fall"),
+    SUIT_UP_STATION("suit_up_station");
 
     private final String animationName;
 

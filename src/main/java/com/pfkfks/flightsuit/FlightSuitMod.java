@@ -2,6 +2,8 @@ package com.pfkfks.flightsuit;
 
 import com.mojang.logging.LogUtils;
 import com.pfkfks.flightsuit.network.ModNetwork;
+import com.pfkfks.flightsuit.registry.ModBlockEntities;
+import com.pfkfks.flightsuit.registry.ModBlocks;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.registry.ModItems;
 import net.minecraft.core.registries.Registries;
@@ -31,6 +33,11 @@ public class FlightSuitMod {
                     .withTabsBefore(CreativeModeTabs.COMBAT)
                     .icon(() -> ModItems.RYAN_MK1_HELMET.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
+                        output.accept(ModItems.EDITH_GLASSES.get());
+                        output.accept(ModBlocks.SUIT_STATION.get());
+                        output.accept(ModBlocks.SOLAR_PANEL.get());
+                        output.accept(ModBlocks.GENERATOR.get());
+                        output.accept(ModBlocks.BATTERY.get());
                         output.accept(ModItems.RYAN_MK1_CAPSULE.get().createFilledCapsule());
                         output.accept(ModItems.RYAN_MK1_CAPSULE.get());
                         output.accept(ModItems.RYAN_MK1_HELMET.get());
@@ -44,7 +51,10 @@ public class FlightSuitMod {
 
     public FlightSuitMod(FMLJavaModLoadingContext context) {
         IEventBus modEventBus = context.getModEventBus();
+        // ModBlocks first: loading it also queues the block items onto ModItems.ITEMS.
+        ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
