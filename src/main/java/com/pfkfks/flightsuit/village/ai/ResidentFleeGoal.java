@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.village.ai;
 
 import com.pfkfks.flightsuit.village.ResidentEntity;
+import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.monster.Monster;
 
@@ -9,7 +10,7 @@ public class ResidentFleeGoal extends AvoidEntityGoal<Monster> {
     private final ResidentEntity resident;
 
     public ResidentFleeGoal(ResidentEntity resident) {
-        super(resident, Monster.class, 10.0F, 0.7D, 0.95D);
+        super(resident, Monster.class, entity -> !RaidMember.isNoThreat(entity), 10.0F, 0.7D, 0.95D, entity -> true);
         this.resident = resident;
     }
 

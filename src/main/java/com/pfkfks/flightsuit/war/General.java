@@ -1,0 +1,118 @@
+package com.pfkfks.flightsuit.war;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+
+import java.util.EnumSet;
+import java.util.Set;
+
+/**
+ * Named generals (DESIGN.md 4-11 장수 표). Each leads the last wave of a raid by their kingdom and has their
+ * own skills. The weapon is mostly for looks: its attack bonus is subtracted again so damage stays as tuned.
+ */
+public enum General {
+    GUAN_YU("guan_yu", Kingdom.SHU, 160.0D, 11.0D, 0.30D, 0.20F, Items.NETHERITE_AXE, 9.0D, Skill.WHIRLWIND, Skill.DUEL),
+    ZHANG_FEI("zhang_fei", Kingdom.SHU, 150.0D, 11.0D, 0.30D, 0.10F, Items.TRIDENT, 8.0D, Skill.ROAR, Skill.CHARGE),
+    XIAHOU_DUN("xiahou_dun", Kingdom.WEI, 150.0D, 10.0D, 0.30D, 0.15F, Items.DIAMOND_SWORD, 6.0D, Skill.CHARGE, Skill.ENRAGE),
+    GAN_NING("gan_ning", Kingdom.WU, 120.0D, 9.0D, 0.36D, 0.0F, Items.IRON_SWORD, 5.0D, Skill.AMBUSH, Skill.WHIRLWIND);
+
+    public enum Skill {
+        /** 회전베기: hits everything around. */
+        WHIRLWIND,
+        /** 일기토: calls a player out; the soldiers leave that player to him, and losing it breaks the army. */
+        DUEL,
+        /** 장판교 고함: stuns everyone nearby and shatters glass and doors. */
+        ROAR,
+        /** 돌진: dashes into the target. */
+        CHARGE,
+        /** Hurt below half: hits harder from then on. */
+        ENRAGE,
+        /** 기습: slips behind the target. */
+        AMBUSH
+    }
+
+    private static final General[] VALUES = values();
+
+    private final String id;
+    private final Kingdom kingdom;
+    private final double health;
+    private final double damage;
+    private final double speed;
+    /** Added to the raid's will to fight while this general leads it. */
+    private final float resolveBonus;
+    private final Item weapon;
+    private final double weaponBonus;
+    private final Set<Skill> skills;
+
+    General(String id, Kingdom kingdom, double health, double damage, double speed, float resolveBonus,
+            Item weapon, double weaponBonus, Skill... skills) {
+        this.id = id;
+        this.kingdom = kingdom;
+        this.health = health;
+        this.damage = damage;
+        this.speed = speed;
+        this.resolveBonus = resolveBonus;
+        this.weapon = weapon;
+        this.weaponBonus = weaponBonus;
+        this.skills = EnumSet.noneOf(Skill.class);
+        java.util.Collections.addAll(this.skills, skills);
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public Kingdom kingdom() {
+        return kingdom;
+    }
+
+    public double health() {
+        return health;
+    }
+
+    /** Base attack damage, before the weapon's own bonus is added back on by the game. */
+    public double baseDamage() {
+        return Math.max(1.0D, damage - weaponBonus);
+    }
+
+    public double speed() {
+        return speed;
+    }
+
+    public float resolveBonus() {
+        return resolveBonus;
+    }
+
+    public ItemStack weapon() {
+        return new ItemStack(weapon);
+    }
+
+    public boolean has(Skill skill) {
+        return skills.contains(skill);
+    }
+
+    public Component displayName() {
+        return Component.translatable("general.flightsuit." + id).withStyle(kingdom.color());
+    }
+
+    /** "<general>: <line>" - what they shout. */
+    public Component line(String key, Object... args) {
+        return Component.translatable("general.flightsuit.says", displayName(),
+                Component.translatable("general.flightsuit." + id + "." + key, args));
+    }
+
+    public static General byId(int ordinal) {
+        return ordinal >= 0 && ordinal < VALUES.length ? VALUES[ordinal] : GUAN_YU;
+    }
+
+    public static General byName(String id) {
+        for (General general : VALUES) {
+            if (general.id.equals(id)) {
+                return general;
+            }
+        }
+        return null;
+    }
+}

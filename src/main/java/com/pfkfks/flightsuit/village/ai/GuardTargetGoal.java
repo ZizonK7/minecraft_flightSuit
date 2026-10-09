@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.village.ai;
 
 import com.pfkfks.flightsuit.village.ResidentEntity;
+import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 
@@ -9,7 +10,8 @@ public class GuardTargetGoal extends NearestAttackableTargetGoal<Monster> {
     private final ResidentEntity guard;
 
     public GuardTargetGoal(ResidentEntity guard) {
-        super(guard, Monster.class, 10, true, false, target -> guard.isInOwnVillage(target.blockPosition()));
+        super(guard, Monster.class, 10, true, false,
+                target -> !RaidMember.isNoThreat(target) && guard.isInOwnVillage(target.blockPosition()));
         this.guard = guard;
     }
 

@@ -1,6 +1,9 @@
 package com.pfkfks.flightsuit.village;
 
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
+import com.pfkfks.flightsuit.suit.EdithAlert;
+import com.pfkfks.flightsuit.war.RaidManager;
+import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
@@ -70,6 +73,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         }
     };
     private final VillageWorks works = new VillageWorks(this);
+    private final FireWatch fireWatch = new FireWatch();
     private final List<Component> news = new ArrayList<>();
     private final List<Long> deathDays = new ArrayList<>();
     private long alarmUntil;
@@ -416,6 +420,12 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
             ringBell(near != null ? near : worldPosition);
             addNews(Component.translatable("news.flightsuit.alarm"));
             tellOwner(Component.translatable("message.flightsuit.village_alarm").withStyle(ChatFormatting.RED));
+            ServerPlayer owner = onlineOwner();
+            // Away from the village (or off in another dimension): EDITH flashes it up too (DESIGN.md 4-15).
+            if (owner != null && EdithAlert.isAway(owner, level.dimension(), worldPosition, VillageTuning.RADIUS + 16)) {
+                EdithAlert.send(owner, Component.translatable("edith.flightsuit.alarm_title"), Component.translatable("edith.flightsuit.alarm",
+                        cause), level.dimension(), alarmAt, EdithAlert.RED, false);
+            }
             refreshStats();
         }
     }
@@ -466,7 +476,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
             return;
         }
         List<Monster> intruders = level.getEntitiesOfClass(Monster.class, area(), monster -> monster.isAlive()
-                && contains(monster.blockPosition()) && isOnSurface(monster.blockPosition()));
+                && !RaidMember.isNoThreat(monster) && contains(monster.blockPosition()) && isOnSurface(monster.blockPosition()));
         if (!intruders.isEmpty()) {
             raiseAlarm(intruders.get(0).blockPosition(), intruders.get(0).getName());
         }
@@ -477,6 +487,15 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     // ---- fight damage (VillageWorks keeps the ledger) ----
+
+    /** Fire set inside the village (a burning arrow): watched so what burns goes on the ledger, and guards put it out. */
+    public void watchFire(BlockPos pos) {
+        fireWatch.watch(pos, level == null ? 0L : level.getGameTime());
+    }
+
+    public FireWatch fireWatch() {
+        return fireWatch;
+    }
 
     public void recordDamage(BlockPos pos, BlockState state) {
         works.recordDamage(pos, state);
@@ -516,8 +535,10 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
                 hall.spawnWanderer();
             }
         }
+        hall.fireWatch.tick(level, hall);
         if (now % 100 == 0) {
             hall.refreshStats();
+            RaidManager.noteVillage(hall);
         }
     }
 

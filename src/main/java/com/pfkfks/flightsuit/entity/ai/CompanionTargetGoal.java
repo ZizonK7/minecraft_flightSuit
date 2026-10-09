@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.entity.ai;
 
 import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
+import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
@@ -68,7 +69,7 @@ public class CompanionTargetGoal extends TargetGoal {
         }
         LivingEntity ward = suit.getAnchor();
         List<Mob> threats = suit.level().getEntitiesOfClass(Mob.class, ward.getBoundingBox().inflate(GUARD_RADIUS),
-                mob -> mob instanceof Enemy && mob.isAlive() && valid(mob, owner)
+                mob -> mob instanceof Enemy && mob.isAlive() && !RaidMember.isNoThreat(mob) && valid(mob, owner)
                         && (mob.getTarget() == ward || mob.distanceToSqr(ward) < 8.0D * 8.0D));
         Mob closest = null;
         for (Mob mob : threats) {

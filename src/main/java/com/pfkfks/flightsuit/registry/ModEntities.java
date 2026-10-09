@@ -9,6 +9,8 @@ import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
 import com.pfkfks.flightsuit.village.ResidentEntity;
+import com.pfkfks.flightsuit.war.GeneralEntity;
+import com.pfkfks.flightsuit.war.KingdomSoldierEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -77,6 +79,18 @@ public final class ModEntities {
                     .sized(0.6F, 1.8F)
                     .clientTrackingRange(10)
                     .build("resident"));
+
+    public static final RegistryObject<EntityType<KingdomSoldierEntity>> KINGDOM_SOLDIER = ENTITY_TYPES.register("kingdom_soldier",
+            () -> EntityType.Builder.<KingdomSoldierEntity>of(KingdomSoldierEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.8F)
+                    .clientTrackingRange(10)
+                    .build("kingdom_soldier"));
+
+    public static final RegistryObject<EntityType<GeneralEntity>> GENERAL = ENTITY_TYPES.register("general",
+            () -> EntityType.Builder.<GeneralEntity>of(GeneralEntity::new, MobCategory.MISC)
+                    .sized(0.65F, 1.95F)
+                    .clientTrackingRange(12)
+                    .build("general"));
 
     private ModEntities() {
     }

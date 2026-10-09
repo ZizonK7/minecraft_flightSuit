@@ -6,6 +6,7 @@ import com.pfkfks.flightsuit.network.ResidentScreenS2CPacket;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.village.ai.BuilderWorkGoal;
 import com.pfkfks.flightsuit.village.ai.FarmerWorkGoal;
+import com.pfkfks.flightsuit.village.ai.GuardFirefightGoal;
 import com.pfkfks.flightsuit.village.ai.GuardHurtByTargetGoal;
 import com.pfkfks.flightsuit.village.ai.GuardMeleeGoal;
 import com.pfkfks.flightsuit.village.ai.GuardPatrolGoal;
@@ -64,6 +65,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -146,6 +148,7 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(2, new ResidentFleeGoal(this));
         goalSelector.addGoal(3, new ResidentShelterGoal(this));
         goalSelector.addGoal(3, new SoldierRallyGoal(this));
+        goalSelector.addGoal(3, new GuardFirefightGoal(this));
         goalSelector.addGoal(4, new ResidentSleepGoal(this));
         goalSelector.addGoal(5, new FarmerWorkGoal(this));
         goalSelector.addGoal(5, new BuilderWorkGoal(this));
@@ -175,6 +178,22 @@ public class ResidentEntity extends PathfinderMob {
         level.addFreshEntity(wanderer);
         hall.announceArrival(wanderer);
         return wanderer;
+    }
+
+    /**
+     * A prisoner who chose to stay (a surrendered raider being recruited, DESIGN.md 4-11 항복과 등용): joins the
+     * village straight away with a job - no wandering, no waiting at the edge.
+     */
+    public static ResidentEntity spawnRecruit(ServerLevel level, VillageHallBlockEntity hall, Vec3 at, ResidentJob job) {
+        ResidentEntity recruit = new ResidentEntity(ModEntities.RESIDENT.get(), level);
+        recruit.moveTo(at.x, at.y, at.z, level.random.nextFloat() * 360.0F, 0.0F);
+        recruit.becomeWandererOf(hall);
+        recruit.entityData.set(WANDERER, false);
+        recruit.setJob(job);
+        recruit.homeBed = hall.claimBed(recruit);
+        level.addFreshEntity(recruit);
+        hall.announceJoined(recruit);
+        return recruit;
     }
 
     private void becomeWandererOf(@Nullable VillageHallBlockEntity hall) {

@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.village;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -36,7 +37,8 @@ public final class VillageEvents {
     /** Hostile monsters treat residents like vanilla villagers - fair game (downed ones are left be). */
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
-        if (!event.getLevel().isClientSide && event.getEntity() instanceof Monster monster && !(monster instanceof NeutralMob)) {
+        if (!event.getLevel().isClientSide && event.getEntity() instanceof Monster monster && !(monster instanceof NeutralMob)
+                && !(monster instanceof RaidMember)) {
             monster.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(monster, ResidentEntity.class, 10, true, false,
                     target -> !((ResidentEntity) target).isDowned()));
         }

@@ -109,6 +109,9 @@ public class VillageHallBlock extends Block implements EntityBlock {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof VillageHallBlockEntity hall) {
             Containers.dropContents(level, pos, hall.getStorage());
+            if (level instanceof net.minecraft.server.level.ServerLevel server) {
+                com.pfkfks.flightsuit.war.RaidManager.forgetVillage(server, pos);
+            }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

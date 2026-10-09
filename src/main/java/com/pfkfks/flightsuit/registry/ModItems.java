@@ -67,6 +67,11 @@ public final class ModItems {
     /** Test helper: drops a wanderer heading for the village it is used in. */
     public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));
+    /** Test helpers: a random Three Kingdoms soldier / general marching on the village it is used in. */
+    public static final RegistryObject<ForgeSpawnEggItem> KINGDOM_SOLDIER_SPAWN_EGG = ITEMS.register("kingdom_soldier_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.KINGDOM_SOLDIER, 0x8E2A20, 0xD9B54A, new Item.Properties()));
+    public static final RegistryObject<ForgeSpawnEggItem> GENERAL_SPAWN_EGG = ITEMS.register("general_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.GENERAL, 0x2E5D3A, 0xE0AE3A, new Item.Properties()));
 
     private ModItems() {
     }

@@ -51,6 +51,8 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.MISSILE.get(), MissileRenderer::new);
         event.registerEntityRenderer(ModEntities.CARD.get(), CardRenderer::new);
         event.registerEntityRenderer(ModEntities.RESIDENT.get(), ResidentRenderer::new);
+        event.registerEntityRenderer(ModEntities.KINGDOM_SOLDIER.get(), KingdomSoldierRenderer::new);
+        event.registerEntityRenderer(ModEntities.GENERAL.get(), GeneralRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 
@@ -70,5 +72,6 @@ public final class ClientSetup {
         event.registerAboveAll("suit_hud", SuitHudOverlay.INSTANCE);
         event.registerAboveAll("hover_car_hud", HoverCarHudOverlay.INSTANCE);
         event.registerAboveAll("remote_link", RemoteLinkOverlay.INSTANCE);
+        event.registerAboveAll("edith_alert", EdithAlertOverlay.INSTANCE);
     }
 }

@@ -61,6 +61,8 @@ public final class ModNetwork {
                 ResidentScreenS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, ResidentActionC2SPacket.class, ResidentActionC2SPacket::encode, ResidentActionC2SPacket::decode,
                 ResidentActionC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, EdithAlertS2CPacket.class, EdithAlertS2CPacket::encode, EdithAlertS2CPacket::decode,
+                EdithAlertS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {

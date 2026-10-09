@@ -52,6 +52,8 @@ public class FlightSuitMod {
                         output.accept(ModItems.HOVER_CAR_CAPSULE.get());
                         output.accept(ModBlocks.VILLAGE_HALL.get());
                         output.accept(ModItems.RESIDENT_SPAWN_EGG.get());
+                        output.accept(ModItems.KINGDOM_SOLDIER_SPAWN_EGG.get());
+                        output.accept(ModItems.GENERAL_SPAWN_EGG.get());
                         for (SuitType type : SuitType.values()) {
                             output.accept(ModItems.capsuleFor(type).createFilledCapsule());
                             output.accept(ModItems.capsuleFor(type));
@@ -81,6 +83,8 @@ public class FlightSuitMod {
         event.put(ModEntities.CLEANER_ROBOT.get(), CleanerRobotEntity.createAttributes().build());
         event.put(ModEntities.REMOTE_BODY.get(), RemoteBodyEntity.createAttributes().build());
         event.put(ModEntities.RESIDENT.get(), ResidentEntity.createAttributes().build());
+        event.put(ModEntities.KINGDOM_SOLDIER.get(), com.pfkfks.flightsuit.war.KingdomSoldierEntity.createAttributes().build());
+        event.put(ModEntities.GENERAL.get(), com.pfkfks.flightsuit.war.GeneralEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

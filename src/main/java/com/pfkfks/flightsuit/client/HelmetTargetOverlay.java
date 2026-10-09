@@ -48,7 +48,8 @@ public final class HelmetTargetOverlay implements IGuiOverlay {
         double range = player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof com.pfkfks.flightsuit.suit.SuitArmorItem helmet
                 ? helmet.getSuitType().suitClass().sensorRange() : DEFAULT_RANGE;
         List<Mob> targets = minecraft.level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(range),
-                mob -> mob instanceof Enemy && mob.isAlive() && !mob.isInvisible());
+                mob -> mob instanceof Enemy && mob.isAlive() && !mob.isInvisible()
+                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(mob));
         targets.sort(Comparator.comparingDouble(mob -> mob.distanceToSqr(player)));
         Font font = minecraft.font;
         int drawn = 0;
