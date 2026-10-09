@@ -814,5 +814,7 @@
   "dragonball.flightsuit.no_wish": "No wish to grant (Shenron isn't here, or time ran out)",
   "dragonball.flightsuit.wish_too_much": "Shenron: \"That is beyond my power. Choose another wish.\"",
   "dragonball.flightsuit.wish_no_suit": "Shenron: \"Wear your suit, then ask.\"",
-  "dragonball.flightsuit.granted": "Shenron: \"Your wish has been granted. Farewell...\" The balls scatter across the sky and turn to stone (3 days)."
+  "dragonball.flightsuit.granted": "Shenron: \"Your wish has been granted. Farewell...\" The balls scatter across the sky and turn to stone (3 days).",
+  "space.flightsuit.need_sky": "The sky above the pad is blocked.",
+  "hud.flightsuit.remote.body_far": "Body: another world"
 }

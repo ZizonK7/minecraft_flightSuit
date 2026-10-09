@@ -25,6 +25,11 @@ public class SpaceshipRenderer extends EntityRenderer<SpaceshipEntity> {
 
     @Override
     public void render(SpaceshipEntity ship, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft.options.getCameraType().isFirstPerson() && minecraft.getCameraEntity() != null && ship.hasPassenger(minecraft.getCameraEntity())) {
+            // The pilot looks out from inside the hull - don't wall them in.
+            return;
+        }
         poseStack.pushPose();
         float yaw = Mth.rotLerp(partialTick, ship.yRotO, ship.getYRot());
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));

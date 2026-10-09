@@ -19,6 +19,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -65,9 +66,26 @@ public final class SpaceTravel {
     /** Nobody climbs out of a ship in flight. */
     @SubscribeEvent
     public static void onMount(EntityMountEvent event) {
+        Entity rider = event.getEntityMounting();
+        // Server only (the client can't see letOut and would keep the pilot stuck aboard); and never against
+        // the game itself - a pilot who dies or leaves must come off.
+        if (rider.level().isClientSide || !rider.isAlive() || rider.isRemoved()) {
+            return;
+        }
         if (event.isDismounting() && event.getEntityBeingMounted() instanceof SpaceshipEntity ship && !ship.mayLeave()) {
             event.setCanceled(true);
         }
+    }
+
+    /** The live pilot aboard (not a stale player object left by a death or a relog). */
+    static @Nullable ServerPlayer pilotOf(SpaceshipEntity ship) {
+        for (Entity passenger : ship.getPassengers()) {
+            if (passenger instanceof ServerPlayer player && player.isAlive() && !player.isRemoved()
+                    && player.server.getPlayerList().getPlayer(player.getUUID()) == player) {
+                return player;
+            }
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------- menus
@@ -135,6 +153,10 @@ public final class SpaceTravel {
         if (!readyToFly(player)) {
             return false;
         }
+        if (!level.canSeeSky(pad.getBlockPos().above(3))) {
+            player.sendSystemMessage(Component.translatable("space.flightsuit.need_sky").withStyle(ChatFormatting.GRAY));
+            return false;
+        }
         pad.spend();
         PlanetData data = PlanetData.get(player.server);
         data.traveller(player.getUUID()).home = new PlanetData.Home(level.dimension(), pad.getBlockPos());
@@ -187,17 +209,23 @@ public final class SpaceTravel {
         return ships.isEmpty() ? null : ships.get(0);
     }
 
+    /** A second before the top of the climb: the star field starts, so the jump itself happens behind it. */
+    static void beginCrossing(SpaceshipEntity ship) {
+        ServerPlayer pilot = pilotOf(ship);
+        if (pilot == null) {
+            return;
+        }
+        Planet planet = ship.planet();
+        Component where = planet != null ? planet.displayName() : Component.translatable("space.flightsuit.home");
+        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot), new SpaceTravelS2CPacket(where, CROSSING_TICKS + 20));
+    }
+
     /**
      * Top of the climb: the pilot crosses space (the cinematic covers the move) and a new ship starts coming down
      * over the far side - the planet's landing site, or the launch pad back home.
      */
     static void cross(SpaceshipEntity ship) {
-        ServerPlayer pilot = null;
-        for (Entity passenger : ship.getPassengers()) {
-            if (passenger instanceof ServerPlayer player) {
-                pilot = player;
-            }
-        }
+        ServerPlayer pilot = pilotOf(ship);
         ship.letOut();
         ship.discard();
         if (pilot == null) {
@@ -207,14 +235,12 @@ public final class SpaceTravel {
         Planet planet = ship.planet();
         ServerLevel target;
         BlockPos ground;
-        Component where;
         if (planet != null) {
             target = server.getLevel(planet.dimension());
             if (target == null) {
                 target = server.overworld();
             }
             ground = landingSite(target, planet, pilot);
-            where = planet.displayName();
         } else {
             PlanetData.Home home = PlanetData.get(server).traveller(pilot.getUUID()).home;
             ServerLevel homeLevel = home == null ? null : server.getLevel(home.dimension());
@@ -230,10 +256,7 @@ public final class SpaceTravel {
                 target.getChunkAt(spawn);
                 ground = new BlockPos(spawn.getX(), target.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ()), spawn.getZ());
             }
-            where = Component.translatable("space.flightsuit.home");
         }
-        ServerPlayer traveller = pilot;
-        ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> traveller), new SpaceTravelS2CPacket(where, CROSSING_TICKS));
         double x = ground.getX() + 0.5D;
         double z = ground.getZ() + 0.5D;
         double y = ground.getY() + DESCENT_HEIGHT;
@@ -247,18 +270,14 @@ public final class SpaceTravel {
 
     /** Touchdown: the pilot steps out. At home the ship folds back into the pad; on a planet it stays as the base. */
     static void landed(SpaceshipEntity ship) {
-        ServerPlayer pilot = null;
-        for (Entity passenger : ship.getPassengers()) {
-            if (passenger instanceof ServerPlayer player) {
-                pilot = player;
-            }
-        }
+        ServerPlayer pilot = pilotOf(ship);
         ship.letOut();
         if (pilot != null) {
             pilot.removeEffect(MobEffects.SLOW_FALLING);
             pilot.fallDistance = 0.0F;
             Vec3 out = ship.position().add(Vec3.directionFromRotation(0.0F, ship.getYRot()).scale(2.2D));
-            pilot.teleportTo(out.x, ship.getY(), out.z);
+            int ground = ship.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(out.x), Mth.floor(out.z));
+            pilot.teleportTo(out.x, Math.max(ground, ship.getY()), out.z);
         }
         Planet planet = ship.planet();
         if (planet == null) {
@@ -288,25 +307,38 @@ public final class SpaceTravel {
         int x = site.getX() + dx * 3;
         int z = site.getZ() + dz * 3;
         level.getChunkAt(new BlockPos(x, 0, z));
-        return new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        if (!level.getFluidState(new BlockPos(x, y - 1, z)).isEmpty()) {
+            return site;
+        }
+        return new BlockPos(x, y, z);
     }
 
-    /** Walks out from (x, z) until the surface is dry land. */
+    /**
+     * Walks out from (x, z) until the terrain stands above the sea - asking the generator (cheap, nothing gets
+     * generated), so only the chunk finally chosen is loaded.
+     */
     static BlockPos firmGround(ServerLevel level, int x0, int z0) {
-        for (int ring = 0; ring < 12; ring++) {
-            for (int step = 0; step < Math.max(1, ring * 8); step++) {
-                double angle = step * Math.PI * 2.0D / Math.max(1, ring * 8);
-                int x = x0 + (int) Math.round(Math.cos(angle) * ring * 24);
-                int z = z0 + (int) Math.round(Math.sin(angle) * ring * 24);
-                level.getChunkAt(new BlockPos(x, 0, z));
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                BlockPos below = new BlockPos(x, y - 1, z);
-                if (level.getFluidState(below).isEmpty() && y > level.getSeaLevel()) {
-                    return new BlockPos(x, y, z);
+        int bestX = x0;
+        int bestZ = z0;
+        search:
+        for (int ring = 0; ring < 40; ring++) {
+            int steps = Math.max(1, ring * 8);
+            for (int step = 0; step < steps; step++) {
+                double angle = step * Math.PI * 2.0D / steps;
+                int x = x0 + (int) Math.round(Math.cos(angle) * ring * 32);
+                int z = z0 + (int) Math.round(Math.sin(angle) * ring * 32);
+                int base = level.getChunkSource().getGenerator().getBaseHeight(x, z, Heightmap.Types.OCEAN_FLOOR_WG, level,
+                        level.getChunkSource().randomState());
+                if (base > level.getSeaLevel() + 2) {
+                    bestX = x;
+                    bestZ = z;
+                    break search;
                 }
             }
         }
-        return new BlockPos(x0, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x0, z0), z0);
+        level.getChunkAt(new BlockPos(bestX, 0, bestZ));
+        return new BlockPos(bestX, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bestX, bestZ), bestZ);
     }
 
     // ---------------------------------------------------------------- remote link from a planet

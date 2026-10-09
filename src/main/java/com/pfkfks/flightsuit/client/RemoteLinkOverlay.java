@@ -73,8 +73,12 @@ public final class RemoteLinkOverlay implements IGuiOverlay {
             graphics.fill(cx - titleWidth / 2 - 10, 10, cx - titleWidth / 2 - 5, 15, argb(0xFF, WARN));
         }
         graphics.drawString(font, title, cx - titleWidth / 2, 9, argb(0xFF, CYAN), true);
-        int distance = (int) player.position().distanceTo(RemoteLinkClient.bodyPos());
-        graphics.drawCenteredString(font, Component.translatable("hud.flightsuit.remote.body", distance), cx, 20, DIM_TEXT);
+        if (Double.isNaN(RemoteLinkClient.bodyPos().y)) {
+            graphics.drawCenteredString(font, Component.translatable("hud.flightsuit.remote.body_far"), cx, 20, DIM_TEXT);
+        } else {
+            int distance = (int) player.position().distanceTo(RemoteLinkClient.bodyPos());
+            graphics.drawCenteredString(font, Component.translatable("hud.flightsuit.remote.body", distance), cx, 20, DIM_TEXT);
+        }
     }
 
     /** Four L-shaped corner marks; dx/dy point inward. */

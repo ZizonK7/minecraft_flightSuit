@@ -254,15 +254,16 @@ public final class RemoteLink {
             }
         }
 
+        // Docked (or capsuled) while still in the suit's world - its station is found from there.
+        if (!parts.isEmpty() && !stays && !flyHome) {
+            SuitUpManager.storeReturningSuit(player, null, parts);
+        }
         player.teleportTo(bodyLevel, session.bodyPos.x, session.bodyPos.y, session.bodyPos.z, session.yaw, session.pitch);
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0.0F;
         session.body.discard();
         SuitServerEvents.revokeSuitFlightNow(player);
         EdithGlassesItem.reequip(player);
-        if (!parts.isEmpty() && !stays && !flyHome) {
-            SuitUpManager.storeReturningSuit(player, null, parts);
-        }
         player.getPersistentData().remove(TAG);
         bodyLevel.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.7F, 1.6F);
         send(player, false, session, "");
@@ -290,6 +291,9 @@ public final class RemoteLink {
         CompoundTag tag = player.getPersistentData().getCompound(TAG);
         player.getPersistentData().remove(TAG);
         Map<EquipmentSlot, ItemStack> parts = SuitUpManager.stripSuit(player);
+        if (!parts.isEmpty()) {
+            SuitUpManager.storeReturningSuit(player, null, parts);
+        }
         ResourceLocation dim = ResourceLocation.tryParse(tag.getString("Dim"));
         ServerLevel bodyLevel = dim == null ? null : player.server.getLevel(ResourceKey.create(Registries.DIMENSION, dim));
         if (bodyLevel != null) {
@@ -298,9 +302,6 @@ public final class RemoteLink {
         }
         SuitServerEvents.revokeSuitFlightNow(player);
         EdithGlassesItem.reequip(player);
-        if (!parts.isEmpty()) {
-            SuitUpManager.storeReturningSuit(player, null, parts);
-        }
         player.displayClientMessage(Component.translatable("message.flightsuit.remote_recovered"), true);
     }
 
@@ -335,8 +336,10 @@ public final class RemoteLink {
     }
 
     private static void send(ServerPlayer player, boolean active, Session session, String suitName) {
+        // A body in another world has no distance worth showing: y = NaN tells the HUD.
+        Vec3 body = player.level().dimension().equals(session.bodyDim) ? session.bodyPos : new Vec3(0.0D, Double.NaN, 0.0D);
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new RemoteLinkS2CPacket(active, session.bodyPos, suitName));
+                new RemoteLinkS2CPacket(active, body, suitName));
     }
 
     // ---------------------------------------------------------------- damage

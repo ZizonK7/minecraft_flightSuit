@@ -74,7 +74,11 @@ public class RemoteBodyEntity extends PathfinderMob {
 
     public Player getOwner() {
         UUID id = getOwnerId();
-        return id == null ? null : level().getPlayerByUUID(id);
+        if (id == null) {
+            return null;
+        }
+        // The owner may be piloting a suit in another dimension.
+        return level().getServer() != null ? level().getServer().getPlayerList().getPlayer(id) : level().getPlayerByUUID(id);
     }
 
     @Override

@@ -814,5 +814,7 @@
   "dragonball.flightsuit.no_wish": "들어줄 소원이 없습니다 (신룡을 부르지 않았거나 시간이 지났음)",
   "dragonball.flightsuit.wish_too_much": "신룡: \"그 소원은 내 힘을 넘어선다. 다른 소원을 말하라.\"",
   "dragonball.flightsuit.wish_no_suit": "신룡: \"슈트를 입고 말하라.\"",
-  "dragonball.flightsuit.granted": "신룡: \"소원은 이루어졌다. 그럼 이만...\" 드래곤볼이 하늘로 흩어져 돌이 되었다 (3일)."
+  "dragonball.flightsuit.granted": "신룡: \"소원은 이루어졌다. 그럼 이만...\" 드래곤볼이 하늘로 흩어져 돌이 되었다 (3일).",
+  "space.flightsuit.need_sky": "발사대 위 하늘이 막혀 있습니다.",
+  "hud.flightsuit.remote.body_far": "몸: 다른 세계"
 }

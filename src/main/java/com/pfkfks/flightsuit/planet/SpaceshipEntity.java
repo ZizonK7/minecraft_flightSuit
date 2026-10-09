@@ -127,6 +127,9 @@ public class SpaceshipEntity extends Entity {
                 if (phaseTicks % 20 == 0) {
                     level().playSound(null, getX(), getY(), getZ(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 2.0F, 0.5F);
                 }
+                if (phaseTicks == ASCENT_TICKS - 20) {
+                    SpaceTravel.beginCrossing(this);
+                }
                 if (phaseTicks >= ASCENT_TICKS || getY() > level().getMaxBuildHeight() + 32) {
                     SpaceTravel.cross(this);
                 }
@@ -199,8 +202,11 @@ public class SpaceshipEntity extends Entity {
         owner = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
         planet = Planet.byId(tag.getString("Planet"));
         groundY = tag.getDouble("Ground");
-        // A flight cut short by a restart just finishes landing where it is.
-        entityData.set(PHASE, tag.getInt("Phase") == DESCENT ? DESCENT : LANDED);
+        phaseTicks = tag.getInt("PhaseTicks");
+        pendingRider = tag.hasUUID("Rider") ? tag.getUUID("Rider") : null;
+        // A flight cut short (the pilot logged out, the server stopped) carries on where it was.
+        int saved = tag.getInt("Phase");
+        entityData.set(PHASE, saved == ASCENT || saved == DESCENT ? saved : LANDED);
         if (phase() == DESCENT && groundY > getY()) {
             groundY = getY();
         }
@@ -214,5 +220,9 @@ public class SpaceshipEntity extends Entity {
         tag.putString("Planet", planet == null ? "" : planet.id());
         tag.putDouble("Ground", groundY);
         tag.putInt("Phase", phase());
+        tag.putInt("PhaseTicks", phaseTicks);
+        if (pendingRider != null) {
+            tag.putUUID("Rider", pendingRider);
+        }
     }
 }
