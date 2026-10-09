@@ -39,6 +39,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.SUIT_COMPANION.get(), SuitCompanionRenderer::new);
         event.registerEntityRenderer(ModEntities.CLEANER_ROBOT.get(), CleanerRobotRenderer::new);
         event.registerEntityRenderer(ModEntities.HOVER_CAR.get(), HoverCarRenderer::new);
+        event.registerEntityRenderer(ModEntities.REMOTE_BODY.get(), RemoteBodyRenderer::new);
     }
 
     @SubscribeEvent
@@ -54,5 +55,6 @@ public final class ClientSetup {
         event.registerAboveAll("helmet_targets", HelmetTargetOverlay.INSTANCE);
         event.registerAboveAll("suit_hud", SuitHudOverlay.INSTANCE);
         event.registerAboveAll("hover_car_hud", HoverCarHudOverlay.INSTANCE);
+        event.registerAboveAll("remote_link", RemoteLinkOverlay.INSTANCE);
     }
 }

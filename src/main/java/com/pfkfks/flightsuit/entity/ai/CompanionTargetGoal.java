@@ -1,5 +1,6 @@
 package com.pfkfks.flightsuit.entity.ai;
 
+import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -15,11 +16,13 @@ import java.util.List;
  * 1. an explicit order (H key);
  * 2. whatever just hurt the owner;
  * 3. whatever the owner just attacked;
- * 4. a hostile mob closing in on the owner.
- * Never targets the owner, other players, or other suits.
+ * 4. a hostile mob closing in on the owner (or on their body, while they're remote-piloting).
+ * Never targets the owner, other players, or other suits, nor anything out of reach.
  */
 public class CompanionTargetGoal extends TargetGoal {
     private static final double GUARD_RADIUS = 12.0D;
+    /** Fights the owner picks far away (e.g. while remote-piloting) are not this suit's to chase. */
+    private static final double REACH = 48.0D;
 
     private final SuitCompanionEntity suit;
     private LivingEntity candidate;
@@ -63,12 +66,13 @@ public class CompanionTargetGoal extends TargetGoal {
         if (suit.getTarget() != null || suit.tickCount % 10 != 0) {
             return null;
         }
-        List<Mob> threats = suit.level().getEntitiesOfClass(Mob.class, owner.getBoundingBox().inflate(GUARD_RADIUS),
+        LivingEntity ward = suit.getAnchor();
+        List<Mob> threats = suit.level().getEntitiesOfClass(Mob.class, ward.getBoundingBox().inflate(GUARD_RADIUS),
                 mob -> mob instanceof Enemy && mob.isAlive() && valid(mob, owner)
-                        && (mob.getTarget() == owner || mob.distanceToSqr(owner) < 8.0D * 8.0D));
+                        && (mob.getTarget() == ward || mob.distanceToSqr(ward) < 8.0D * 8.0D));
         Mob closest = null;
         for (Mob mob : threats) {
-            if (closest == null || mob.distanceToSqr(owner) < closest.distanceToSqr(owner)) {
+            if (closest == null || mob.distanceToSqr(ward) < closest.distanceToSqr(ward)) {
                 closest = mob;
             }
         }
@@ -76,8 +80,8 @@ public class CompanionTargetGoal extends TargetGoal {
     }
 
     private boolean valid(LivingEntity entity, Player owner) {
-        return entity.isAlive() && entity != owner && entity != suit
-                && !(entity instanceof Player) && !(entity instanceof SuitCompanionEntity);
+        return entity.isAlive() && entity != owner && entity != suit && entity.distanceToSqr(suit) < REACH * REACH
+                && !(entity instanceof Player) && !(entity instanceof SuitCompanionEntity) && !(entity instanceof RemoteBodyEntity);
     }
 
     @Override

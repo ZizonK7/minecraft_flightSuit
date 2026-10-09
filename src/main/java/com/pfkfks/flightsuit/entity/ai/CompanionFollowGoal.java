@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.entity.ai;
 
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -11,6 +12,7 @@ import java.util.EnumSet;
  * Stands by at the owner's side and stays put, looking where the owner looks. Only when the owner has
  * moved more than {@link #LEAVE_DISTANCE} away does it fly back to their right side (faster the further
  * it is), then settles again. Left far behind, it streaks back in flight (teleporting only across huge gaps).
+ * While the owner is remote-piloting another suit, it stands guard by the body they left instead.
  */
 public class CompanionFollowGoal extends Goal {
     /** Beyond this it streaks back in flight (rather than flying in normally). */
@@ -45,7 +47,7 @@ public class CompanionFollowGoal extends Goal {
 
     @Override
     public void tick() {
-        Player owner = suit.getOwner();
+        LivingEntity owner = suit.getAnchor();
         if (owner == null) {
             return;
         }

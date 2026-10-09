@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.entity.ai.CompanionFollowGoal;
 import com.pfkfks.flightsuit.entity.ai.CompanionTargetGoal;
 import com.pfkfks.flightsuit.entity.ai.SuitMoveControl;
 import com.pfkfks.flightsuit.registry.ModEntities;
+import com.pfkfks.flightsuit.suit.RemoteLink;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
 import com.pfkfks.flightsuit.suit.SuitUpManager;
@@ -133,6 +134,16 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     public Player getOwner() {
         return ownerId == null ? null : level().getPlayerByUUID(ownerId);
+    }
+
+    /**
+     * Who it stands by: the owner - or, while the owner is remote-piloting another suit, the body they left
+     * behind (following the pilot across the map would strand it in unloaded chunks). Server side.
+     */
+    public LivingEntity getAnchor() {
+        Player owner = getOwner();
+        LivingEntity body = owner == null || level().isClientSide ? null : RemoteLink.bodyOf(owner);
+        return body != null ? body : owner;
     }
 
     public boolean isOwnedBy(Player player) {
@@ -312,7 +323,7 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     /** Rocket in toward the owner's side, fast while far, easing off as it closes in; normal AI resumes nearby. */
     private void tickArrival() {
-        Player owner = getOwner();
+        LivingEntity owner = getAnchor();
         if (owner == null || !isPowered()) {
             arriving = false;
             noPhysics = false;
@@ -341,8 +352,9 @@ public class SuitCompanionEntity extends PathfinderMob {
     private void tickPower() {
         // Parked: owner gone or far away and nothing to do - land and idle without spending power.
         Player owner = getOwner();
+        LivingEntity anchor = getAnchor();
         boolean active = getTarget() != null || boarding || arriving || held || homeTicks >= 0
-                || (owner != null && distanceToSqr(owner) < PARK_DISTANCE * PARK_DISTANCE);
+                || (anchor != null && distanceToSqr(anchor) < PARK_DISTANCE * PARK_DISTANCE);
         if (!active) {
             setNoGravity(false);
             return;

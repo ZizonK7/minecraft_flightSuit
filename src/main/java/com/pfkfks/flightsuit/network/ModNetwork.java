@@ -45,6 +45,8 @@ public final class ModNetwork {
                 SuitRosterS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, EdithStatusS2CPacket.class, EdithStatusS2CPacket::encode, EdithStatusS2CPacket::decode,
                 EdithStatusS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, RemoteLinkS2CPacket.class, RemoteLinkS2CPacket::encode, RemoteLinkS2CPacket::decode,
+                RemoteLinkS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {

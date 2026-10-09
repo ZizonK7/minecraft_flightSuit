@@ -12,7 +12,8 @@ import java.util.List;
 
 /**
  * Suit wheel (DESIGN.md 4-1): every reachable suit as a card on a ring, House Party Protocol in the middle.
- * Click = deploy as companion, Shift+click = swap into it, right click = make that station the main one.
+ * Click = deploy as companion, Shift+click = swap into it, Ctrl+click = remote-pilot it, right click = make
+ * that station the main one.
  */
 public class SuitWheelScreen extends Screen {
     private static final int CARD_W = 118;
@@ -92,7 +93,8 @@ public class SuitWheelScreen extends Screen {
             graphics.drawString(font, font.plainSubstrByWidth(name, CARD_W - 8), x + 4, y + 4, entry.broken() ? WARN : TEXT, false);
             graphics.drawString(font, detail(entry), x + 4, y + 16, entry.broken() ? WARN : DIM, false);
         }
-        graphics.drawCenteredString(font, Component.translatable("screen.flightsuit.wheel_hint"), cx, height - 24, DIM);
+        graphics.drawCenteredString(font, Component.translatable("screen.flightsuit.wheel_hint"), cx, height - 30, DIM);
+        graphics.drawCenteredString(font, Component.translatable("screen.flightsuit.wheel_hint_remote"), cx, height - 18, DIM);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
@@ -131,7 +133,8 @@ public class SuitWheelScreen extends Screen {
             return true;
         }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            send(hasShiftDown() ? SuitWheel.WEAR : SuitWheel.SUMMON, entry.kind(), entry.key());
+            byte action = hasControlDown() ? SuitWheel.REMOTE : hasShiftDown() ? SuitWheel.WEAR : SuitWheel.SUMMON;
+            send(action, entry.kind(), entry.key());
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);

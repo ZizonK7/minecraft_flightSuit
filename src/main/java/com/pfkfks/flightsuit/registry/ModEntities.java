@@ -3,6 +3,7 @@ package com.pfkfks.flightsuit.registry;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.car.HoverCarEntity;
 import com.pfkfks.flightsuit.cleaner.CleanerRobotEntity;
+import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
 import net.minecraft.world.entity.EntityType;
@@ -44,6 +45,13 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .updateInterval(1)
                     .build("hover_car"));
+
+    public static final RegistryObject<EntityType<RemoteBodyEntity>> REMOTE_BODY = ENTITY_TYPES.register("remote_body",
+            () -> EntityType.Builder.<RemoteBodyEntity>of(RemoteBodyEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.8F)
+                    .noSave()
+                    .clientTrackingRange(10)
+                    .build("remote_body"));
 
     private ModEntities() {
     }

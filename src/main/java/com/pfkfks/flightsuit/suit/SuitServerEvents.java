@@ -62,6 +62,7 @@ public final class SuitServerEvents {
             return;
         }
         SuitUpManager.tick(player);
+        RemoteLink.tick(player);
         CounterHandler.tick(player);
 
         WornSuit worn = WornSuit.of(player);
@@ -220,6 +221,8 @@ public final class SuitServerEvents {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Back into the body before the player is saved, so they log in where they left it.
+            RemoteLink.end(player, RemoteLink.End.LOGOUT);
             SuitUpManager.finishNow(player);
             forget(player.getUUID());
         }

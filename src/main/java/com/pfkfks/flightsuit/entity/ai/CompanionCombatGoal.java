@@ -1,5 +1,6 @@
 package com.pfkfks.flightsuit.entity.ai;
 
+import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.suit.RepulsorHandler;
 import com.pfkfks.flightsuit.suit.SuitTuning;
@@ -83,7 +84,8 @@ public class CompanionCombatGoal extends Goal {
             Vec3 palm = suit.palmPosition();
             Vec3 aim = target.getBoundingBox().getCenter().subtract(palm).normalize();
             RepulsorHandler.blast((ServerLevel) suit.level(), suit, palm, aim, FIRE_RANGE, COMPANION_REPULSOR_DAMAGE,
-                    entity -> entity != suit && !(entity instanceof SuitCompanionEntity) && entity != suit.getOwner());
+                    entity -> entity != suit && !(entity instanceof SuitCompanionEntity) && !(entity instanceof RemoteBodyEntity)
+                            && entity != suit.getOwner());
             suit.markAiming();
             fireCooldown = FIRE_COOLDOWN;
         }

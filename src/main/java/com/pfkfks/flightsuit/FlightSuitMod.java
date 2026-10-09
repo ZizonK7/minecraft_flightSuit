@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit;
 
 import com.mojang.logging.LogUtils;
 import com.pfkfks.flightsuit.cleaner.CleanerRobotEntity;
+import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
@@ -74,6 +75,7 @@ public class FlightSuitMod {
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.SUIT_COMPANION.get(), SuitCompanionEntity.createAttributes().build());
         event.put(ModEntities.CLEANER_ROBOT.get(), CleanerRobotEntity.createAttributes().build());
+        event.put(ModEntities.REMOTE_BODY.get(), RemoteBodyEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

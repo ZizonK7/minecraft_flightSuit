@@ -57,6 +57,7 @@ public final class ClientEvents {
             ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
         SuitFlightClient.tick(player);
+        RemoteLinkClient.tick(player);
         CinematicCamera.tick();
         if (!minecraft.isPaused()) {
             SuitAnimator.spawnThrusterParticles(minecraft.level);
@@ -198,5 +199,6 @@ public final class ClientEvents {
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         CinematicCamera.reset();
         SuitFlightClient.reset();
+        RemoteLinkClient.reset();
     }
 }

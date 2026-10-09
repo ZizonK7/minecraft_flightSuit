@@ -1,5 +1,6 @@
 package com.pfkfks.flightsuit.suit;
 
+import com.pfkfks.flightsuit.block.SuitStationBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.network.ModNetwork;
@@ -28,7 +29,8 @@ import java.util.Map;
  * - SUMMON: send it out as a companion;
  * - WEAR: swap into it (the suit you're wearing stays out as a companion, or goes home if worn out);
  * - SET_MAIN: make that station the one G calls;
- * - ALL: House Party Protocol - every docked suit deploys, up to EDITH's control capacity.
+ * - ALL: House Party Protocol - every docked suit deploys, up to EDITH's control capacity;
+ * - REMOTE: remote-pilot it (DESIGN.md 4-7) - a companion, or a docked suit straight off its station.
  */
 public final class SuitWheel {
     public static final byte STATION = 0;
@@ -39,6 +41,7 @@ public final class SuitWheel {
     public static final byte WEAR = 1;
     public static final byte SET_MAIN = 2;
     public static final byte ALL = 3;
+    public static final byte REMOTE = 4;
 
     /** How many suits EDITH can fly at once (DESIGN.md "이디스 제어 용량"; upgrades come later). */
     public static final int CONTROL_CAPACITY = 4;
@@ -55,6 +58,10 @@ public final class SuitWheel {
     public static void open(ServerPlayer player) {
         if (!EdithGlassesItem.has(player)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.wheel_needs_edith"), true);
+            return;
+        }
+        if (RemoteLink.isActive(player)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.remote_busy"), true);
             return;
         }
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SuitRosterS2CPacket(roster(player)));
@@ -98,7 +105,11 @@ public final class SuitWheel {
     }
 
     public static void act(ServerPlayer player, byte kind, long key, byte action) {
-        if (!EdithGlassesItem.has(player) || SuitUpManager.isSuitingUp(player)) {
+        if (!EdithGlassesItem.has(player) || SuitUpManager.isSuitingUp(player) || RemoteLink.isActive(player)) {
+            return;
+        }
+        if (action == REMOTE) {
+            remote(player, kind, key);
             return;
         }
         if (action == ALL) {
@@ -179,6 +190,39 @@ public final class SuitWheel {
             }
             default -> {
             }
+        }
+    }
+
+    /** Open a remote link to a suit: a docked one powers up on its station platform, a companion right where it is. */
+    private static void remote(ServerPlayer player, byte kind, long key) {
+        if (!RemoteLink.canConnect(player)) {
+            return;
+        }
+        switch (kind) {
+            case STATION -> {
+                SuitStationBlockEntity station = loadOwnedStation(player, BlockPos.of(key));
+                if (station == null || !station.hasSuit() || refuseBroken(player, station.getParts().values())
+                        || !RemoteLink.canPilot(player, station.getParts())) {
+                    return;
+                }
+                float yaw = station.getBlockState().getValue(SuitStationBlock.FACING).toYRot();
+                // Where the docked suit stands - the same spot as stepping into it at the station.
+                Vec3 spot = Vec3.atBottomCenterOf(station.getBlockPos()).add(0.0D, 0.25D, 0.0D);
+                RemoteLink.start(player, station.takeAll(), spot, yaw, false);
+            }
+            case COMPANION -> {
+                if (!(player.serverLevel().getEntity((int) key) instanceof SuitCompanionEntity suit) || !suit.isOwnedBy(player)
+                        || refuseBroken(player, suit.partsView().values()) || !RemoteLink.canPilot(player, suit.partsView())) {
+                    return;
+                }
+                Vec3 spot = suit.position();
+                float yaw = suit.getYRot();
+                boolean airborne = !suit.onGround();
+                Map<EquipmentSlot, ItemStack> parts = suit.takeParts();
+                suit.discard();
+                RemoteLink.start(player, parts, spot, yaw, airborne);
+            }
+            default -> player.displayClientMessage(Component.translatable("message.flightsuit.remote_capsule"), true);
         }
     }
 

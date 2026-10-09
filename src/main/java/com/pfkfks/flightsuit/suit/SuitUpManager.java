@@ -133,6 +133,14 @@ public final class SuitUpManager {
         if (isSuitingUp(player)) {
             return;
         }
+        if (RemoteLink.isActive(player)) {
+            // Remote piloting: G drops the link; held, everyone (this suit included) goes home.
+            if (hold) {
+                Companions.recallAll(player);
+            }
+            RemoteLink.end(player, hold ? RemoteLink.End.RECALL : RemoteLink.End.DISCONNECT);
+            return;
+        }
         WornSuit worn = WornSuit.of(player);
         if (hold) {
             int recalled = Companions.recallAll(player);
@@ -418,6 +426,8 @@ public final class SuitUpManager {
     /**
      * Where a suit that flew off home ends up: docked at its own station (or the main one) if there's room,
      * otherwise packed into a capsule for the owner (or dropped where the suit was, if the owner is offline).
+     * {@code suit} may be null (no entity flew home - e.g. a remote link dropped far away): a capsule that
+     * doesn't fit the inventory then drops at the owner's feet.
      */
     public static void storeReturningSuit(ServerPlayer owner, SuitCompanionEntity suit, Map<EquipmentSlot, ItemStack> parts) {
         if (parts.isEmpty()) {
@@ -436,7 +446,11 @@ public final class SuitUpManager {
             SuitCapsuleItem.setPart(capsule, entry.getKey(), entry.getValue());
         }
         if (owner == null || !owner.getInventory().add(capsule)) {
-            suit.spawnAtLocation(capsule);
+            if (suit != null) {
+                suit.spawnAtLocation(capsule);
+            } else if (owner != null) {
+                owner.drop(capsule, false);
+            }
         }
     }
 
@@ -451,6 +465,11 @@ public final class SuitUpManager {
 
     /** Iron Man 3: a piece gave out - the back opens and the wearer is thrown clear; the suit goes for repairs. */
     private static void forcedEject(ServerPlayer player) {
+        if (RemoteLink.isActive(player)) {
+            // Nobody inside to throw clear: the link just drops and the suit goes for repairs.
+            RemoteLink.end(player, RemoteLink.End.BROKEN);
+            return;
+        }
         if (!WornSuit.of(player).any()) {
             return;
         }
@@ -722,7 +741,7 @@ public final class SuitUpManager {
     }
 
     /** Faceplate shut + eyes light up. */
-    private static void eyesOn(ServerLevel level, ServerPlayer player) {
+    public static void eyesOn(ServerLevel level, ServerPlayer player) {
         Vec3 eye = player.getEyePosition().add(player.getLookAngle().scale(0.35D));
         level.sendParticles(ParticleTypes.END_ROD, eye.x, eye.y, eye.z, 6, 0.12D, 0.04D, 0.12D, 0.01D);
         level.sendParticles(ParticleTypes.FLASH, eye.x, eye.y, eye.z, 1, 0, 0, 0, 0);
@@ -743,7 +762,7 @@ public final class SuitUpManager {
         return worn;
     }
 
-    private static Map<EquipmentSlot, ItemStack> stripSuit(ServerPlayer player) {
+    public static Map<EquipmentSlot, ItemStack> stripSuit(ServerPlayer player) {
         Map<EquipmentSlot, ItemStack> stripped = new EnumMap<>(EquipmentSlot.class);
         for (Map.Entry<EquipmentSlot, ItemStack> entry : wornPieces(player).entrySet()) {
             stripped.put(entry.getKey(), entry.getValue().copy());
