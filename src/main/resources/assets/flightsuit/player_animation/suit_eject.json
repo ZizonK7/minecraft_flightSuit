@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "name": "suit_eject",
+  "author": "flightsuit",
+  "description": "Thrown out of a failing suit: flung backward, arms and legs flailing.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 14,
+    "stopTick": 22,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 3, "easing": "OUTQUAD", "body": {"pitch": 35}},
+      {"tick": 3, "easing": "OUTQUAD", "head": {"pitch": 20}},
+      {"tick": 3, "easing": "OUTBACK", "rightArm": {"pitch": -150, "roll": 30}},
+      {"tick": 3, "easing": "OUTBACK", "leftArm": {"pitch": -150, "roll": -30}},
+      {"tick": 3, "easing": "OUTQUAD", "rightLeg": {"pitch": -40}},
+      {"tick": 3, "easing": "OUTQUAD", "leftLeg": {"pitch": 20}},
+      {"tick": 8, "easing": "INOUTSINE", "rightArm": {"pitch": -110, "roll": 50}},
+      {"tick": 8, "easing": "INOUTSINE", "leftArm": {"pitch": -170, "roll": -15}},
+      {"tick": 8, "easing": "INOUTSINE", "rightLeg": {"pitch": 15}},
+      {"tick": 8, "easing": "INOUTSINE", "leftLeg": {"pitch": -35}},
+      {"tick": 14, "easing": "INOUTSINE", "body": {"pitch": 10}},
+      {"tick": 14, "easing": "INOUTSINE", "head": {"pitch": 0}},
+      {"tick": 14, "easing": "INOUTSINE", "rightArm": {"pitch": -60, "roll": 40}},
+      {"tick": 14, "easing": "INOUTSINE", "leftArm": {"pitch": -60, "roll": -40}},
+      {"tick": 14, "easing": "INOUTSINE", "rightLeg": {"pitch": -10}},
+      {"tick": 14, "easing": "INOUTSINE", "leftLeg": {"pitch": 10}}
+    ]
+  }
+}

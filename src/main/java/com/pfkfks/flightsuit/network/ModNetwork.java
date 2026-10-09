@@ -33,6 +33,8 @@ public final class ModNetwork {
                 ThrustStateC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, SuitAnimS2CPacket.class, SuitAnimS2CPacket::encode, SuitAnimS2CPacket::decode,
                 SuitAnimS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, CommandAttackC2SPacket.class, CommandAttackC2SPacket::encode, CommandAttackC2SPacket::decode,
+                CommandAttackC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, EdithStatusS2CPacket.class, EdithStatusS2CPacket::encode, EdithStatusS2CPacket::decode,
                 EdithStatusS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }

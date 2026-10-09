@@ -5,7 +5,8 @@ public enum SuitAnim {
     SUIT_UP_GROUND("suit_up_ground"),
     REPULSOR_RIGHT("repulsor_right"),
     SUIT_UP_FALL("suit_up_fall"),
-    SUIT_UP_STATION("suit_up_station");
+    SUIT_UP_STATION("suit_up_station"),
+    SUIT_EJECT("suit_eject");
 
     private final String animationName;
 

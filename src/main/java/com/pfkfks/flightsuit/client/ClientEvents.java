@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.network.CommandAttackC2SPacket;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.RepulsorC2SPacket;
 import com.pfkfks.flightsuit.network.SuitToggleC2SPacket;
@@ -43,13 +44,46 @@ public final class ClientEvents {
         if (player == null || minecraft.level == null) {
             return;
         }
-        while (ModKeys.SUIT_TOGGLE.consumeClick()) {
-            ModNetwork.sendToServer(new SuitToggleC2SPacket());
+        tickSuitKey();
+        while (ModKeys.COMMAND_ATTACK.consumeClick()) {
+            ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
         SuitFlightClient.tick(player);
         CinematicCamera.tick();
         if (!minecraft.isPaused()) {
             SuitAnimator.spawnThrusterParticles(minecraft.level);
+        }
+    }
+
+    /** G is a tap/hold key: a hold fires once at the threshold, a release before it counts as a tap. */
+    private static final int HOLD_TICKS = 10;
+    private static int suitKeyHeld = -1;
+    private static boolean holdSent;
+
+    private static void tickSuitKey() {
+        while (ModKeys.SUIT_TOGGLE.consumeClick()) {
+            // Edge detection is done with isDown below; drain the click queue so it can't pile up.
+            if (suitKeyHeld < 0) {
+                suitKeyHeld = 0;
+                holdSent = false;
+            }
+        }
+        if (ModKeys.SUIT_TOGGLE.isDown()) {
+            if (suitKeyHeld < 0) {
+                suitKeyHeld = 0;
+                holdSent = false;
+            } else {
+                suitKeyHeld++;
+            }
+            if (!holdSent && suitKeyHeld >= HOLD_TICKS) {
+                holdSent = true;
+                ModNetwork.sendToServer(new SuitToggleC2SPacket(true));
+            }
+        } else if (suitKeyHeld >= 0) {
+            if (!holdSent) {
+                ModNetwork.sendToServer(new SuitToggleC2SPacket(false));
+            }
+            suitKeyHeld = -1;
         }
     }
 

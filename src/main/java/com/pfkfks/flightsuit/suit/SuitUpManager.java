@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.suit;
 
 import com.pfkfks.flightsuit.block.SuitStationBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
+import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.SuitAnimS2CPacket;
@@ -115,25 +116,42 @@ public final class SuitUpManager {
     // ---------------------------------------------------------------- entry points
 
     /**
-     * G key. Wearing suit pieces: send them home (EDITH + main station) or pack them into a capsule.
-     * Not wearing any: call the main suit (EDITH + main station) or suit up from a filled capsule.
+     * G key (DESIGN.md 4-1).
+     * Tap, wearing a full suit: step out of it - it stays behind as a companion.
+     * Tap, wearing a partial suit: put it away (home with EDITH + main station, else a capsule).
+     * Tap, not wearing one: board the nearest companion suit, else call the main suit (EDITH + main station),
+     * else suit up from a filled capsule.
+     * Hold: every companion flies home, and the worn suit is put away too.
      */
-    public static void toggle(ServerPlayer player) {
+    public static void toggle(ServerPlayer player, boolean hold) {
         if (isSuitingUp(player)) {
             return;
         }
-        boolean edith = EdithGlassesItem.has(player);
-        if (WornSuit.of(player).any()) {
-            if (edith) {
-                SuitStationBlockEntity station = MainStation.resolve(player);
-                if (station != null && station.canDock(wornPieces(player))) {
-                    sendHome(player, station);
-                    return;
-                }
+        WornSuit worn = WornSuit.of(player);
+        if (hold) {
+            int recalled = Companions.recallAll(player);
+            if (worn.any()) {
+                putAway(player);
+            } else {
+                player.displayClientMessage(Component.translatable("message.flightsuit.companions_recalled", recalled), true);
             }
-            pack(player);
             return;
         }
+        if (worn.fullSet()) {
+            stepOut(player);
+            return;
+        }
+        if (worn.any()) {
+            putAway(player);
+            return;
+        }
+        SuitCompanionEntity companion = Companions.nearest(player, 32.0D);
+        if (companion != null) {
+            companion.startBoarding();
+            player.displayClientMessage(Component.translatable("message.flightsuit.companion_boarding"), true);
+            return;
+        }
+        boolean edith = EdithGlassesItem.has(player);
         if (edith) {
             SuitStationBlockEntity station = MainStation.resolve(player);
             if (station != null && station.hasSuit()) {
@@ -169,7 +187,7 @@ public final class SuitUpManager {
             return;
         }
         Map<EquipmentSlot, ItemStack> parts = SuitCapsuleItem.getParts(capsule);
-        if (parts.isEmpty()) {
+        if (parts.isEmpty() || refuseBroken(player, parts)) {
             return;
         }
         SuitCapsuleItem.clearParts(capsule);
@@ -178,6 +196,9 @@ public final class SuitUpManager {
 
     /** EDITH call: the main suit leaves its station and flies to the player from that direction. */
     public static void callFromStation(ServerPlayer player, SuitStationBlockEntity station) {
+        if (refuseBroken(player, station.getParts())) {
+            return;
+        }
         Map<EquipmentSlot, ItemStack> parts = station.takeAll();
         Vec3 toStation = station.dockPoint().subtract(player.position());
         player.displayClientMessage(Component.translatable("message.flightsuit.suit_incoming",
@@ -194,6 +215,9 @@ public final class SuitUpManager {
         if (isSuitingUp(player) || WornSuit.of(player).any()) {
             return false;
         }
+        if (refuseBroken(player, station.getParts())) {
+            return true;
+        }
         Map<EquipmentSlot, ItemStack> parts = station.takeAll();
         if (parts.isEmpty()) {
             return false;
@@ -204,7 +228,12 @@ public final class SuitUpManager {
         player.connection.teleport(spot.x, spot.y, spot.z, yaw, 0.0F);
         player.setYBodyRot(yaw);
         player.setYHeadRot(yaw);
+        startClamp(player, parts, yaw);
+        return true;
+    }
 
+    /** In-place assembly around the player (station platform, or a companion suit wrapping its owner). */
+    private static void startClamp(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, float yaw) {
         Vec3 back = Vec3.directionFromRotation(0.0F, yaw).scale(-1.0D);
         List<Step> steps = new ArrayList<>();
         for (int i = 0; i < ORDER.length; i++) {
@@ -221,7 +250,6 @@ public final class SuitUpManager {
             steps.add(new Step(ORDER[i], stack, STATION_LAUNCH_TICK[i], STATION_PRESS_TICKS, offset, true));
         }
         startGround(player, steps, SuitAnim.SUIT_UP_STATION);
-        return true;
     }
 
     /** Right-click the station empty-handed while wearing suit pieces: they come off and dock. */
@@ -231,6 +259,133 @@ public final class SuitUpManager {
         }
         sendHome(player, station);
         return true;
+    }
+
+    /** A suit with a worn-out piece stays put until a station has repaired it. */
+    private static boolean refuseBroken(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts) {
+        for (ItemStack stack : parts.values()) {
+            if (SuitArmorItem.isBroken(stack)) {
+                player.displayClientMessage(Component.translatable("message.flightsuit.suit_needs_repair"), true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ---------------------------------------------------------------- companions
+
+    /**
+     * Iron Man stepping out of his suit: the suit stays exactly where the player stood (now a companion)
+     * and the player pops out backward. Glasses go back on.
+     */
+    public static void stepOut(ServerPlayer player) {
+        float yaw = player.getYRot();
+        Vec3 spot = player.position();
+        Map<EquipmentSlot, ItemStack> pieces = stripSuit(player);
+        SuitCompanionEntity.spawn(player, pieces, spot, yaw);
+        EdithGlassesItem.reequip(player);
+
+        Vec3 back = Vec3.directionFromRotation(0.0F, yaw).scale(-1.0D);
+        player.setDeltaMovement(back.scale(0.45D).add(0.0D, 0.3D, 0.0D));
+        player.hurtMarked = true;
+        ServerLevel level = player.serverLevel();
+        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, spot.x, spot.y + 1.0D, spot.z, 16, 0.3D, 0.6D, 0.3D, 0.15D);
+        level.playSound(null, player.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 0.8F, 1.2F);
+        level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.8F, 1.4F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.suit_stepped_out"), true);
+    }
+
+    /** A companion that reached its owner wraps around them (in place, or the falling dive if they're falling). */
+    public static void boardCompanion(ServerPlayer player, SuitCompanionEntity companion) {
+        if (isSuitingUp(player) || WornSuit.of(player).any() || !companion.isAlive()) {
+            return;
+        }
+        Map<EquipmentSlot, ItemStack> parts = companion.takeParts();
+        companion.discard();
+        if (parts.isEmpty()) {
+            return;
+        }
+        if (isFalling(player)) {
+            startFall(player, parts);
+            return;
+        }
+        startClamp(player, parts, player.getYRot());
+    }
+
+    /** Direction from {@code from} to the player's main station (null when there is none in this dimension). */
+    public static Vec3 mainStationDirection(ServerPlayer player, Vec3 from) {
+        MainStation.Link link = MainStation.get(player);
+        if (!MainStation.isInPlayerDimension(player, link)) {
+            return null;
+        }
+        return Vec3.atCenterOf(link.pos()).subtract(from);
+    }
+
+    /**
+     * Where a suit that flew off home ends up: docked at the owner's main station if it has room, otherwise
+     * packed into a capsule for the owner (or dropped where the suit was, if the owner is offline).
+     */
+    public static void storeReturningSuit(ServerPlayer owner, SuitCompanionEntity suit, Map<EquipmentSlot, ItemStack> parts) {
+        if (parts.isEmpty()) {
+            return;
+        }
+        if (owner != null) {
+            SuitStationBlockEntity station = MainStation.resolve(owner);
+            if (station != null && station.canDock(parts)) {
+                station.dock(parts);
+                return;
+            }
+        }
+        SuitType type = ((SuitArmorItem) parts.values().iterator().next().getItem()).getSuitType();
+        ItemStack capsule = new ItemStack(ModItems.capsuleFor(type));
+        for (Map.Entry<EquipmentSlot, ItemStack> entry : parts.entrySet()) {
+            SuitCapsuleItem.setPart(capsule, entry.getKey(), entry.getValue());
+        }
+        if (owner == null || !owner.getInventory().add(capsule)) {
+            suit.spawnAtLocation(capsule);
+        }
+    }
+
+    // ---------------------------------------------------------------- forced ejection
+
+    private static final java.util.Set<UUID> EJECT_REQUESTS = new java.util.HashSet<>();
+
+    /** Called from armor damage (mid-damage-calculation), so the actual ejection waits for the next tick. */
+    public static void requestEject(ServerPlayer player) {
+        EJECT_REQUESTS.add(player.getUUID());
+    }
+
+    /** Iron Man 3: a piece gave out - the back opens and the wearer is thrown clear; the suit goes for repairs. */
+    private static void forcedEject(ServerPlayer player) {
+        if (!WornSuit.of(player).any()) {
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        Vec3 body = player.position().add(0.0D, 1.0D, 0.0D);
+        level.sendParticles(ParticleTypes.EXPLOSION, body.x, body.y, body.z, 1, 0, 0, 0, 0);
+        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, body.x, body.y, body.z, 30, 0.4D, 0.6D, 0.4D, 0.3D);
+        level.sendParticles(ParticleTypes.LARGE_SMOKE, body.x, body.y, body.z, 12, 0.3D, 0.5D, 0.3D, 0.05D);
+        level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.8F, 0.7F);
+        level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.5F, 1.5F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.suit_ejected"), true);
+
+        putAway(player);
+        Vec3 back = Vec3.directionFromRotation(0.0F, player.getYRot()).scale(-1.0D);
+        player.setDeltaMovement(back.scale(0.7D).add(0.0D, 0.9D, 0.0D));
+        player.hurtMarked = true;
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SUIT_EJECT, 0));
+    }
+
+    /** Worn suit off: home to the main station (EDITH) if possible, else into a capsule. */
+    private static void putAway(ServerPlayer player) {
+        if (EdithGlassesItem.has(player)) {
+            SuitStationBlockEntity station = MainStation.resolve(player);
+            if (station != null && station.canDock(wornPieces(player))) {
+                sendHome(player, station);
+                return;
+            }
+        }
+        pack(player);
     }
 
     // ---------------------------------------------------------------- suit-up
@@ -310,6 +465,9 @@ public final class SuitUpManager {
 
     /** Called every server tick for every player. */
     public static void tick(ServerPlayer player) {
+        if (EJECT_REQUESTS.remove(player.getUUID()) && !isSuitingUp(player)) {
+            forcedEject(player);
+        }
         Sequence sequence = ACTIVE.get(player.getUUID());
         if (sequence == null) {
             return;
@@ -540,5 +698,6 @@ public final class SuitUpManager {
 
     public static void forget(UUID playerId) {
         ACTIVE.remove(playerId);
+        EJECT_REQUESTS.remove(playerId);
     }
 }

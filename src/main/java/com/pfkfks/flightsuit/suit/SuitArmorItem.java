@@ -48,6 +48,26 @@ public class SuitArmorItem extends ArmorItem {
         return getType() == Type.CHESTPLATE ? SuitTuning.CHEST_CAPACITY : SuitTuning.PIECE_CAPACITY;
     }
 
+    /** A piece worn down to its last durability point: it can't take more and must go back to a station. */
+    public static boolean isBroken(ItemStack stack) {
+        return stack.getItem() instanceof SuitArmorItem && stack.isDamageableItem()
+                && stack.getDamageValue() >= stack.getMaxDamage() - 1;
+    }
+
+    /**
+     * Suit pieces never shatter like vanilla armor (that would delete the suit): damage stops one point short
+     * of breaking, and a wearer whose piece hits that point gets ejected (DESIGN.md 4-2 "강제 이탈").
+     */
+    @Override
+    public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, T entity, Consumer<T> onBroken) {
+        int room = Math.max(0, stack.getMaxDamage() - 1 - stack.getDamageValue());
+        int applied = Math.min(amount, room);
+        if (applied >= room && entity instanceof net.minecraft.server.level.ServerPlayer player) {
+            SuitUpManager.requestEject(player);
+        }
+        return applied;
+    }
+
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
         return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + "_" + getType().getName() + ".png";
@@ -72,6 +92,10 @@ public class SuitArmorItem extends ArmorItem {
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.flightsuit.energy", SuitEnergy.get(stack), getEnergyCapacity())
                 .withStyle(ChatFormatting.AQUA));
+        int max = stack.getMaxDamage();
+        int left = max - stack.getDamageValue();
+        tooltip.add(Component.translatable(isBroken(stack) ? "tooltip.flightsuit.durability_broken" : "tooltip.flightsuit.durability", left, max)
+                .withStyle(isBroken(stack) ? ChatFormatting.RED : left * 5 < max ? ChatFormatting.GOLD : ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.flightsuit.piece." + getType().getName())
                 .withStyle(ChatFormatting.GRAY));
     }
@@ -82,7 +106,7 @@ public class SuitArmorItem extends ArmorItem {
             @Override
             public HumanoidModel<?> getHumanoidArmorModel(LivingEntity livingEntity, ItemStack itemStack,
                                                          EquipmentSlot equipmentSlot, HumanoidModel<?> original) {
-                return SuitArmorModels.forSlot(equipmentSlot);
+                return SuitArmorModels.forWearer(livingEntity, equipmentSlot);
             }
         });
     }

@@ -7,12 +7,21 @@ import net.minecraftforge.client.settings.KeyConflictContext;
 public final class ModKeys {
     private static final String CATEGORY = "key.categories.flightsuit";
 
-    /** G: suit up from a capsule / pack the worn suit away (becomes "call main suit" once glasses exist). */
+    /** G tap: call / board / step out of the suit. G hold: every suit home. */
     public static final KeyMapping SUIT_TOGGLE = new KeyMapping(
             "key.flightsuit.suit_toggle",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             InputConstants.KEY_G,
+            CATEGORY
+    );
+
+    /** H: companion suits attack the aimed-at target (aim at nothing to call them off). */
+    public static final KeyMapping COMMAND_ATTACK = new KeyMapping(
+            "key.flightsuit.command_attack",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_H,
             CATEGORY
     );
 

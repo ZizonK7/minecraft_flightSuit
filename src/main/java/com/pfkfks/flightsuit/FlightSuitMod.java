@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit;
 
 import com.mojang.logging.LogUtils;
+import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.registry.ModBlocks;
@@ -10,6 +11,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -58,6 +60,11 @@ public class FlightSuitMod {
         ModEntities.ENTITY_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::registerAttributes);
+    }
+
+    private void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put(ModEntities.SUIT_COMPANION.get(), SuitCompanionEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

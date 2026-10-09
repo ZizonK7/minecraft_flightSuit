@@ -3,6 +3,7 @@ package com.pfkfks.flightsuit.client;
 import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
 import com.pfkfks.flightsuit.suit.EdithGlassesItem;
 import com.pfkfks.flightsuit.suit.FlightPose;
+import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
 import com.pfkfks.flightsuit.suit.SuitType;
 import com.pfkfks.flightsuit.suit.WornSuit;
@@ -29,6 +30,7 @@ public final class SuitHudOverlay implements IGuiOverlay {
     private static final int TEXT = 0xFFDDF6FF;
     private static final int WARN = 0xFFFF6A4D;
     private static final int DIM_TEXT = 0xFF8FA9B5;
+    private static final int CAUTION = 0xFFFFC94D;
 
     private SuitHudOverlay() {
     }
@@ -53,17 +55,27 @@ public final class SuitHudOverlay implements IGuiOverlay {
 
         SuitType type = WornSuit.primaryType(player);
         String name = worn.fullSet() ? type.hudName() : type.hudName() + " (PARTIAL)";
-        graphics.fill(x - 3, y - 3, x + 124, y + 42, 0x66000000);
+        graphics.fill(x - 3, y - 3, x + 124, y + 53, 0x66000000);
         graphics.drawString(font, name, x, y, CYAN, true);
 
-        // H C L B piece lights.
+        // H C L B piece lights, colored by each piece's durability; the weakest piece's % underneath.
         int px = x;
         String[] labels = {"H", "C", "L", "B"};
-        boolean[] on = {worn.helmet(), worn.chest(), worn.legs(), worn.boots()};
+        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+        int weakest = 100;
         for (int i = 0; i < labels.length; i++) {
-            graphics.drawString(font, labels[i], px, y + 11, on[i] ? CYAN : DIM, false);
+            ItemStack piece = player.getItemBySlot(slots[i]);
+            int color = DIM;
+            if (piece.getItem() instanceof SuitArmorItem) {
+                int percent = durabilityPercent(piece);
+                weakest = Math.min(weakest, percent);
+                color = percent <= 20 ? WARN : percent <= 50 ? CAUTION : CYAN;
+            }
+            graphics.drawString(font, labels[i], px, y + 11, color, false);
             px += 9;
         }
+        graphics.drawString(font, Component.translatable("hud.flightsuit.armor", weakest), x, y + 31,
+                weakest <= 20 ? WARN : weakest <= 50 ? CAUTION : TEXT, false);
 
         // Battery: chest reactor if worn, else whichever piece is on.
         EquipmentSlot sourceSlot = worn.chest() ? EquipmentSlot.CHEST
@@ -79,7 +91,7 @@ public final class SuitHudOverlay implements IGuiOverlay {
         graphics.fill(barX, barY, barX + Math.round(barW * ratio), barY + 5, ratio < 0.15F ? WARN : CYAN);
         graphics.drawString(font, energy + " FE", barX, y + 20, TEXT, false);
 
-        graphics.drawString(font, status(player, worn, energy), x, y + 31, energy <= 0 ? WARN : TEXT, false);
+        graphics.drawString(font, status(player, worn, energy), x, y + 42, energy <= 0 ? WARN : TEXT, false);
     }
 
     /**
@@ -128,6 +140,14 @@ public final class SuitHudOverlay implements IGuiOverlay {
         graphics.drawString(font, suitLine, x, y + 22, suitColor, false);
         graphics.drawString(font, stationLine, x, y + 32, TEXT, false);
         graphics.drawString(font, Component.translatable("hud.flightsuit.edith.call_hint"), x, y + 42, DIM_TEXT, false);
+    }
+
+    private static int durabilityPercent(ItemStack piece) {
+        if (!piece.isDamageableItem()) {
+            return 100;
+        }
+        int max = piece.getMaxDamage();
+        return Math.round((max - piece.getDamageValue()) * 100.0F / max);
     }
 
     private static Component status(LocalPlayer player, WornSuit worn, int energy) {
