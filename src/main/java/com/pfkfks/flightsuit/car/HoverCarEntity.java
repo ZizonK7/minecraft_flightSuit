@@ -246,7 +246,8 @@ public class HoverCarEntity extends Entity {
             bankO = bank;
             LivingEntity driver = getControllingPassenger();
             float turning = driver == null ? 0.0F : driver.xxa;
-            bank += ((float) (-turning * 18.0F * Math.min(1.0D, Math.abs(speed) / 0.5D)) - bank) * 0.2F;
+            // Lean into the turn (A = turning left = left side down = positive roll in the renderer's frame).
+            bank += ((float) (turning * 18.0F * Math.min(1.0D, Math.abs(speed) / 0.5D)) - bank) * 0.2F;
             if (getEnergy() > 0) {
                 spawnThrusterParticles();
             }

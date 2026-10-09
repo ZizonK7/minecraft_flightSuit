@@ -84,11 +84,13 @@ public class HoverCarModel extends EntityModel<HoverCarEntity> {
                 .texOffs(234, 70).addBox(-2.0F, -16.0F, -7.0F, 4.0F, 3.0F, 1.0F) // wheel
                 .texOffs(0, 78).addBox(-8.0F, -19.0F, -10.0F, 16.0F, 1.0F, 1.0F) // windshield_frame
                 .texOffs(94, 58).addBox(-8.0F, -23.0F, 16.0F, 1.0F, 10.0F, 1.0F) // antenna
-                .texOffs(138, 70).addBox(-9.0F, -26.0F, 15.0F, 3.0F, 3.0F, 3.0F) // antenna_tip, PartPose.ZERO);
+                .texOffs(138, 70).addBox(-9.0F, -26.0F, 15.0F, 3.0F, 3.0F, 3.0F) // antenna_tip
+                , PartPose.ZERO);
         root.addOrReplaceChild("glass", CubeListBuilder.create()
                 .texOffs(150, 70).addBox(-8.0F, -18.0F, -10.0F, 16.0F, 5.0F, 1.0F) // windshield
                 .texOffs(78, 70).addBox(-9.0F, -17.0F, -10.0F, 1.0F, 4.0F, 3.0F) // side_glass_right
-                .texOffs(78, 70).addBox(8.0F, -17.0F, -10.0F, 1.0F, 4.0F, 3.0F) // side_glass_left, PartPose.ZERO);
+                .texOffs(78, 70).addBox(8.0F, -17.0F, -10.0F, 1.0F, 4.0F, 3.0F) // side_glass_left
+                , PartPose.ZERO);
         return LayerDefinition.create(mesh, 256, 128);
     }
 
