@@ -655,7 +655,7 @@
   "hero.flightsuit.ironman.repair": "Repair",
   "hero.flightsuit.ironman.repair_hint": "Repair and recharge the suit you wear (friendly or better, once a day)",
   "hero.flightsuit.ironman.upgrade": "Upgrade",
-  "hero.flightsuit.ironman.upgrade_hint": "Chestplate battery +25% (4 diamonds, trust 50+, up to 2 levels)",
+  "hero.flightsuit.ironman.upgrade_hint": "Chestplate battery +25%% (4 diamonds, trust 50+, up to 2 levels)",
   "hero.flightsuit.ironman.reactor": "Arc Reactor",
   "hero.flightsuit.ironman.reactor_hint": "One arc reactor (trust 50+, every 3 days)",
   "hero.flightsuit.ironman.gift": "Gift",
@@ -713,5 +713,6 @@
   "command.flightsuit.thief_no_village": "This village isn't recorded yet or has fewer than 2 residents",
   "command.flightsuit.thief_now": "Batman's crew comes to this village tonight (clock set to night)",
   "command.flightsuit.thief_no_type": "One of batman, catwoman, robin",
-  "command.flightsuit.thief_spawned": "A hidden %s is here"
+  "command.flightsuit.thief_spawned": "A hidden %s is here",
+  "hero.flightsuit.vault_locked": "The vault only opens once Hero City has fallen."
 }

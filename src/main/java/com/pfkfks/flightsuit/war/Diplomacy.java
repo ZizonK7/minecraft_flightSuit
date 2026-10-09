@@ -411,6 +411,10 @@ public final class Diplomacy {
                 if (request.type != Request.Type.REINFORCE && data.battles().get(request.battle) == null) {
                     // The battle ended without word back (e.g. a restart): don't leave it hanging.
                     data.endRequest(request);
+                } else if (request.type == Request.Type.REINFORCE
+                        && (data.villages().get(request.villageKey) == null || level.getDayTime() / 24000L > request.returnDay + 10)) {
+                    // Their village is gone, or never visited again: the lent soldiers stay on, the request is closed.
+                    data.endRequest(request);
                 }
             }
         }

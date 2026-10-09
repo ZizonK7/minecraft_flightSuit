@@ -8,7 +8,7 @@ import net.minecraft.world.item.Items;
 
 /**
  * Who lives in Hero City (DESIGN.md 4-13, M13). Seven heroes - Captain leads, Iron Man helps with the suits -
- * and S.H.I.E.L.D. agents as the city's guards. Each hero has one signature move (HeroEntity.tickSkill).
+ * and S.H.I.E.L.D. agents as the city's guards. Each hero has one signature move (CityHeroEntity.customServerAiStep).
  */
 public enum HeroType {
     CAPTAIN("captain", 160.0D, 9.0D, 0.32D, 1.0F, Items.SHIELD, false),

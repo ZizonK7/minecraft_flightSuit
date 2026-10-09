@@ -655,7 +655,7 @@
   "hero.flightsuit.ironman.repair": "수리",
   "hero.flightsuit.ironman.repair_hint": "입고 있는 슈트를 전부 수리하고 충전 (관계 우호 이상, 하루 1번)",
   "hero.flightsuit.ironman.upgrade": "업그레이드",
-  "hero.flightsuit.ironman.upgrade_hint": "흉갑 배터리 +25% (다이아몬드 4개, 관계 50 이상, 최대 2단계)",
+  "hero.flightsuit.ironman.upgrade_hint": "흉갑 배터리 +25%% (다이아몬드 4개, 관계 50 이상, 최대 2단계)",
   "hero.flightsuit.ironman.reactor": "아크 원자로",
   "hero.flightsuit.ironman.reactor_hint": "아크 원자로 하나 (관계 50 이상, 3일에 1번)",
   "hero.flightsuit.ironman.gift": "선물",
@@ -713,5 +713,6 @@
   "command.flightsuit.thief_no_village": "이 마을은 아직 기록되지 않았거나 주민이 2명 미만입니다",
   "command.flightsuit.thief_now": "오늘 밤 배트맨 일당이 이 마을로 옵니다 (시간을 밤으로)",
   "command.flightsuit.thief_no_type": "batman, catwoman, robin 중 하나",
-  "command.flightsuit.thief_spawned": "숨은 %s 등장"
+  "command.flightsuit.thief_spawned": "숨은 %s 등장",
+  "hero.flightsuit.vault_locked": "금고는 히어로 시티가 함락되어야 열 수 있습니다."
 }

@@ -44,8 +44,6 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -53,7 +51,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -174,7 +171,14 @@ public class CityHeroEntity extends PathfinderMob {
             return false;
         }
         if (other instanceof RaidMember member) {
-            return member.role() == WarRole.RAID && !member.isNoThreat();
+            if (member.isNoThreat()) {
+                return false;
+            }
+            if (member.role() == WarRole.RAID) {
+                return true;
+            }
+            UUID commander = member.commander();
+            return commander != null && level() instanceof ServerLevel server && HeroData.get(server.getServer()).trust(commander) <= -50;
         }
         if (other instanceof Enemy) {
             return home == null || other.blockPosition().closerThan(home, 40.0D) || HeroCity.isVillain(other);
@@ -245,6 +249,16 @@ public class CityHeroEntity extends PathfinderMob {
         }
 
         @Override
+        public void start() {
+            setAggressive(true);
+        }
+
+        @Override
+        public void stop() {
+            setAggressive(false);
+        }
+
+        @Override
         public void tick() {
             LivingEntity target = getTarget();
             if (target == null) {
@@ -276,16 +290,16 @@ public class CityHeroEntity extends PathfinderMob {
             playSound(SoundEvents.FIRECHARGE_USE, 0.8F, 1.6F);
             return;
         }
-        int arrows = ++shots % 4 == 0 ? 3 : 1;
-        for (int i = 0; i < arrows; i++) {
-            AbstractArrow arrow = ProjectileUtil.getMobArrow(this, new ItemStack(Items.ARROW), 1.0F);
-            double dx = target.getX() - getX();
-            double dy = target.getY(0.3333333333333333D) - arrow.getY();
-            double dz = target.getZ() - getZ();
-            double flat = Math.sqrt(dx * dx + dz * dz);
-            arrow.shoot(dx, dy + flat * 0.2D, dz, 1.8F, arrows > 1 ? 8.0F : 2.0F);
-            arrow.setBaseDamage(3.0D);
-            level().addFreshEntity(arrow);
+        // Hawkeye doesn't miss: his arrows only ever find foes (no stray arrow into a friend fighting beside him).
+        boolean volley = ++shots % 4 == 0;
+        int hits = 0;
+        for (LivingEntity foe : level().getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(volley ? 4.0D : 0.0D), this::isFoe)) {
+            if (hits >= (volley ? 3 : 1)) {
+                break;
+            }
+            beam(foe, ParticleTypes.CRIT);
+            foe.hurt(damageSources().mobAttack(this), (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.8F);
+            hits++;
         }
         playSound(SoundEvents.ARROW_SHOOT, 1.0F, 1.2F);
     }
@@ -493,10 +507,5 @@ public class CityHeroEntity extends PathfinderMob {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         entityData.set(TYPE, HeroType.byId(tag.getInt("Hero")).ordinal());
-    }
-
-    /** For the renderer: everyone around who fights alongside (unused on the client). */
-    List<CityHeroEntity> neighbours() {
-        return level().getEntitiesOfClass(CityHeroEntity.class, getBoundingBox().inflate(12.0D));
     }
 }

@@ -40,6 +40,8 @@ public final class WarTuning {
     public static final int FALLEN_GARRISON = 2;
     /** A fallen fortress stays weak (and asks nothing) this long. */
     public static final int FALLEN_DAYS = 7;
+    /** A city's (or fortress's) count of its people beaten starts over after this long without another. */
+    public static final long LOSS_RESET_TICKS = 20L * 60 * 5;
     /** A beaten general is back home after this many days. */
     public static final int GENERAL_REST_DAYS = 3;
     /** Soldiers per storm wave at a fortress, and in an allied army on an invasion. */

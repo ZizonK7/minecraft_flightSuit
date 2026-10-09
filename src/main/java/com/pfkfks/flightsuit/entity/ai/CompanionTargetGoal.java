@@ -64,7 +64,7 @@ public class CompanionTargetGoal extends TargetGoal {
             lastHurtTimestamp = owner.getLastHurtMobTimestamp();
             return victim;
         }
-        if (suit.getTarget() != null || suit.tickCount % 10 != 0) {
+        if (suit.getTarget() != null || suit.getRandom().nextInt(10) != 0) {
             return null;
         }
         LivingEntity ward = suit.getAnchor();

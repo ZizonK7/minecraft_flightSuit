@@ -85,8 +85,7 @@ public final class HeroCity {
     private static int jobIndex;
     private static long tickingSince = -1L;
     private static int losses;
-    private static @Nullable UUID conqueror;
-    private static long conqueredAt;
+    private static long lastLossAt;
 
     private HeroCity() {
     }
@@ -97,7 +96,7 @@ public final class HeroCity {
         jobIndex = 0;
         tickingSince = -1L;
         losses = 0;
-        conqueror = null;
+        lastLossAt = 0L;
     }
 
     @SubscribeEvent
@@ -211,6 +210,36 @@ public final class HeroCity {
         }
     }
 
+    /** The two vault chests in the HQ lobby (HeroCityBuilder.headquarters). */
+    private static List<BlockPos> vault(HeroData data) {
+        BlockPos center = data.center();
+        return List.of(center.offset(-2, 1, -4), center.offset(2, 1, -4));
+    }
+
+    /** The vault stays shut while the city stands - it's theirs - and opens once the city has fallen. */
+    @SubscribeEvent
+    public static void onUseBlock(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        if (guardsVault(event.getLevel(), event.getPos(), event.getEntity())) {
+            event.setCanceled(true);
+            event.getEntity().displayClientMessage(Component.translatable("hero.flightsuit.vault_locked").withStyle(ChatFormatting.GRAY), true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBreakBlock(net.minecraftforge.event.level.BlockEvent.BreakEvent event) {
+        if (event.getLevel() instanceof Level level && guardsVault(level, event.getPos(), event.getPlayer())) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static boolean guardsVault(Level level, BlockPos pos, Player player) {
+        if (level.isClientSide || !(level instanceof ServerLevel server) || level.dimension() != Level.OVERWORLD || player.isCreative()) {
+            return false;
+        }
+        HeroData data = HeroData.get(server.getServer());
+        return data.built && vault(data).contains(pos) && !data.isFallen(level.getDayTime() / 24000L);
+    }
+
     private static void stockVault(ServerLevel level, List<BlockPos> chests) {
         RandomSource random = level.random;
         for (BlockPos pos : chests) {
@@ -244,8 +273,8 @@ public final class HeroCity {
         if (now - tickingSince < 100L || (now / 20) % 5 != 0) {
             return;
         }
-        if (conqueror != null && now - conqueredAt > 20L * 60 * 5) {
-            conqueror = null;
+        if (losses > 0 && now - lastLossAt > WarTuning.LOSS_RESET_TICKS) {
+            losses = 0;
         }
         List<CityHeroEntity> present = level.getEntitiesOfClass(CityHeroEntity.class, area(data));
         RandomSource random = level.random;
@@ -277,13 +306,25 @@ public final class HeroCity {
         if (type == HeroType.IRON_MAN) {
             return HeroCityBuilder.lobby(center).offset(1, 0, 1);
         }
+        // Out on the open roads (never inside a tower - Hulk wouldn't fit back through its doors).
+        int headroom = type == HeroType.HULK ? 4 : 2;
         for (int tries = 0; tries < 12; tries++) {
-            BlockPos pos = center.offset(random.nextInt(41) - 20, 1, random.nextInt(11) + 7);
-            if (level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir()) {
+            int along = 7 + random.nextInt(17);
+            int across = random.nextInt(5) - 2;
+            BlockPos pos = switch (random.nextInt(3)) {
+                case 0 -> center.offset(across, 1, along);
+                case 1 -> center.offset(along, 1, across);
+                default -> center.offset(-along, 1, across);
+            };
+            boolean clear = level.canSeeSky(pos);
+            for (int up = 0; up < headroom && clear; up++) {
+                clear = level.getBlockState(pos.above(up)).isAir();
+            }
+            if (clear) {
                 return pos;
             }
         }
-        return center.offset(0, 1, 8);
+        return center.offset(0, 1, 9);
     }
 
     // ---------------------------------------------------------------- standing
@@ -318,13 +359,33 @@ public final class HeroCity {
         if (type.isHero()) {
             data.sendAway(type, day + 3);
         }
-        if (!FortressManager.byPlayerSide(killer) || data.isFallen(day)) {
+        if (!FortressManager.byPlayerSide(killer) || data.isFallen(day) || !atWar(data, killer)) {
             return;
         }
         losses += type.isHero() ? 3 : 1;
+        lastLossAt = level.getGameTime();
         if (type == HeroType.CAPTAIN || losses >= 12) {
             fall(level, data, killer);
         }
+    }
+
+    /**
+     * Only a real attack counts toward the city falling: a player striking its people themselves, or the suits and
+     * soldiers of a player the city is hostile to - not a friendly player's suit hitting back at a stray shot.
+     */
+    private static boolean atWar(HeroData data, @Nullable Entity killer) {
+        if (killer instanceof Player) {
+            return true;
+        }
+        UUID backer = null;
+        if (killer instanceof com.pfkfks.flightsuit.entity.SuitCompanionEntity suit) {
+            backer = suit.getOwnerId();
+        } else if (killer instanceof ResidentEntity resident) {
+            backer = resident.getCommander();
+        } else if (killer instanceof com.pfkfks.flightsuit.war.RaidMember member) {
+            backer = member.commander();
+        }
+        return backer != null && data.trust(backer) <= -50;
     }
 
     /** Hero City is taken: its heroes pull out for a week, the vault in the HQ lobby is there for the taking. */
@@ -338,6 +399,7 @@ public final class HeroCity {
         }
         losses = 0;
         data.setDirty();
+        stockVault(level, vault(data));
         for (CityHeroEntity hero : level.getEntitiesOfClass(CityHeroEntity.class, area(data))) {
             level.sendParticles(ParticleTypes.LARGE_SMOKE, hero.getX(), hero.getY() + 1.0D, hero.getZ(), 10, 0.3D, 0.6D, 0.3D, 0.02D);
             hero.discard();
@@ -348,8 +410,6 @@ public final class HeroCity {
             player = suit.getOwner();
         }
         if (player instanceof ServerPlayer serverPlayer) {
-            conqueror = serverPlayer.getUUID();
-            conqueredAt = level.getGameTime();
             data.addTrust(serverPlayer.getUUID(), -100);
             EdithAlert.send(serverPlayer, Component.translatable("hero.flightsuit.fallen_title").withStyle(ChatFormatting.GOLD),
                     Component.translatable("hero.flightsuit.fallen"), Level.OVERWORLD, data.center(), EdithAlert.AMBER, true);
@@ -515,21 +575,21 @@ public final class HeroCity {
                     || day - standing.lastRequest < WarTuning.REQUEST_INTERVAL) {
                 continue;
             }
-            offer(player, data, level.random.nextFloat() < 0.6F ? HeroData.Request.Type.DEFEND : HeroData.Request.Type.REINFORCE, day);
+            offer(player, data, level.random.nextFloat() < 0.6F ? HeroData.Request.Type.DEFEND : HeroData.Request.Type.REINFORCE, day, day + 1);
         }
         for (HeroData.Request request : new ArrayList<>(data.requests().values())) {
             tickRequest(level, data, request, day);
         }
     }
 
-    private static void offer(ServerPlayer player, HeroData data, HeroData.Request.Type type, long day) {
+    private static void offer(ServerPlayer player, HeroData data, HeroData.Request.Type type, long day, long due) {
         data.standing(player.getUUID()).lastRequest = day;
         HeroData.Request request = data.newRequest(player.getUUID(), type, day);
         if (type == HeroData.Request.Type.REINFORCE) {
             request.needed = 1 + player.getRandom().nextInt(2);
             request.days = 2;
         }
-        request.day = day + 1;
+        request.day = due;
         data.setDirty();
         EdithAlert.send(player, Component.translatable("hero.flightsuit.request_title"), Component.translatable("hero.flightsuit.request_from"),
                 null, null, EdithAlert.CYAN, false);
@@ -545,11 +605,7 @@ public final class HeroCity {
             data.endRequest(open);
         }
         long day = player.level().getDayTime() / 24000L;
-        offer(player, data, type, day);
-        HeroData.Request request = data.openRequest(player.getUUID());
-        if (request != null) {
-            request.day = day;
-        }
+        offer(player, data, type, day, day);
         return true;
     }
 
@@ -602,6 +658,10 @@ public final class HeroCity {
             }
             case ACTIVE -> {
                 if (request.type == HeroData.Request.Type.DEFEND && data.storm == null) {
+                    data.endRequest(request);
+                } else if (request.type == HeroData.Request.Type.REINFORCE
+                        && (WarData.get(level.getServer()).villages().get(request.villageKey) == null || day > request.returnDay + 10)) {
+                    // Their village is gone, or never visited again: the lent soldiers stay on in the city, the request is closed.
                     data.endRequest(request);
                 }
             }
@@ -693,6 +753,7 @@ public final class HeroCity {
         request.returnDay = player.level().getDayTime() / 24000L + request.days;
         request.villageKey = WarData.keyOf(player.level().dimension(), hall.getBlockPos());
         data.setDirty();
+        hall.addNews(Component.translatable("news.flightsuit.soldiers_lent", request.needed, Component.translatable("hero.flightsuit.city")));
         hall.refreshStats();
         player.sendSystemMessage(Component.translatable("request.flightsuit.sent", request.needed, Component.translatable("hero.flightsuit.city"),
                 request.days).withStyle(ChatFormatting.GREEN));
@@ -720,6 +781,7 @@ public final class HeroCity {
                 }
             }
             hall.addNews(Component.translatable("news.flightsuit.soldiers_back", back));
+            hall.refreshStats();
             succeed(level, data, request, 12);
         }
     }
@@ -772,10 +834,11 @@ public final class HeroCity {
         if (!level.isPositionEntityTicking(data.center())) {
             return;
         }
-        int fighting = level.getEntitiesOfClass(Mob.class, area(data), mob -> mob.isAlive() && isVillain(mob)).size();
+        int fighting = level.getEntitiesOfClass(Mob.class, area(data).inflate(8.0D), mob -> mob.isAlive() && isVillain(mob)).size();
         if (storm.wave < 3 && (storm.wave == 0 || fighting <= Math.max(1, storm.lastWave / 3) || now - storm.waveAt > WarTuning.WAVE_TIMEOUT)) {
             villainWave(level, data, storm);
         } else if (storm.wave >= 3 && fighting == 0) {
+            clearVillains(level, data);
             data.storm = null;
             data.setDirty();
             if (request != null) {
@@ -789,8 +852,8 @@ public final class HeroCity {
         storm.waveAt = level.getGameTime();
         RandomSource random = level.random;
         double angle = random.nextDouble() * Math.PI * 2.0D;
-        int bx = data.x + Mth.floor(Math.cos(angle) * (HeroCityBuilder.EDGE + 10));
-        int bz = data.z + Mth.floor(Math.sin(angle) * (HeroCityBuilder.EDGE + 10));
+        int bx = data.x + Mth.floor(Math.cos(angle) * (HeroCityBuilder.EDGE + 6));
+        int bz = data.z + Mth.floor(Math.sin(angle) * (HeroCityBuilder.EDGE + 6));
         List<EntityType<? extends Mob>> roster = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             roster.add(i % 2 == 0 ? EntityType.PILLAGER : EntityType.VINDICATOR);
@@ -819,11 +882,7 @@ public final class HeroCity {
             }
             mob.addTag(VILLAIN_TAG);
             mob.setPersistenceRequired();
-            if (mob instanceof PathfinderMob walker) {
-                BlockPos center = data.center();
-                walker.goalSelector.addGoal(4, new MarchOnVillageGoal(walker, () -> walker.getTarget() == null ? center : null));
-            }
-            mob.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(mob, CityHeroEntity.class, true));
+            arm(mob, data.center());
             if (level.addFreshEntity(mob)) {
                 spawned++;
             }
@@ -839,8 +898,31 @@ public final class HeroCity {
         }
     }
 
+    /** Villains march on the city and go for its people (goals aren't saved - re-added on load, see onJoin). */
+    private static void arm(Mob mob, BlockPos center) {
+        if (mob instanceof PathfinderMob walker) {
+            walker.goalSelector.addGoal(4, new MarchOnVillageGoal(walker, () -> walker.getTarget() == null ? center : null));
+        }
+        mob.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(mob, CityHeroEntity.class, true));
+    }
+
+    /** A villain loaded back from disk: still fighting if the attack is on, else gone. */
+    @SubscribeEvent
+    public static void onJoin(net.minecraftforge.event.entity.EntityJoinLevelEvent event) {
+        if (!event.loadedFromDisk() || !(event.getEntity() instanceof Mob mob) || !isVillain(mob)
+                || !(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        HeroData data = HeroData.get(level.getServer());
+        if (data.storm == null) {
+            event.setCanceled(true);
+            return;
+        }
+        arm(mob, data.center());
+    }
+
     private static void clearVillains(ServerLevel level, HeroData data) {
-        for (Mob mob : level.getEntitiesOfClass(Mob.class, area(data), HeroCity::isVillain)) {
+        for (Mob mob : level.getEntitiesOfClass(Mob.class, area(data).inflate(8.0D), HeroCity::isVillain)) {
             level.sendParticles(ParticleTypes.POOF, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 8, 0.3D, 0.5D, 0.3D, 0.02D);
             mob.discard();
         }
@@ -858,14 +940,21 @@ public final class HeroCity {
         int sector = Math.floorMod((int) Math.round(Math.toDegrees(Math.atan2(dx, -dz)) / 45.0D), 8);
         Component dir = Component.translatable("edith.flightsuit.dir." + sector);
         if (!standing.found) {
-            return Component.translatable("hero.flightsuit.list_rumour", dir, Math.max(100, Math.round(distance / 100.0F) * 100))
-                    .withStyle(ChatFormatting.GRAY);
+            boolean overworld = player.level().dimension() == Level.OVERWORLD;
+            return Component.translatable("hero.flightsuit.list_rumour", overworld ? dir : Component.literal("?"),
+                    Math.max(100, Math.round(distance / 100.0F) * 100)).withStyle(ChatFormatting.GRAY);
         }
-        MutableComponent line = Component.translatable("hero.flightsuit.list_found", Component.translatable("edith.flightsuit.where", distance, dir),
+        boolean overworld = player.level().dimension() == Level.OVERWORLD;
+        MutableComponent line = Component.translatable("hero.flightsuit.list_found",
+                overworld ? Component.translatable("edith.flightsuit.where", distance, dir) : Component.literal("-"),
                 Component.translatable("tier.flightsuit." + tierKey(standing.trust)), standing.trust, standing.done);
         long day = player.level().getDayTime() / 24000L;
         if (data.isFallen(day)) {
             line.append(" ").append(Component.translatable("fort.flightsuit.list_fallen", data.fallenUntilDay - day).withStyle(ChatFormatting.DARK_RED));
+        }
+        HeroData.Request request = data.openRequest(player.getUUID());
+        if (request != null) {
+            line.append("\n").append(describe(request));
         }
         return line;
     }
