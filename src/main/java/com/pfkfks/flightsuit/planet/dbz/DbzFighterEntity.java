@@ -385,6 +385,9 @@ public class DbzFighterEntity extends PathfinderMob {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         DbzCharacter me = getCharacter();
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return super.hurt(source, amount);
+        }
         if (!isFighting() || source.getEntity() instanceof DbzFighterEntity other && other.getCharacter().isFoe() == me.isFoe()) {
             return false;
         }

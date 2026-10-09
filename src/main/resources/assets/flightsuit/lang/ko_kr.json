@@ -792,7 +792,7 @@
   "item.flightsuit.dragon_radar": "드래곤 레이더",
   "tooltip.flightsuit.dragon_ball": "7개를 모두 가지고 하나를 우클릭하면 신룡이 나타납니다",
   "tooltip.flightsuit.dragon_radar": "손에 들면 가장 가까운 드래곤볼의 방향과 거리를 알려 줍니다 (드래곤볼 지구에서만)",
-  "dbz.flightsuit.bulma.radar": "부르마: \"이건 드래곤 레이더야! 드래곤볼 7개를 모으면 소원을 하나 들어준대!\"",
+  "dbz.flightsuit.bulma.radar": "이건 드래곤 레이더야! 드래곤볼 7개를 모으면 소원을 하나 들어준대!",
   "dragonball.flightsuit.got": "%s성구를 얻었다! (%s/7)",
   "dragonball.flightsuit.radar_none": "드래곤 레이더: 신호 없음 (드래곤볼 지구에서만 작동)",
   "dragonball.flightsuit.radar_stone": "드래곤 레이더: 드래곤볼이 돌이 되어 있다 (%s일 남음)",
@@ -889,5 +889,6 @@
   "thanos.flightsuit.snap": "타노스가 손가락을 튕겼다... %s명이 재가 되어 사라졌다 (%s일 뒤 돌아옴). 그는 다시 올 것이다.",
   "thanos.flightsuit.news_back": "사라졌던 주민 %s명이 돌아왔다!",
   "command.flightsuit.thanos_cant": "지금은 타노스를 부를 수 없습니다 (이미 습격 중이거나, 내 마을과 히어로 시티가 모두 없음)",
-  "hero.flightsuit.captain.assemble": "어벤져스, 어셈블!"
+  "hero.flightsuit.captain.assemble": "어벤져스, 어셈블!",
+  "dragonball.flightsuit.crumbled": "드래곤볼이 손 안에서 돌이 되어 부서졌다... (흩어지기 전의 공)"
 }

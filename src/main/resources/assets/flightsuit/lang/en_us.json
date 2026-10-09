@@ -792,7 +792,7 @@
   "item.flightsuit.dragon_radar": "Dragon Radar",
   "tooltip.flightsuit.dragon_ball": "With all seven, right-click one to call Shenron",
   "tooltip.flightsuit.dragon_radar": "Hold it to see the nearest Dragon Ball's direction and distance (Dragon Ball Earth only)",
-  "dbz.flightsuit.bulma.radar": "Bulma: \"This is the Dragon Radar! Gather all seven Dragon Balls and you get a wish!\"",
+  "dbz.flightsuit.bulma.radar": "This is the Dragon Radar! Gather all seven Dragon Balls and you get a wish!",
   "dragonball.flightsuit.got": "Got the %s-star ball! (%s/7)",
   "dragonball.flightsuit.radar_none": "Dragon Radar: no signal (works on Dragon Ball Earth)",
   "dragonball.flightsuit.radar_stone": "Dragon Radar: the balls have turned to stone (%s days left)",
@@ -889,5 +889,6 @@
   "thanos.flightsuit.snap": "Thanos snapped his fingers... %s turned to dust (back in %s days). He will come again.",
   "thanos.flightsuit.news_back": "%s of the vanished came back!",
   "command.flightsuit.thanos_cant": "Can't call Thanos now (a raid is on, or you have no village and Hero City isn't built)",
-  "hero.flightsuit.captain.assemble": "Avengers... assemble!"
+  "hero.flightsuit.captain.assemble": "Avengers... assemble!",
+  "dragonball.flightsuit.crumbled": "The ball crumbles to stone in your hand... (one from before the scatter)"
 }

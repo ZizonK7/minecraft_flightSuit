@@ -40,7 +40,8 @@ public enum DbzLandmarks {
     /** Builds it on the ground at {@code center}'s column; returns the centre at ground level. */
     public BlockPos build(ServerLevel level, BlockPos site) {
         BlockPos column = around(site);
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());
+        BlockPos ground = DragonBalls.firmGround(level, column.getX(), column.getZ());
+        int y = ground != null ? ground.getY() : level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());
         BlockPos center = new BlockPos(column.getX(), y, column.getZ());
         switch (this) {
             case CAPSULE_CORP -> capsuleCorp(level, center);
@@ -73,17 +74,20 @@ public enum DbzLandmarks {
                     set(level, center.offset(x, y, z), Blocks.AIR.defaultBlockState());
                 }
                 set(level, center.offset(x, -1, z), top);
-                for (int y = -4; y <= -2; y++) {
+                // Fill down to solid ground, so nothing stands on a thin disc in the air.
+                for (int y = -2; y >= -16; y--) {
                     BlockPos below = center.offset(x, y, z);
-                    if (level.getBlockState(below).isAir() || !level.getFluidState(below).isEmpty()) {
-                        set(level, below, Blocks.DIRT.defaultBlockState());
+                    BlockState there = level.getBlockState(below);
+                    if (!there.isAir() && there.getFluidState().isEmpty() && !there.canBeReplaced()) {
+                        break;
                     }
+                    set(level, below, Blocks.DIRT.defaultBlockState());
                 }
             }
         }
     }
 
-    /** A white dome with a yellow band, round windows, a wide door to the south and a little lab inside. */
+    /** A white dome with a yellow band, round windows, a wide door to the north (-Z) and a little lab inside. */
     private static void capsuleCorp(ServerLevel level, BlockPos c) {
         flatten(level, c, 12, Blocks.SMOOTH_STONE.defaultBlockState());
         int r = 8;
@@ -140,7 +144,7 @@ public enum DbzLandmarks {
                 }
             }
         }
-        // Windows and the door (south side, -Z).
+        // Windows and the door (north side, -Z).
         set(level, c.offset(-3, 2, 0), Blocks.GLASS_PANE.defaultBlockState());
         set(level, c.offset(3, 2, 0), Blocks.GLASS_PANE.defaultBlockState());
         set(level, c.offset(0, 2, 3), Blocks.GLASS_PANE.defaultBlockState());

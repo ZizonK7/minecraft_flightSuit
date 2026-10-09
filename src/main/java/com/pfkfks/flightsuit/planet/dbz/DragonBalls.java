@@ -133,6 +133,15 @@ public final class DragonBalls {
         }
         for (Tag raw : balls(world)) {
             CompoundTag ball = (CompoundTag) raw;
+            if (ball.getInt("State") == PLACED) {
+                // Its block is gone (creative break, a Wither...): it lies out there again.
+                BlockPos at = new BlockPos(ball.getInt("X"), ball.getInt("Y"), ball.getInt("Z"));
+                if (level.isLoaded(at) && !level.getBlockState(at).is(ModBlocks.DRAGON_BALL.get())) {
+                    ball.putInt("State", LYING);
+                    data.setDirty();
+                }
+                continue;
+            }
             if (ball.getInt("State") != LYING) {
                 continue;
             }
@@ -142,14 +151,36 @@ public final class DragonBalls {
             if (!level.isLoaded(column) || !someoneNear(level, x, z)) {
                 continue;
             }
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-            BlockPos pos = new BlockPos(x, y, z);
+            BlockPos pos = firmGround(level, x, z);
+            if (pos == null) {
+                // Water or lava there: it rolls on a little.
+                ball.putInt("X", x + 12);
+                data.setDirty();
+                continue;
+            }
+            int y = pos.getY();
             BlockState state = ModBlocks.DRAGON_BALL.get().defaultBlockState().setValue(DragonBallBlock.STARS, ball.getInt("Stars"));
             level.setBlock(pos, state, Block.UPDATE_ALL);
             ball.putInt("Y", y);
             ball.putInt("State", PLACED);
             data.setDirty();
         }
+    }
+
+    /** The first spot above solid ground (through trees and plants); null over water or lava. */
+    static @org.jetbrains.annotations.Nullable BlockPos firmGround(ServerLevel level, int x, int z) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
+        while (pos.getY() > level.getMinBuildHeight()) {
+            BlockState state = level.getBlockState(pos);
+            if (!state.getFluidState().isEmpty()) {
+                return null;
+            }
+            if (!state.is(net.minecraft.tags.BlockTags.LOGS) && !state.is(net.minecraft.tags.BlockTags.LEAVES) && !state.canBeReplaced() && !state.isAir()) {
+                return pos.above().immutable();
+            }
+            pos.move(0, -1, 0);
+        }
+        return null;
     }
 
     private static boolean someoneNear(ServerLevel level, int x, int z) {
@@ -166,20 +197,27 @@ public final class DragonBalls {
     static void pickUp(ServerPlayer player, BlockPos pos, int stars) {
         ServerLevel level = player.serverLevel();
         level.removeBlock(pos, false);
-        give(player, DragonBallItem.of(ModItems.DRAGON_BALL.get(), stars));
-        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
         PlanetData data = PlanetData.get(player.server);
         int left = 0;
+        boolean real = false;
         for (Tag raw : balls(data.world(Planet.DBZ_EARTH))) {
             CompoundTag ball = (CompoundTag) raw;
             if (ball.getInt("Stars") == stars && ball.getInt("State") == PLACED && ball.getInt("X") == pos.getX() && ball.getInt("Z") == pos.getZ()) {
                 ball.putInt("State", TAKEN);
                 data.setDirty();
+                real = true;
             }
             if (ball.getInt("State") != TAKEN) {
                 left++;
             }
         }
+        if (!real) {
+            // A ball from before a scatter: it crumbles - only the balls on record are real.
+            player.displayClientMessage(Component.translatable("dragonball.flightsuit.crumbled"), true);
+            return;
+        }
+        give(player, DragonBallItem.of(ModItems.DRAGON_BALL.get(), stars));
+        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
         player.sendSystemMessage(Component.translatable("dragonball.flightsuit.got", stars, 7 - left).withStyle(ChatFormatting.GOLD));
     }
 
@@ -296,6 +334,36 @@ public final class DragonBalls {
         data.setDirty();
     }
 
+    /** A ball that fell out of the world is lost - so it turns up out there again. */
+    @SubscribeEvent
+    public static void onLeave(net.minecraftforge.event.entity.EntityLeaveLevelEvent event) {
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.item.ItemEntity item) || event.getLevel().isClientSide()
+                || !item.getItem().is(ModItems.DRAGON_BALL.get()) || item.getY() > event.getLevel().getMinBuildHeight() - 32) {
+            return;
+        }
+        PlanetData data = PlanetData.get(item.getServer());
+        int stars = DragonBallItem.stars(item.getItem());
+        for (Tag raw : balls(data.world(Planet.DBZ_EARTH))) {
+            CompoundTag ball = (CompoundTag) raw;
+            if (ball.getInt("Stars") == stars && ball.getInt("State") == TAKEN) {
+                ball.putInt("State", LYING);
+                data.setDirty();
+                return;
+            }
+        }
+    }
+
+    /** Shenron's strength wish stays with you through death (attribute modifiers aren't copied to the new body). */
+    @SubscribeEvent
+    public static void onClone(net.minecraftforge.event.entity.player.PlayerEvent.Clone event) {
+        AttributeInstance before = event.getOriginal().getAttribute(Attributes.MAX_HEALTH);
+        AttributeInstance after = event.getEntity().getAttribute(Attributes.MAX_HEALTH);
+        AttributeModifier wish = before == null ? null : before.getModifier(STRENGTH);
+        if (wish != null && after != null && after.getModifier(STRENGTH) == null) {
+            after.addPermanentModifier(new AttributeModifier(STRENGTH, "Shenron's wish", wish.getAmount(), AttributeModifier.Operation.ADDITION));
+        }
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || SHOWS.isEmpty()) {
@@ -354,6 +422,15 @@ public final class DragonBalls {
                         .then(Commands.literal("reset").executes(ctx -> {
                             PlanetData data = PlanetData.get(ctx.getSource().getServer());
                             CompoundTag world = data.world(Planet.DBZ_EARTH);
+                            ServerLevel planet = ctx.getSource().getServer().getLevel(Planet.DBZ_EARTH.dimension());
+                            for (Tag raw : balls(world)) {
+                                CompoundTag ball = (CompoundTag) raw;
+                                BlockPos at = new BlockPos(ball.getInt("X"), ball.getInt("Y"), ball.getInt("Z"));
+                                if (planet != null && ball.getInt("State") == PLACED && planet.isLoaded(at)
+                                        && planet.getBlockState(at).is(ModBlocks.DRAGON_BALL.get())) {
+                                    planet.removeBlock(at, false);
+                                }
+                            }
                             world.remove(BALLS);
                             world.remove(STONE_UNTIL);
                             data.setDirty();
