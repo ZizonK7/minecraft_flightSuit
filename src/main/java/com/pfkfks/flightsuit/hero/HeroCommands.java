@@ -40,7 +40,9 @@ public final class HeroCommands {
                         .then(Commands.literal("decline").then(Commands.argument("id", IntegerArgumentType.integer(0))
                                 .executes(ctx -> HeroCity.decline(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0)))
                         .then(Commands.literal("send").then(Commands.argument("id", IntegerArgumentType.integer(0))
-                                .executes(ctx -> HeroCity.send(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0))))
+                                .executes(ctx -> HeroCity.send(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0)))
+                        .then(Commands.literal("timestone").executes(ctx ->
+                                com.pfkfks.flightsuit.thanos.ThanosSaga.timeStone(ctx.getSource().getPlayerOrException()) ? 1 : 0)))
                 .then(Commands.literal("ironman").then(Commands.argument("service", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(new String[]{"repair", "upgrade", "reactor", "gift"}, builder))
                         .executes(ctx -> HeroCity.ironManService(ctx.getSource().getPlayerOrException(),

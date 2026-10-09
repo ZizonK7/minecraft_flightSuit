@@ -30,6 +30,7 @@
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
 | `planet/` | 우주·행성: Planet(차원 키), PlanetData(SavedData: 착륙 지점, 플레이어별 집 발사대·스토리 진행, 행성별 월드 상태), LaunchPadBlock/Entity, SpaceshipEntity(상승·하강·착륙), SpaceTravel(`/spaceship launch|return|remote`, 우주 건너기), PlanetStory |
 | `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
+| `thanos/` | 타노스 사가: InfinityStone(+Item), ThanosForce/ThanosForceEntity(Monster, 저장 안 함, 레이드 태그 `RAID_TAG`), TitanSites, ThanosSaga(타이탄 관리·스톤 기록·레드 스컬·타임 스톤·전조), ThanosRaid(최종전) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드 |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |

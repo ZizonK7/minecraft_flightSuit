@@ -1,0 +1,17 @@
+{
+  "type": "flightsuit:titan",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:checkerboard",
+      "scale": 4,
+      "biomes": [
+        "minecraft:badlands",
+        "minecraft:eroded_badlands",
+        "minecraft:desert",
+        "minecraft:wooded_badlands"
+      ]
+    }
+  }
+}

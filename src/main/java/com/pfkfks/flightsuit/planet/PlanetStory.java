@@ -53,6 +53,11 @@ public final class PlanetStory {
     }
 
     public static void onLanded(ServerPlayer player, Planet planet) {
+        if (planet == Planet.TITAN) {
+            player.sendSystemMessage(Component.translatable("story.flightsuit.titan.welcome").withStyle(ChatFormatting.LIGHT_PURPLE));
+            com.pfkfks.flightsuit.thanos.ThanosSaga.objective(player);
+            return;
+        }
         if (planet != Planet.DBZ_EARTH) {
             return;
         }
@@ -65,6 +70,13 @@ public final class PlanetStory {
 
     /** What to do next, and which way. */
     public static void objective(ServerPlayer player) {
+        int stones = com.pfkfks.flightsuit.thanos.ThanosSaga.stones(player.server, player.getUUID());
+        if (player.level().dimension() == Planet.TITAN.dimension() || stones != 0) {
+            com.pfkfks.flightsuit.thanos.ThanosSaga.objective(player);
+            if (player.level().dimension() == Planet.TITAN.dimension()) {
+                return;
+            }
+        }
         DbzStage stage = dbzStage(player);
         if (stage == null) {
             player.sendSystemMessage(Component.translatable("story.flightsuit.none").withStyle(ChatFormatting.GRAY));

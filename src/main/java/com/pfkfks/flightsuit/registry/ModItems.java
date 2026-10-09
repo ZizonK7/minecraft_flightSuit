@@ -86,6 +86,21 @@ public final class ModItems {
             () -> new com.pfkfks.flightsuit.planet.dbz.DragonBallItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
     public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.DragonRadarItem> DRAGON_RADAR = ITEMS.register("dragon_radar",
             () -> new com.pfkfks.flightsuit.planet.dbz.DragonRadarItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    /** The six Infinity Stones (DESIGN.md 4-16, M16), by InfinityStone. */
+    private static final Map<com.pfkfks.flightsuit.thanos.InfinityStone, RegistryObject<com.pfkfks.flightsuit.thanos.InfinityStoneItem>> STONES =
+            new EnumMap<>(com.pfkfks.flightsuit.thanos.InfinityStone.class);
+
+    static {
+        for (com.pfkfks.flightsuit.thanos.InfinityStone stone : com.pfkfks.flightsuit.thanos.InfinityStone.values()) {
+            STONES.put(stone, ITEMS.register(stone.id() + "_stone", () -> new com.pfkfks.flightsuit.thanos.InfinityStoneItem(stone,
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant())));
+        }
+    }
+
+    public static Item stone(com.pfkfks.flightsuit.thanos.InfinityStone stone) {
+        return STONES.get(stone).get();
+    }
+
     /** Test helper: drops a wanderer heading for the village it is used in. */
     public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));

@@ -15,7 +15,8 @@ import org.jetbrains.annotations.Nullable;
  * Titan come with their chapters.
  */
 public enum Planet {
-    DBZ_EARTH("dbz_earth");
+    DBZ_EARTH("dbz_earth"),
+    TITAN("titan");
 
     private final String id;
     private final ResourceKey<Level> dimension;

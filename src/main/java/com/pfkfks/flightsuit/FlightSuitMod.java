@@ -63,6 +63,9 @@ public class FlightSuitMod {
                         output.accept(ModItems.SCOUTER.get());
                         output.accept(ModItems.SENZU_BEAN.get());
                         output.accept(ModItems.DRAGON_RADAR.get());
+                        for (com.pfkfks.flightsuit.thanos.InfinityStone stone : com.pfkfks.flightsuit.thanos.InfinityStone.values()) {
+                            output.accept(ModItems.stone(stone));
+                        }
                         for (SuitType type : SuitType.values()) {
                             output.accept(ModItems.capsuleFor(type).createFilledCapsule());
                             output.accept(ModItems.capsuleFor(type));
@@ -97,6 +100,7 @@ public class FlightSuitMod {
         event.put(ModEntities.CITY_HERO.get(), com.pfkfks.flightsuit.hero.CityHeroEntity.createAttributes().build());
         event.put(ModEntities.THIEF.get(), com.pfkfks.flightsuit.thief.ThiefEntity.createAttributes().build());
         event.put(ModEntities.DBZ_FIGHTER.get(), com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity.createAttributes().build());
+        event.put(ModEntities.THANOS_FORCE.get(), com.pfkfks.flightsuit.thanos.ThanosForceEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

@@ -400,6 +400,11 @@ public final class HeroCity {
         losses = 0;
         data.setDirty();
         stockVault(level, vault(data));
+        // The Time Stone is kept in the vault too (DESIGN 4-16: 시간 강탈 - or Captain's gift to an ally).
+        if (level.getBlockEntity(vault(data).get(0)) instanceof Container chest) {
+            chest.setItem(13, new ItemStack(com.pfkfks.flightsuit.registry.ModItems.stone(com.pfkfks.flightsuit.thanos.InfinityStone.TIME)));
+            chest.setChanged();
+        }
         for (CityHeroEntity hero : level.getEntitiesOfClass(CityHeroEntity.class, area(data))) {
             level.sendParticles(ParticleTypes.LARGE_SMOKE, hero.getX(), hero.getY() + 1.0D, hero.getZ(), 10, 0.3D, 0.6D, 0.3D, 0.02D);
             hero.discard();
@@ -441,6 +446,10 @@ public final class HeroCity {
         player.sendSystemMessage(type.line(tier, player.getName()));
         player.sendSystemMessage(Component.translatable("fort.flightsuit.standing",
                 Component.translatable("tier.flightsuit." + tier), trust, standing.done).withStyle(ChatFormatting.GRAY));
+        if (com.pfkfks.flightsuit.thanos.ThanosSaga.offersTimeStone(player, trust)) {
+            player.sendSystemMessage(button(Component.translatable("hero.flightsuit.button_time_stone"), "/village hero timestone",
+                    "hero.flightsuit.button_time_stone_hint", ChatFormatting.GREEN));
+        }
         HeroData.Request request = data.openRequest(player.getUUID());
         if (request != null) {
             player.sendSystemMessage(describe(request));
@@ -867,6 +876,28 @@ public final class HeroCity {
             roster.add(EntityType.EVOKER);
         }
         int spawned = 0;
+        // The herald (DESIGN 4-16 전조): Chitauri among the villains.
+        if (storm.wave >= 2 && com.pfkfks.flightsuit.thanos.ThanosSaga.heraldActive(level.getServer())) {
+            for (int i = 0; i < storm.wave * 2 - 2; i++) {
+                int x = bx + random.nextInt(9) - 4;
+                int z = bz + random.nextInt(9) - 4;
+                BlockPos at = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+                com.pfkfks.flightsuit.thanos.ThanosForceEntity chitauri = com.pfkfks.flightsuit.thanos.ThanosForceEntity.create(level,
+                        com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI, at, 0);
+                chitauri.moveTo(x + 0.5D, at.getY(), z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+                chitauri.addTag(VILLAIN_TAG);
+                arm(chitauri, data.center());
+                if (level.addFreshEntity(chitauri)) {
+                    spawned++;
+                }
+            }
+            if (storm.wave == 2 && storm.player != null) {
+                ServerPlayer watcher = level.getServer().getPlayerList().getPlayer(storm.player);
+                if (watcher != null) {
+                    watcher.sendSystemMessage(HeroType.CAPTAIN.line("chitauri"));
+                }
+            }
+        }
         for (EntityType<? extends Mob> type : roster) {
             Mob mob = type.create(level);
             if (mob == null) {

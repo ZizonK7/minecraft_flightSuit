@@ -34,6 +34,8 @@ public class PlanetData extends SavedData {
         public long nextBeatDay;
         /** Chapters cleared, per planet. */
         public final Map<Planet, Integer> cleared = new EnumMap<>(Planet.class);
+        /** Infinity Stones this player has won (thanos.InfinityStone bits) - Thanos comes for them. */
+        public int stones;
 
         CompoundTag save() {
             CompoundTag tag = new CompoundTag();
@@ -48,6 +50,7 @@ public class PlanetData extends SavedData {
             cleared.forEach((planet, value) -> clears.putInt(planet.id(), value));
             tag.put("Cleared", clears);
             tag.putLong("NextBeat", nextBeatDay);
+            tag.putInt("Stones", stones);
             return tag;
         }
 
@@ -68,6 +71,7 @@ public class PlanetData extends SavedData {
                 }
             }
             traveller.nextBeatDay = tag.getLong("NextBeat");
+            traveller.stones = tag.getInt("Stones");
             return traveller;
         }
     }

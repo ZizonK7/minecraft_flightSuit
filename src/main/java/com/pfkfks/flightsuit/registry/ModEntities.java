@@ -113,6 +113,12 @@ public final class ModEntities {
                     .clientTrackingRange(12)
                     .build("dbz_fighter"));
 
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.thanos.ThanosForceEntity>> THANOS_FORCE = ENTITY_TYPES.register("thanos_force",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.thanos.ThanosForceEntity>of(com.pfkfks.flightsuit.thanos.ThanosForceEntity::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(12)
+                    .build("thanos_force"));
+
     public static final RegistryObject<EntityType<ThiefEntity>> THIEF = ENTITY_TYPES.register("thief",
             () -> EntityType.Builder.<ThiefEntity>of(ThiefEntity::new, MobCategory.MISC)
                     .sized(0.6F, 1.8F)
