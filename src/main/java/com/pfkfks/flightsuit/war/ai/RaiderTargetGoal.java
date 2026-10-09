@@ -37,7 +37,8 @@ public class RaiderTargetGoal extends TargetGoal {
 
     @Override
     public boolean canUse() {
-        if (off.getAsBoolean() || raider.getTarget() != null || raider.tickCount % 10 != 0) {
+        // Random like NearestAttackableTargetGoal: canUse only runs every other tick, so a fixed tickCount % 10 would starve half the mobs.
+        if (off.getAsBoolean() || raider.getTarget() != null || raider.getRandom().nextInt(reducedTickDelay(10)) != 0) {
             return false;
         }
         candidate = pick();

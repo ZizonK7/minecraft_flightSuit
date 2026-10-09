@@ -14,7 +14,8 @@ public class YieldedGoal extends Goal {
     public YieldedGoal(Mob mob, BooleanSupplier down) {
         this.mob = mob;
         this.down = down;
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
+        // No JUMP: it would share it with FloatGoal at the same priority and wait for it to finish.
+        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     @Override

@@ -34,10 +34,11 @@ public enum Kingdom {
         return Component.translatable("kingdom.flightsuit." + id).withStyle(color);
     }
 
+    /** The generals who lead its armies (not the ruler). */
     public List<General> generals() {
         List<General> list = new ArrayList<>();
         for (General general : General.values()) {
-            if (general.kingdom() == this) {
+            if (general.kingdom() == this && !general.isLeader()) {
                 list.add(general);
             }
         }

@@ -50,6 +50,10 @@ public final class EdithAlertOverlay implements IGuiOverlay {
         }
         float alpha = age < 5.0F ? age / 5.0F : (age > SHOW_TICKS - 20 ? (SHOW_TICKS - age) / 20.0F : 1.0F);
         alpha = Mth.clamp(alpha, 0.0F, 1.0F);
+        if (alpha * 255.0F < 8.0F) {
+            // Font treats an alpha under 4 as opaque - skip the faintest frames instead of flashing.
+            return;
+        }
         Font font = minecraft.font;
         Component where = where(player);
         int boxWidth = Math.max(180, Math.max(font.width(current.title), Math.max(font.width(current.detail), font.width(where))) + 24);

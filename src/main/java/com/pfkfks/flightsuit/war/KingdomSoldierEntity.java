@@ -232,6 +232,9 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
     @Override
     public boolean hurt(DamageSource source, float amount) {
         Entity attacker = source.getEntity();
+        if (hasYielded() && attacker instanceof net.minecraft.world.entity.animal.IronGolem) {
+            return false;
+        }
         // No friendly fire inside one army (stray arrows, sweeping spears).
         if (attacker instanceof RaidMember member && !member.isNoThreat() && member.raidId() == raidId && raidId >= 0) {
             return false;

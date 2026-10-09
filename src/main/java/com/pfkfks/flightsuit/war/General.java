@@ -16,7 +16,11 @@ public enum General {
     GUAN_YU("guan_yu", Kingdom.SHU, 160.0D, 11.0D, 0.30D, 0.20F, Items.NETHERITE_AXE, 9.0D, Skill.WHIRLWIND, Skill.DUEL),
     ZHANG_FEI("zhang_fei", Kingdom.SHU, 150.0D, 11.0D, 0.30D, 0.10F, Items.TRIDENT, 8.0D, Skill.ROAR, Skill.CHARGE),
     XIAHOU_DUN("xiahou_dun", Kingdom.WEI, 150.0D, 10.0D, 0.30D, 0.15F, Items.DIAMOND_SWORD, 6.0D, Skill.CHARGE, Skill.ENRAGE),
-    GAN_NING("gan_ning", Kingdom.WU, 120.0D, 9.0D, 0.36D, 0.0F, Items.IRON_SWORD, 5.0D, Skill.AMBUSH, Skill.WHIRLWIND);
+    GAN_NING("gan_ning", Kingdom.WU, 120.0D, 9.0D, 0.36D, 0.0F, Items.IRON_SWORD, 5.0D, Skill.AMBUSH, Skill.WHIRLWIND),
+    // The rulers (M12): they stay in their fortress, rally the men around them, and are who you talk to.
+    LIU_BEI("liu_bei", Kingdom.SHU, 120.0D, 7.0D, 0.28D, 0.15F, Items.GOLDEN_SWORD, 3.0D, Skill.RALLY),
+    CAO_CAO("cao_cao", Kingdom.WEI, 130.0D, 8.0D, 0.28D, 0.15F, Items.DIAMOND_SWORD, 6.0D, Skill.RALLY),
+    SUN_QUAN("sun_quan", Kingdom.WU, 120.0D, 7.0D, 0.28D, 0.15F, Items.GOLDEN_SWORD, 3.0D, Skill.RALLY);
 
     public enum Skill {
         /** 회전베기: hits everything around. */
@@ -30,7 +34,9 @@ public enum General {
         /** Hurt below half: hits harder from then on. */
         ENRAGE,
         /** 기습: slips behind the target. */
-        AMBUSH
+        AMBUSH,
+        /** 지휘: the men around fight harder and heal (the rulers). */
+        RALLY
     }
 
     private static final General[] VALUES = values();
@@ -87,6 +93,20 @@ public enum General {
 
     public ItemStack weapon() {
         return new ItemStack(weapon);
+    }
+
+    /** A ruler: never marches out with a raid; the one you deal with (DESIGN 4-11 외교와 의뢰). */
+    public boolean isLeader() {
+        return skills.contains(Skill.RALLY);
+    }
+
+    public static General leaderOf(Kingdom kingdom) {
+        for (General general : VALUES) {
+            if (general.kingdom == kingdom && general.isLeader()) {
+                return general;
+            }
+        }
+        return null;
     }
 
     public boolean has(Skill skill) {

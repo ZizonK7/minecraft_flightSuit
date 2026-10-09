@@ -404,7 +404,8 @@ public final class RemoteLink {
 
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (BREAK_DROPS.isEmpty() || !(event.getEntity() instanceof ItemEntity item) || !(event.getLevel() instanceof ServerLevel level)) {
+        if (BREAK_DROPS.isEmpty() || event.loadedFromDisk() || !(event.getEntity() instanceof ItemEntity item)
+                || !(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
         long now = level.getGameTime();

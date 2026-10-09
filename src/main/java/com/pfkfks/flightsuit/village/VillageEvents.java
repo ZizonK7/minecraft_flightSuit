@@ -4,11 +4,13 @@ import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.war.RaidMember;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -31,6 +33,14 @@ public final class VillageEvents {
         }
         for (BlockPos pos : event.getAffectedBlocks()) {
             Villages.recordDamage(level, pos, level.getBlockState(pos));
+        }
+    }
+
+    /** Iron golems go for anything that counts as a monster - but not kneeling prisoners or allied generals. */
+    @SubscribeEvent
+    public static void onChangeTarget(LivingChangeTargetEvent event) {
+        if (event.getEntity() instanceof IronGolem && RaidMember.isNoThreat(event.getNewTarget())) {
+            event.setCanceled(true);
         }
     }
 

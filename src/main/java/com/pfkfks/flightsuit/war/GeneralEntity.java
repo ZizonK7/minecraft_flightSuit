@@ -83,6 +83,7 @@ public class GeneralEntity extends Monster implements RaidMember {
     private @Nullable BlockPos hallPos;
     private @Nullable UUID ownerId;
     private int woundTicks;
+    private int standUpTicks;
     private boolean enraged;
     private int whirlwindCooldown;
     private int roarCooldown;
@@ -304,6 +305,16 @@ public class GeneralEntity extends Monster implements RaidMember {
             }
             return;
         }
+        if (hasYielded() && raidId < 0 && !isRecruited()) {
+            // Spawned by hand (egg / command): no raid to recruit or release him, so he gets back up after a while.
+            if (++standUpTicks >= WOUND_TICKS) {
+                standUpTicks = 0;
+                entityData.set(YIELDED, false);
+                setHealth(getMaxHealth() * 0.5F);
+                bossBar.setVisible(true);
+            }
+            return;
+        }
         if (!canFight()) {
             return;
         }
@@ -502,6 +513,7 @@ public class GeneralEntity extends Monster implements RaidMember {
                 return false;
             }
             if (isRecruited() && (attacker instanceof Player || attacker instanceof SuitCompanionEntity || attacker instanceof ResidentEntity
+                    || attacker instanceof IronGolem
                     || attacker instanceof GeneralEntity && ((GeneralEntity) attacker).isRecruited())) {
                 return false;
             }

@@ -38,7 +38,7 @@ public class FactionSkinGen {
     public static void main(String[] args) throws IOException {
         File dir = new File(args[0]);
         dir.mkdirs();
-        for (String name : new String[]{"soldier_wei", "soldier_shu", "soldier_wu", "guan_yu", "zhang_fei", "xiahou_dun", "gan_ning"}) {
+        for (String name : new String[]{"soldier_wei", "soldier_shu", "soldier_wu", "guan_yu", "zhang_fei", "xiahou_dun", "gan_ning", "liu_bei", "cao_cao", "sun_quan"}) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
             pal.put('W', 0xFFFFFFFF);
@@ -51,6 +51,9 @@ public class FactionSkinGen {
                 case "zhang_fei" -> zhangFei();
                 case "xiahou_dun" -> xiahouDun();
                 case "gan_ning" -> ganNing();
+                case "liu_bei" -> ruler(0xFFE8C66A, 0xFFB8963A, 0xFF2F7A3A, 0xFF1F5426, 0xFF141010, "mustache");
+                case "cao_cao" -> ruler(0xFF1F2A44, 0xFF141B2E, 0xFF2F4F8F, 0xFFD9B54A, 0xFF241C18, "beard");
+                case "sun_quan" -> ruler(0xFFA8322A, 0xFF74201B, 0xFF6A2E8A, 0xFFD9B54A, 0xFF8E3A1E, "beard");
                 default -> throw new IllegalStateException(name);
             }
             File out = new File(dir, name + ".png");
@@ -156,6 +159,37 @@ public class FactionSkinGen {
         armour("PGPPPPGP/PGPllPGP/PGPPPPGP/PGPllPGP/PGPPPPGP/PGPPPPGP/PGPPPPGP/PGPPPPGP/PGPPPPGP/........", null);
         top(HAT, (f, i, j) -> i == 3 || i == 4 ? 'G' : 'P');
         wrap(HAT, (f, i, j) -> j > 2 ? '.' : (j == 2 ? 'G' : 'P'));
+    }
+
+    /**
+     * The rulers (유비, 조조, 손권): a long court robe in their colours over a sash, a gold crown with a
+     * flat top board (면류관) on the hat layer.
+     */
+    static void ruler(int robe, int robeDark, int trim, int sash, int hairColour, String facial) {
+        tone(0xFFD8AA7E, 0xFF2B2420, 0xFF2A1A10);
+        hair(hairColour);
+        colors("P", robe, "p", robeDark, "l", trim, "B", sash, "G", 0xFFE8C66A, "T", robeDark, "M", 0xFF6E6043,
+                "w", robe, "Y", 0xFFF2D27A);
+        head("short", facial, false);
+        wrap(BODY, (f, i, j) -> j == 9 ? 'B' : (f == Face.FRONT && (i == 3 || i == 4) ? 'l' : (j % 4 == 3 ? 'p' : 'P')));
+        top(BODY, 'P');
+        face(BODY, Face.FRONT, rowsOf(12, "........", 0, "PlPllPlP", 9, "BBBGGBBB"));
+        for (Box arm : new Box[]{R_ARM, L_ARM}) {
+            wrapRows(arm, "PPPPPPPPllSS");
+            top(arm, 'P');
+            bottom(arm, 'S');
+        }
+        for (Box leg : new Box[]{R_LEG, L_LEG}) {
+            wrapRows(leg, "PPPPPPPPPlKK");
+            top(leg, 'P');
+            bottom(leg, 'K');
+        }
+        for (Box pants : new Box[]{R_PANTS, L_PANTS}) {
+            wrapRows(pants, "PPPPPPPPPl..");
+        }
+        // Crown: gold band, flat board on top with bead strings at the front and back.
+        top(HAT, (f, i, j) -> 'G');
+        wrap(HAT, (f, i, j) -> j == 0 ? 'Y' : (j == 1 ? 'G' : ((f == Face.FRONT || f == Face.BACK) && j < 4 && i % 2 == 0 ? 'Y' : '.')));
     }
 
     /** 감녕: the river pirate - bare tattooed arms, red vest, bells on the belt, feathered headband. */
