@@ -36,7 +36,7 @@ public class SuitArmorItem extends ArmorItem {
     private final SuitType suitType;
 
     public SuitArmorItem(SuitType suitType, ArmorItem.Type type, Properties properties) {
-        super(SuitArmorMaterial.MARK_1, type, properties);
+        super(suitType.material(), type, properties);
         this.suitType = suitType;
     }
 
@@ -98,6 +98,9 @@ public class SuitArmorItem extends ArmorItem {
                 .withStyle(isBroken(stack) ? ChatFormatting.RED : left * 5 < max ? ChatFormatting.GOLD : ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.flightsuit.piece." + getType().getName())
                 .withStyle(ChatFormatting.GRAY));
+        if (suitType.suitClass() == SuitClass.STEALTH) {
+            tooltip.add(Component.translatable("tooltip.flightsuit.class.stealth").withStyle(ChatFormatting.DARK_PURPLE));
+        }
     }
 
     @Override
@@ -106,6 +109,11 @@ public class SuitArmorItem extends ArmorItem {
             @Override
             public HumanoidModel<?> getHumanoidArmorModel(LivingEntity livingEntity, ItemStack itemStack,
                                                          EquipmentSlot equipmentSlot, HumanoidModel<?> original) {
+                // Active camouflage hides the suit itself, not just the body under it.
+                if (livingEntity.isInvisible() && livingEntity instanceof net.minecraft.world.entity.player.Player player
+                        && StealthHandler.wearsStealthSuit(WornSuit.of(player))) {
+                    return SuitArmorModels.empty();
+                }
                 return SuitArmorModels.forWearer(livingEntity, equipmentSlot);
             }
         });

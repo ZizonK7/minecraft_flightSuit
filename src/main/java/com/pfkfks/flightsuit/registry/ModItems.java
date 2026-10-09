@@ -16,20 +16,35 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 public final class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, FlightSuitMod.MODID);
 
-    public static final RegistryObject<SuitArmorItem> RYAN_MK1_HELMET = ITEMS.register("ryan_mk1_helmet",
-            () -> new SuitArmorItem(SuitType.RYAN_MK1, ArmorItem.Type.HELMET, new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final RegistryObject<SuitArmorItem> RYAN_MK1_CHESTPLATE = ITEMS.register("ryan_mk1_chestplate",
-            () -> new SuitArmorItem(SuitType.RYAN_MK1, ArmorItem.Type.CHESTPLATE, new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final RegistryObject<SuitArmorItem> RYAN_MK1_LEGGINGS = ITEMS.register("ryan_mk1_leggings",
-            () -> new SuitArmorItem(SuitType.RYAN_MK1, ArmorItem.Type.LEGGINGS, new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final RegistryObject<SuitArmorItem> RYAN_MK1_BOOTS = ITEMS.register("ryan_mk1_boots",
-            () -> new SuitArmorItem(SuitType.RYAN_MK1, ArmorItem.Type.BOOTS, new Item.Properties().rarity(Rarity.UNCOMMON)));
+    /** Per suit type: its four pieces (by armor slot) and its capsule. */
+    private static final Map<SuitType, Map<EquipmentSlot, RegistryObject<SuitArmorItem>>> PIECES = new EnumMap<>(SuitType.class);
+    private static final Map<SuitType, RegistryObject<SuitCapsuleItem>> CAPSULES = new EnumMap<>(SuitType.class);
 
-    public static final RegistryObject<SuitCapsuleItem> RYAN_MK1_CAPSULE = ITEMS.register("ryan_mk1_capsule",
-            () -> new SuitCapsuleItem(SuitType.RYAN_MK1, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    static {
+        for (SuitType type : SuitType.values()) {
+            Rarity rarity = type == SuitType.RYAN_MK1 ? Rarity.UNCOMMON : Rarity.RARE;
+            Map<EquipmentSlot, RegistryObject<SuitArmorItem>> pieces = new EnumMap<>(EquipmentSlot.class);
+            pieces.put(EquipmentSlot.HEAD, piece(type, ArmorItem.Type.HELMET, rarity));
+            pieces.put(EquipmentSlot.CHEST, piece(type, ArmorItem.Type.CHESTPLATE, rarity));
+            pieces.put(EquipmentSlot.LEGS, piece(type, ArmorItem.Type.LEGGINGS, rarity));
+            pieces.put(EquipmentSlot.FEET, piece(type, ArmorItem.Type.BOOTS, rarity));
+            PIECES.put(type, pieces);
+            CAPSULES.put(type, ITEMS.register(type.id() + "_capsule",
+                    () -> new SuitCapsuleItem(type, new Item.Properties().stacksTo(1).rarity(Rarity.RARE))));
+        }
+    }
+
+    public static final RegistryObject<SuitArmorItem> RYAN_MK1_HELMET = PIECES.get(SuitType.RYAN_MK1).get(EquipmentSlot.HEAD);
+    public static final RegistryObject<SuitArmorItem> RYAN_MK1_CHESTPLATE = PIECES.get(SuitType.RYAN_MK1).get(EquipmentSlot.CHEST);
+    public static final RegistryObject<SuitArmorItem> RYAN_MK1_LEGGINGS = PIECES.get(SuitType.RYAN_MK1).get(EquipmentSlot.LEGS);
+    public static final RegistryObject<SuitArmorItem> RYAN_MK1_BOOTS = PIECES.get(SuitType.RYAN_MK1).get(EquipmentSlot.FEET);
+    public static final RegistryObject<SuitCapsuleItem> RYAN_MK1_CAPSULE = CAPSULES.get(SuitType.RYAN_MK1);
 
     public static final RegistryObject<Item> ARC_REACTOR = ITEMS.register("arc_reactor",
             () -> new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
@@ -45,17 +60,16 @@ public final class ModItems {
     private ModItems() {
     }
 
+    private static RegistryObject<SuitArmorItem> piece(SuitType type, ArmorItem.Type slot, Rarity rarity) {
+        return ITEMS.register(type.id() + "_" + slot.getName(),
+                () -> new SuitArmorItem(type, slot, new Item.Properties().rarity(rarity)));
+    }
+
     public static SuitArmorItem pieceFor(SuitType type, EquipmentSlot slot) {
-        // Only one suit so far; this becomes a per-type table once a second suit exists.
-        return switch (slot) {
-            case HEAD -> RYAN_MK1_HELMET.get();
-            case CHEST -> RYAN_MK1_CHESTPLATE.get();
-            case LEGS -> RYAN_MK1_LEGGINGS.get();
-            default -> RYAN_MK1_BOOTS.get();
-        };
+        return PIECES.get(type).get(slot).get();
     }
 
     public static SuitCapsuleItem capsuleFor(SuitType type) {
-        return RYAN_MK1_CAPSULE.get();
+        return CAPSULES.get(type).get();
     }
 }

@@ -51,7 +51,9 @@ public final class SuitUpManager {
 
     private enum Mode {
         GROUND,
-        FALL
+        FALL,
+        /** Companion opens its back and the player steps in. */
+        BOARD
     }
 
     private static final Map<UUID, Sequence> ACTIVE = new HashMap<>();
@@ -93,6 +95,10 @@ public final class SuitUpManager {
         final List<Step> steps = new ArrayList<>();
         final int endTick;
         int age;
+        /** BOARD: the open companion suit being stepped into. */
+        SuitCompanionEntity companion;
+        Vec3 boardSpot;
+        float boardYaw;
 
         Sequence(Mode mode, List<Step> steps, int finaleTicks) {
             this.mode = mode;
@@ -279,15 +285,26 @@ public final class SuitUpManager {
      * and the player pops out backward. Glasses go back on.
      */
     public static void stepOut(ServerPlayer player) {
+        stepOut(player, true);
+    }
+
+    /**
+     * @param push hop the player out backward (plain G); a suit swap skips it - and if the player was flying,
+     *             they now drop, so the incoming suit catches them mid-air.
+     */
+    public static void stepOut(ServerPlayer player, boolean push) {
         float yaw = player.getYRot();
         Vec3 spot = player.position();
         Map<EquipmentSlot, ItemStack> pieces = stripSuit(player);
         SuitCompanionEntity.spawn(player, pieces, spot, yaw);
         EdithGlassesItem.reequip(player);
+        SuitServerEvents.revokeSuitFlightNow(player);
 
-        Vec3 back = Vec3.directionFromRotation(0.0F, yaw).scale(-1.0D);
-        player.setDeltaMovement(back.scale(0.45D).add(0.0D, 0.3D, 0.0D));
-        player.hurtMarked = true;
+        if (push) {
+            Vec3 back = Vec3.directionFromRotation(0.0F, yaw).scale(-1.0D);
+            player.setDeltaMovement(back.scale(0.45D).add(0.0D, 0.3D, 0.0D));
+            player.hurtMarked = true;
+        }
         ServerLevel level = player.serverLevel();
         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, spot.x, spot.y + 1.0D, spot.z, 16, 0.3D, 0.6D, 0.3D, 0.15D);
         level.playSound(null, player.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 0.8F, 1.2F);
@@ -300,21 +317,98 @@ public final class SuitUpManager {
         if (isSuitingUp(player) || WornSuit.of(player).any() || !companion.isAlive()) {
             return;
         }
-        Map<EquipmentSlot, ItemStack> parts = companion.takeParts();
-        companion.discard();
-        if (parts.isEmpty()) {
+        if (isFallingOrAirborne(player)) {
+            // Falling: no time to step in - the suit dives onto them instead.
+            Map<EquipmentSlot, ItemStack> parts = companion.takeParts();
+            companion.discard();
+            if (!parts.isEmpty()) {
+                startFall(player, parts);
+            }
             return;
         }
-        if (isFalling(player)) {
-            startFall(player, parts);
+        startBoard(player, companion);
+    }
+
+    public static boolean isFallingOrAirborne(ServerPlayer player) {
+        return isFalling(player) || isHighInTheAir(player);
+    }
+
+    private static final int BOARD_OPEN_TICKS = 6;
+    private static final int BOARD_STEP_IN_TICKS = 16;
+    private static final int BOARD_FINALE_TICKS = 10;
+
+    /**
+     * The movie version: the companion suit stands with its back to you and splits open, you step in from
+     * behind (third-person camera from behind), and it seals shut around you.
+     */
+    private static void startBoard(ServerPlayer player, SuitCompanionEntity companion) {
+        // Face the way the player faces: its back is toward them, ready to be stepped into.
+        float yaw = player.getYRot();
+        companion.holdOpen(yaw);
+        Sequence board = new Sequence(Mode.BOARD, new ArrayList<>(), BOARD_OPEN_TICKS + BOARD_STEP_IN_TICKS + BOARD_FINALE_TICKS);
+        board.companion = companion;
+        board.boardSpot = companion.position();
+        board.boardYaw = yaw;
+        ACTIVE.put(player.getUUID(), board);
+        ServerLevel level = player.serverLevel();
+        level.playSound(null, companion.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 0.9F, 1.3F);
+        level.playSound(null, companion.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.9F, 1.2F);
+        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, board.boardSpot.x, board.boardSpot.y + 1.2D, board.boardSpot.z, 10, 0.3D, 0.5D, 0.3D, 0.1D);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SUIT_UP_BOARD, board.endTick));
+    }
+
+    private static void tickBoard(ServerLevel level, ServerPlayer player, Sequence sequence) {
+        SuitCompanionEntity companion = sequence.companion;
+        boolean sealed = companion == null;
+        if (!sealed && !companion.isAlive()) {
+            ACTIVE.remove(player.getUUID());
             return;
         }
-        startClamp(player, parts, player.getYRot());
+        if (!sealed && sequence.age > BOARD_OPEN_TICKS) {
+            // Walk in: ease the player toward the inside of the suit.
+            Vec3 to = sequence.boardSpot.subtract(player.position());
+            if (to.horizontalDistance() > 0.2D && sequence.age < BOARD_OPEN_TICKS + BOARD_STEP_IN_TICKS) {
+                Vec3 step = new Vec3(to.x, 0.0D, to.z).normalize().scale(Math.min(0.18D, to.horizontalDistance() * 0.5D));
+                player.setDeltaMovement(step.x, player.getDeltaMovement().y, step.z);
+                player.hurtMarked = true;
+            } else {
+                // Inside: seal it.
+                player.connection.teleport(sequence.boardSpot.x, sequence.boardSpot.y, sequence.boardSpot.z, sequence.boardYaw, player.getXRot());
+                Map<EquipmentSlot, ItemStack> parts = companion.takeParts();
+                companion.discard();
+                sequence.companion = null;
+                for (Map.Entry<EquipmentSlot, ItemStack> entry : parts.entrySet()) {
+                    Step step = new Step(entry.getKey(), entry.getValue(), 0, 0, Vec3.ZERO);
+                    sequence.steps.add(step);
+                    equip(player, step, false);
+                }
+                Vec3 body = player.position().add(0.0D, 1.0D, 0.0D);
+                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, body.x, body.y, body.z, 24, 0.35D, 0.6D, 0.35D, 0.2D);
+                level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 1.0F);
+                level.playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_NETHERITE, SoundSource.PLAYERS, 1.0F, 0.8F);
+                level.playSound(null, player.blockPosition(), SoundEvents.IRON_GOLEM_STEP, SoundSource.PLAYERS, 0.8F, 1.3F);
+            }
+        }
+        if (sequence.age >= sequence.endTick) {
+            ACTIVE.remove(player.getUUID());
+            if (sequence.companion != null) {
+                // Ran out of time: finish the job in place.
+                sequence.age = BOARD_OPEN_TICKS + BOARD_STEP_IN_TICKS;
+                ACTIVE.put(player.getUUID(), sequence);
+                return;
+            }
+            eyesOn(level, player);
+            player.displayClientMessage(Component.translatable("message.flightsuit.suit_online"), true);
+        }
     }
 
     /** Direction from {@code from} to the player's main station (null when there is none in this dimension). */
-    public static Vec3 mainStationDirection(ServerPlayer player, Vec3 from) {
-        MainStation.Link link = MainStation.get(player);
+    /** Direction from {@code from} to where these pieces will go home (their own station, else main), or null. */
+    public static Vec3 homeDirection(ServerPlayer player, Map<EquipmentSlot, ItemStack> pieces, Vec3 from) {
+        MainStation.Link link = SuitHome.of(pieces.values());
+        if (!MainStation.isInPlayerDimension(player, link)) {
+            link = MainStation.get(player);
+        }
         if (!MainStation.isInPlayerDimension(player, link)) {
             return null;
         }
@@ -322,16 +416,16 @@ public final class SuitUpManager {
     }
 
     /**
-     * Where a suit that flew off home ends up: docked at the owner's main station if it has room, otherwise
-     * packed into a capsule for the owner (or dropped where the suit was, if the owner is offline).
+     * Where a suit that flew off home ends up: docked at its own station (or the main one) if there's room,
+     * otherwise packed into a capsule for the owner (or dropped where the suit was, if the owner is offline).
      */
     public static void storeReturningSuit(ServerPlayer owner, SuitCompanionEntity suit, Map<EquipmentSlot, ItemStack> parts) {
         if (parts.isEmpty()) {
             return;
         }
         if (owner != null) {
-            SuitStationBlockEntity station = MainStation.resolve(owner);
-            if (station != null && station.canDock(parts)) {
+            SuitStationBlockEntity station = SuitHome.resolve(owner, parts);
+            if (station != null) {
                 station.dock(parts);
                 return;
             }
@@ -376,11 +470,18 @@ public final class SuitUpManager {
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SUIT_EJECT, 0));
     }
 
+    /** For the suit wheel's swap: put the worn suit away and drop out of suit flight right now. */
+    public static void putAwayWorn(ServerPlayer player) {
+        putAway(player);
+        SuitServerEvents.revokeSuitFlightNow(player);
+    }
+
     /** Worn suit off: home to the main station (EDITH) if possible, else into a capsule. */
     private static void putAway(ServerPlayer player) {
         if (EdithGlassesItem.has(player)) {
-            SuitStationBlockEntity station = MainStation.resolve(player);
-            if (station != null && station.canDock(wornPieces(player))) {
+            // Back to the station this suit came from (falls back to the main one).
+            SuitStationBlockEntity station = SuitHome.resolve(player, wornPieces(player));
+            if (station != null) {
                 sendHome(player, station);
                 return;
             }
@@ -395,7 +496,7 @@ public final class SuitUpManager {
      */
     private static void begin(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, Vec3 fromDirection,
                               double minDistance, double maxDistance, int flightTicks) {
-        if (isFalling(player)) {
+        if (isFalling(player) || isHighInTheAir(player)) {
             startFall(player, parts);
             return;
         }
@@ -426,6 +527,20 @@ public final class SuitUpManager {
         return !player.onGround() && !player.getAbilities().flying && !player.isFallFlying()
                 && !player.isInWater() && !player.isPassenger()
                 && (player.getDeltaMovement().y < -0.35D || player.fallDistance > 2.5F);
+    }
+
+    /**
+     * Not falling yet but well off the ground and not flying - e.g. just stepped out of a suit mid-flight to
+     * swap. That's about to be a fall, so the next suit should catch them rather than assemble in place.
+     */
+    private static boolean isHighInTheAir(ServerPlayer player) {
+        if (player.onGround() || player.getAbilities().flying || player.isInWater() || player.isPassenger()) {
+            return false;
+        }
+        net.minecraft.world.phys.BlockHitResult below = player.level().clip(new net.minecraft.world.level.ClipContext(
+                player.position(), player.position().subtract(0.0D, 3.0D, 0.0D),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.ANY, player));
+        return below.getType() == net.minecraft.world.phys.HitResult.Type.MISS;
     }
 
     private static void startGround(ServerPlayer player, List<Step> steps, SuitAnim pose) {
@@ -464,9 +579,26 @@ public final class SuitUpManager {
     }
 
     /** Called every server tick for every player. */
+    private record Pending(int dueTick, Runnable action) {
+    }
+
+    private static final Map<UUID, Pending> PENDING = new HashMap<>();
+
+    /** Runs {@code action} for this player after {@code delayTicks} (e.g. the second half of a suit swap). */
+    public static void schedule(ServerPlayer player, int delayTicks, Runnable action) {
+        PENDING.put(player.getUUID(), new Pending(player.tickCount + delayTicks, action));
+    }
+
     public static void tick(ServerPlayer player) {
         if (EJECT_REQUESTS.remove(player.getUUID()) && !isSuitingUp(player)) {
             forcedEject(player);
+        }
+        Pending pending = PENDING.get(player.getUUID());
+        if (pending != null && player.tickCount >= pending.dueTick()) {
+            PENDING.remove(player.getUUID());
+            if (!isSuitingUp(player) && !WornSuit.of(player).any()) {
+                pending.action().run();
+            }
         }
         Sequence sequence = ACTIVE.get(player.getUUID());
         if (sequence == null) {
@@ -477,6 +609,10 @@ public final class SuitUpManager {
 
         if (sequence.mode == Mode.FALL) {
             tickFall(level, player, sequence);
+            return;
+        }
+        if (sequence.mode == Mode.BOARD) {
+            tickBoard(level, player, sequence);
             return;
         }
         for (Step step : sequence.steps) {
@@ -535,6 +671,10 @@ public final class SuitUpManager {
             if (!step.equipped) {
                 equip(player, step, false);
             }
+        }
+        if (sequence.companion != null && sequence.companion.isAlive()) {
+            // Interrupted mid-boarding: the suit just closes up and stays a companion.
+            sequence.companion.release();
         }
     }
 
@@ -699,5 +839,6 @@ public final class SuitUpManager {
     public static void forget(UUID playerId) {
         ACTIVE.remove(playerId);
         EJECT_REQUESTS.remove(playerId);
+        PENDING.remove(playerId);
     }
 }

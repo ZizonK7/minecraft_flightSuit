@@ -33,6 +33,8 @@ public final class SuitArmorModels {
     public static final ModelLayerLocation BOOTS = layer("boots");
 
     public static final ModelLayerLocation GLASSES = layer("edith_glasses");
+    public static final ModelLayerLocation EMPTY = layer("empty");
+    private static HumanoidModel<LivingEntity> emptyModel;
 
     private static final Map<EquipmentSlot, HumanoidModel<LivingEntity>> BAKED = new EnumMap<>(EquipmentSlot.class);
     /**
@@ -56,6 +58,7 @@ public final class SuitArmorModels {
         event.registerLayerDefinition(LEGGINGS, () -> create(0.30F));
         event.registerLayerDefinition(BOOTS, () -> create(0.50F));
         event.registerLayerDefinition(GLASSES, SuitArmorModels::createGlasses);
+        event.registerLayerDefinition(EMPTY, SuitArmorModels::createEmpty);
     }
 
     /** Re-bakes on every resource reload (AddLayers fires each time). */
@@ -69,6 +72,24 @@ public final class SuitArmorModels {
         BAKED_OTHER.put(EquipmentSlot.LEGS, new HumanoidModel<>(models.bakeLayer(LEGGINGS)));
         BAKED_OTHER.put(EquipmentSlot.FEET, new HumanoidModel<>(models.bakeLayer(BOOTS)));
         glassesModel = new HumanoidModel<>(models.bakeLayer(GLASSES));
+        emptyModel = new HumanoidModel<>(models.bakeLayer(EMPTY));
+    }
+
+    /** A humanoid model with no geometry - what a cloaked stealth suit renders as. */
+    public static HumanoidModel<LivingEntity> empty() {
+        if (emptyModel == null) {
+            bake(Minecraft.getInstance().getEntityModels());
+        }
+        return emptyModel;
+    }
+
+    public static LayerDefinition createEmpty() {
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        for (String part : new String[]{"head", "hat", "body", "right_arm", "left_arm", "right_leg", "left_leg"}) {
+            root.addOrReplaceChild(part, CubeListBuilder.create(), PartPose.ZERO);
+        }
+        return LayerDefinition.create(mesh, 16, 16);
     }
 
     public static HumanoidModel<LivingEntity> glasses() {

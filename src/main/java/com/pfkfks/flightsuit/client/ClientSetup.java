@@ -46,6 +46,7 @@ public final class ClientSetup {
         event.register(ModKeys.SUIT_TOGGLE);
         event.register(ModKeys.COMMAND_ATTACK);
         event.register(ModKeys.COUNTER);
+        event.register(ModKeys.SUIT_WHEEL);
     }
 
     @SubscribeEvent

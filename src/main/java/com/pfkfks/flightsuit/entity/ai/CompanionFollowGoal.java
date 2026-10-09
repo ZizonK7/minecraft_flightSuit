@@ -10,10 +10,13 @@ import java.util.EnumSet;
 /**
  * Stands by at the owner's side and stays put, looking where the owner looks. Only when the owner has
  * moved more than {@link #LEAVE_DISTANCE} away does it fly back to their right side (faster the further
- * it is), then settles again. Jumps straight to the owner when left far behind.
+ * it is), then settles again. Left far behind, it streaks back in flight (teleporting only across huge gaps).
  */
 public class CompanionFollowGoal extends Goal {
-    private static final double TELEPORT_DISTANCE = 48.0D;
+    /** Beyond this it streaks back in flight (rather than flying in normally). */
+    private static final double ARRIVAL_DISTANCE = 48.0D;
+    /** Only absurd gaps (other side of the map) still teleport. */
+    private static final double TELEPORT_DISTANCE = 160.0D;
     private static final double LEAVE_DISTANCE = 6.0D;
 
     private final SuitCompanionEntity suit;
@@ -55,6 +58,11 @@ public class CompanionFollowGoal extends Goal {
         if (ownerDistance > TELEPORT_DISTANCE) {
             suit.moveTo(spot.x, spot.y, spot.z, owner.getYRot(), 0.0F);
             suit.setDeltaMovement(Vec3.ZERO);
+            repositioning = false;
+            return;
+        }
+        if (ownerDistance > ARRIVAL_DISTANCE) {
+            suit.startArrival();
             repositioning = false;
             return;
         }

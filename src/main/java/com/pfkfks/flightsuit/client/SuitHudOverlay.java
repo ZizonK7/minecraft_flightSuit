@@ -157,6 +157,9 @@ public final class SuitHudOverlay implements IGuiOverlay {
         if (energy <= 0) {
             return Component.translatable("hud.flightsuit.no_power");
         }
+        if (player.isInvisible() && com.pfkfks.flightsuit.suit.StealthHandler.wearsStealthSuit(worn)) {
+            return Component.translatable("hud.flightsuit.cloaked");
+        }
         FlightPose pose = SuitAnimator.poseOf(player);
         if (pose == FlightPose.BOOST) {
             return Component.translatable("hud.flightsuit.boost");

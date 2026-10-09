@@ -7,6 +7,7 @@ public enum SuitAnim {
     SUIT_UP_FALL("suit_up_fall"),
     SUIT_UP_STATION("suit_up_station"),
     SUIT_EJECT("suit_eject"),
+    SUIT_UP_BOARD("suit_up_station"),
     PARRY("parry"),
     COUNTER("counter");
 

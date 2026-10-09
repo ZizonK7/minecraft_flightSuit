@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.block;
 
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.suit.MainStation;
+import com.pfkfks.flightsuit.suit.OwnedStations;
 import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
 import com.pfkfks.flightsuit.suit.SuitUpManager;
 import net.minecraft.ChatFormatting;
@@ -88,7 +89,15 @@ public class SuitStationBlock extends HorizontalDirectionalBlock implements Enti
         if (!(level.getBlockEntity(pos) instanceof SuitStationBlockEntity station) || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
-        MainStation.set(serverPlayer, pos);
+        // Every station you use is remembered (suit wheel); the first one, or one you sneak-click, becomes main.
+        OwnedStations.add(serverPlayer, pos);
+        if (MainStation.get(serverPlayer) == null || player.isShiftKeyDown()) {
+            MainStation.set(serverPlayer, pos);
+            if (player.isShiftKeyDown()) {
+                player.displayClientMessage(Component.translatable("message.flightsuit.main_station_set"), true);
+                return InteractionResult.CONSUME;
+            }
+        }
         ItemStack held = player.getItemInHand(hand);
 
         if (held.getItem() instanceof SuitCapsuleItem && SuitCapsuleItem.hasParts(held)) {

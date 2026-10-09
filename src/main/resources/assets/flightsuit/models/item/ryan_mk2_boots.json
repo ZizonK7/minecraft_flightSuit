@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {"layer0": "flightsuit:item/ryan_mk2_boots"}
+}

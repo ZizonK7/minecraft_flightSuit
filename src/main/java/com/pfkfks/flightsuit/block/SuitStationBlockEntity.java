@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.energy.PowerTuning;
 import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
+import com.pfkfks.flightsuit.suit.SuitHome;
 import com.pfkfks.flightsuit.suit.SuitType;
 import com.pfkfks.flightsuit.suit.WornSuit;
 import net.minecraft.core.BlockPos;
@@ -80,6 +81,9 @@ public class SuitStationBlockEntity extends PowerBlockEntity {
     public void dock(Map<EquipmentSlot, ItemStack> incoming) {
         for (Map.Entry<EquipmentSlot, ItemStack> entry : incoming.entrySet()) {
             if (!entry.getValue().isEmpty()) {
+                if (level != null) {
+                    SuitHome.stamp(entry.getValue(), level, worldPosition);
+                }
                 parts.put(entry.getKey(), entry.getValue());
             }
         }

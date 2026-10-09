@@ -25,6 +25,15 @@ public final class ModKeys {
             CATEGORY
     );
 
+    /** R: suit wheel (needs EDITH glasses). */
+    public static final KeyMapping SUIT_WHEEL = new KeyMapping(
+            "key.flightsuit.suit_wheel",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_R,
+            CATEGORY
+    );
+
     /** Z: tap = parry window, hold = nano shield (needs the suit chestplate). */
     public static final KeyMapping COUNTER = new KeyMapping(
             "key.flightsuit.counter",

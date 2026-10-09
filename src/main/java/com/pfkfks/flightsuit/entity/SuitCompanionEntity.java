@@ -52,6 +52,8 @@ public class SuitCompanionEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> POWERED = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     /** In repulsor flight (hovering / flying), as decided by the server - drives the hover pose on clients. */
     private static final EntityDataAccessor<Boolean> FLYING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Back split open for the owner to step in (boarding sequence). */
+    private static final EntityDataAccessor<Boolean> OPENING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
 
     public static final int IDLE_DRAIN = 1;
     public static final int MOVE_DRAIN = 2;
@@ -66,6 +68,12 @@ public class SuitCompanionEntity extends PathfinderMob {
     private Vec3 homeDirection = Vec3.ZERO;
     private int aimTicks;
     private LivingEntity commandTarget;
+    /** Streaking in from far away (summoned / left far behind) - flies straight through, no AI. */
+    private boolean arriving;
+    /** Held in place by the boarding sequence while the owner steps in. */
+    private boolean held;
+    /** Client: ticks since the back opened, for the opening animation. */
+    public int openTicks;
 
     public SuitCompanionEntity(EntityType<? extends SuitCompanionEntity> type, Level level) {
         super(type, level);
@@ -106,6 +114,7 @@ public class SuitCompanionEntity extends PathfinderMob {
         this.entityData.define(AIMING, false);
         this.entityData.define(POWERED, true);
         this.entityData.define(FLYING, true);
+        this.entityData.define(OPENING, false);
     }
 
     @Override
@@ -144,7 +153,7 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     /** Busy with something that overrides normal follow/fight behavior. */
     public boolean isBusy() {
-        return boarding || homeTicks >= 0 || !isPowered();
+        return boarding || arriving || held || homeTicks >= 0 || !isPowered();
     }
 
     public boolean isBoarding() {
@@ -155,6 +164,38 @@ public class SuitCompanionEntity extends PathfinderMob {
         boarding = true;
         boardingTicks = 0;
         setTarget(null);
+    }
+
+    public boolean isOpening() {
+        return entityData.get(OPENING);
+    }
+
+    /** Boarding sequence: hold still, facing {@code yaw}, with the back split open. */
+    public void holdOpen(float yaw) {
+        held = true;
+        boarding = false;
+        setDeltaMovement(Vec3.ZERO);
+        setYRot(yaw);
+        setYBodyRot(yaw);
+        setYHeadRot(yaw);
+        entityData.set(OPENING, true);
+    }
+
+    /** Boarding interrupted: close up and go back to being a companion. */
+    public void release() {
+        held = false;
+        entityData.set(OPENING, false);
+    }
+
+    /** Fly in from wherever it is now (far away) instead of popping in next to the owner. */
+    public void startArrival() {
+        arriving = true;
+        noPhysics = true;
+        setTarget(null);
+    }
+
+    public boolean isArriving() {
+        return arriving;
     }
 
     public void setCommandTarget(LivingEntity target) {
@@ -212,13 +253,24 @@ public class SuitCompanionEntity extends PathfinderMob {
         return getEyePosition().add(look.scale(0.7D)).add(right.scale(0.35D)).add(0.0D, -0.3D, 0.0D);
     }
 
-    /** Leaves for the owner's main station: lifts off along that bearing, then docks (or drops a capsule). */
+    /** The pieces it's made of, without removing them. */
+    public Map<EquipmentSlot, ItemStack> partsView() {
+        Map<EquipmentSlot, ItemStack> parts = new EnumMap<>(EquipmentSlot.class);
+        for (EquipmentSlot slot : WornSuit.SLOTS) {
+            if (!getItemBySlot(slot).isEmpty()) {
+                parts.put(slot, getItemBySlot(slot));
+            }
+        }
+        return parts;
+    }
+
+    /** Leaves for its own station (else the main one): lifts off along that bearing, then docks (or drops a capsule). */
     public void goHome() {
         if (homeTicks >= 0) {
             return;
         }
         Player owner = getOwner();
-        Vec3 toStation = owner instanceof ServerPlayer serverOwner ? SuitUpManager.mainStationDirection(serverOwner, position()) : null;
+        Vec3 toStation = owner instanceof ServerPlayer serverOwner ? SuitUpManager.homeDirection(serverOwner, partsView(), position()) : null;
         homeDirection = toStation == null ? new Vec3(0.0D, 1.0D, 0.0D) : toStation.normalize();
         homeTicks = 0;
         boarding = false;
@@ -232,8 +284,13 @@ public class SuitCompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (level().isClientSide) {
+            openTicks = isOpening() ? openTicks + 1 : 0;
             if (isFlying()) {
                 spawnThrusterParticles();
+                // Contrail when streaking in fast, so an arriving suit is visible from far off.
+                if (position().subtract(xo, yo, zo).lengthSqr() > 0.5D) {
+                    level().addParticle(ParticleTypes.CLOUD, getX(), getY() + 0.8D, getZ(), 0.0D, 0.0D, 0.0D);
+                }
             }
             return;
         }
@@ -242,17 +299,49 @@ public class SuitCompanionEntity extends PathfinderMob {
         }
         tickPower();
         entityData.set(FLYING, isPowered() && isNoGravity());
-        if (homeTicks >= 0) {
+        if (held) {
+            setDeltaMovement(Vec3.ZERO);
+        } else if (homeTicks >= 0) {
             tickHomeFlight();
+        } else if (arriving) {
+            tickArrival();
         } else if (boarding) {
             tickBoarding();
         }
     }
 
+    /** Rocket in toward the owner's side, fast while far, easing off as it closes in; normal AI resumes nearby. */
+    private void tickArrival() {
+        Player owner = getOwner();
+        if (owner == null || !isPowered()) {
+            arriving = false;
+            noPhysics = false;
+            return;
+        }
+        Vec3 forward = Vec3.directionFromRotation(0.0F, owner.getYRot());
+        Vec3 spot = owner.position().add(-forward.z * 1.5D, 0.5D, forward.x * 1.5D);
+        Vec3 to = spot.subtract(position());
+        double distance = to.length();
+        if (distance < 6.0D) {
+            arriving = false;
+            noPhysics = false;
+            setDeltaMovement(to.normalize().scale(0.3D));
+            level().playSound(null, blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.7F, 0.8F);
+            return;
+        }
+        double speed = Math.max(0.6D, Math.min(3.0D, distance * 0.12D));
+        Vec3 velocity = to.scale(speed / distance);
+        setDeltaMovement(velocity);
+        float yaw = (float) (Math.atan2(to.z, to.x) * (180.0D / Math.PI)) - 90.0F;
+        setYRot(yaw);
+        setYBodyRot(yaw);
+        setYHeadRot(yaw);
+    }
+
     private void tickPower() {
         // Parked: owner gone or far away and nothing to do - land and idle without spending power.
         Player owner = getOwner();
-        boolean active = getTarget() != null || boarding || homeTicks >= 0
+        boolean active = getTarget() != null || boarding || arriving || held || homeTicks >= 0
                 || (owner != null && distanceToSqr(owner) < PARK_DISTANCE * PARK_DISTANCE);
         if (!active) {
             setNoGravity(false);
@@ -295,9 +384,13 @@ public class SuitCompanionEntity extends PathfinderMob {
             return;
         }
         boardingTicks++;
-        Vec3 target = owner.position();
-        getMoveControl().setWantedPosition(target.x, target.y, target.z, 4.0D);
-        if (distanceTo(owner) < 1.5D || boardingTicks > 100) {
+        // Line up just in front of the owner, facing the same way - back toward them, ready to open.
+        Vec3 forward = Vec3.directionFromRotation(0.0F, owner.getYRot());
+        Vec3 spot = owner.position().add(forward.scale(1.8D));
+        getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 3.0D);
+        getLookControl().setLookAt(spot.add(forward.scale(10.0D)));
+        boolean inPlace = position().distanceTo(spot) < 0.5D;
+        if (inPlace || boardingTicks > 100 || SuitUpManager.isFallingOrAirborne(serverOwner)) {
             SuitUpManager.boardCompanion(serverOwner, this);
         }
     }

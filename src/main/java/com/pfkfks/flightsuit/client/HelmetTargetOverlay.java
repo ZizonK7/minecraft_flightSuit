@@ -25,7 +25,8 @@ import java.util.List;
 public final class HelmetTargetOverlay implements IGuiOverlay {
     public static final HelmetTargetOverlay INSTANCE = new HelmetTargetOverlay();
 
-    private static final double RANGE = 32.0D;
+    /** Fallback when the helmet carries no class info. */
+    private static final double DEFAULT_RANGE = 32.0D;
     private static final int MAX_TARGETS = 24;
     private static final double CLOSE = 8.0D;
     private static final int RED = 0xFFFF4A3D;
@@ -43,7 +44,10 @@ public final class HelmetTargetOverlay implements IGuiOverlay {
                 || SuitEnergy.available(player, EquipmentSlot.HEAD) <= 0) {
             return;
         }
-        List<Mob> targets = minecraft.level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(RANGE),
+        // Sensor range depends on the helmet's suit class (stealth helmets see further).
+        double range = player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof com.pfkfks.flightsuit.suit.SuitArmorItem helmet
+                ? helmet.getSuitType().suitClass().sensorRange() : DEFAULT_RANGE;
+        List<Mob> targets = minecraft.level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(range),
                 mob -> mob instanceof Enemy && mob.isAlive() && !mob.isInvisible());
         targets.sort(Comparator.comparingDouble(mob -> mob.distanceToSqr(player)));
         Font font = minecraft.font;

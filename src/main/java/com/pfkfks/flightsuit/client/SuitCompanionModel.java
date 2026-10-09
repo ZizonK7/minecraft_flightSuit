@@ -18,6 +18,12 @@ public class SuitCompanionModel extends HumanoidModel<SuitCompanionEntity> {
     @Override
     public void setupAnim(SuitCompanionEntity suit, float limbSwing, float limbSwingAmount, float ageInTicks,
                           float netHeadYaw, float headPitch) {
+        // The opening pose moves parts that vanilla setupAnim never resets; put them back first (the model
+        // instance is shared by every companion).
+        head.z = 0.0F;
+        body.z = 0.0F;
+        rightArm.x = -5.0F;
+        leftArm.x = 5.0F;
         super.setupAnim(suit, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         if (!suit.isPowered()) {
             head.xRot = 0.6F;
@@ -38,6 +44,28 @@ public class SuitCompanionModel extends HumanoidModel<SuitCompanionEntity> {
             leftLeg.xRot = -0.07F;
             rightLeg.zRot = 0.05F;
             leftLeg.zRot = -0.05F;
+        }
+        if (suit.isOpening()) {
+            // Splitting open for the owner to step in from behind: helmet lifts and tips forward, arms swing
+            // wide, the torso shell slides forward and the legs part.
+            float t = Math.min(1.0F, (suit.openTicks + ageInTicks - (int) ageInTicks) / 6.0F);
+            float ease = 1.0F - (1.0F - t) * (1.0F - t);
+            head.y = -3.0F * ease;
+            head.z = -1.5F * ease;
+            head.xRot = 0.7F * ease;
+            head.yRot = 0.0F;
+            body.z = -1.5F * ease;
+            rightArm.x = -5.0F - 1.5F * ease;
+            leftArm.x = 5.0F + 1.5F * ease;
+            rightArm.xRot = 0.0F;
+            leftArm.xRot = 0.0F;
+            rightArm.zRot = 0.1F + 0.9F * ease;
+            leftArm.zRot = -0.1F - 0.9F * ease;
+            rightLeg.xRot = 0.0F;
+            leftLeg.xRot = 0.0F;
+            rightLeg.zRot = 0.2F * ease;
+            leftLeg.zRot = -0.2F * ease;
+            return;
         }
         if (suit.isAiming()) {
             rightArm.yRot = head.yRot;

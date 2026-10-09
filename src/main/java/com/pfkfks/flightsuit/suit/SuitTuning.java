@@ -21,6 +21,12 @@ public final class SuitTuning {
     public static final int REPULSOR_COOLDOWN_TICKS = 8;
     public static final double REPULSOR_RANGE = 48.0D;
     public static final float REPULSOR_DAMAGE = 7.0F;
+    /** Stealth cryo beam: weaker hit, but the target freezes solid. */
+    public static final float FREEZE_BEAM_DAMAGE = 4.0F;
+    public static final int FREEZE_TICKS = 100;
+
+    // Stealth active camouflage (full set, while sneaking).
+    public static final int CLOAK_COST = 6;
 
     // Boots-only thrust: limited climb per airtime, then the boots can only slow the fall.
     public static final int BOOTS_THRUST_TICKS = 30;

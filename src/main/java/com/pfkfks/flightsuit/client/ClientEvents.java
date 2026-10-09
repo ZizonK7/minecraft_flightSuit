@@ -8,6 +8,7 @@ import com.pfkfks.flightsuit.suit.SuitTuning;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.RepulsorC2SPacket;
 import com.pfkfks.flightsuit.network.SuitToggleC2SPacket;
+import com.pfkfks.flightsuit.network.SuitWheelC2SPacket;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
@@ -49,6 +50,9 @@ public final class ClientEvents {
         }
         tickSuitKey();
         tickCounterKey(player);
+        while (ModKeys.SUIT_WHEEL.consumeClick()) {
+            ModNetwork.sendToServer(SuitWheelC2SPacket.open());
+        }
         while (ModKeys.COMMAND_ATTACK.consumeClick()) {
             ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
@@ -56,6 +60,7 @@ public final class ClientEvents {
         CinematicCamera.tick();
         if (!minecraft.isPaused()) {
             SuitAnimator.spawnThrusterParticles(minecraft.level);
+            spawnCloakShimmer(minecraft);
         }
     }
 
@@ -63,6 +68,17 @@ public final class ClientEvents {
     private static final int HOLD_TICKS = 10;
     private static int suitKeyHeld = -1;
     private static boolean holdSent;
+
+    /** A faint heat-shimmer around cloaked stealth suits, so a careful eye can still spot them. */
+    private static void spawnCloakShimmer(Minecraft minecraft) {
+        for (net.minecraft.client.player.AbstractClientPlayer other : minecraft.level.players()) {
+            if (other.isInvisible() && other.getRandom().nextInt(3) == 0
+                    && com.pfkfks.flightsuit.suit.StealthHandler.wearsStealthSuit(com.pfkfks.flightsuit.suit.WornSuit.of(other))) {
+                minecraft.level.addParticle(net.minecraft.core.particles.ParticleTypes.REVERSE_PORTAL,
+                        other.getRandomX(0.6D), other.getRandomY(), other.getRandomZ(0.6D), 0.0D, 0.0D, 0.0D);
+            }
+        }
+    }
 
     private static void tickSuitKey() {
         while (ModKeys.SUIT_TOGGLE.consumeClick()) {

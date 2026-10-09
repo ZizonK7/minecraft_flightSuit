@@ -69,6 +69,7 @@ public final class SuitServerEvents {
         tickNightVision(player, worn, data);
         tickFlight(player, worn, data);
         tickThrust(player, worn);
+        StealthHandler.tick(player, worn);
         updatePose(player, worn);
         if (player.tickCount % 20 == 0 && EdithGlassesItem.has(player)) {
             ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), EdithStatusS2CPacket.of(player));
@@ -129,6 +130,14 @@ public final class SuitServerEvents {
         abilities.flying = true;
         player.fallDistance = 0.0F;
         player.onUpdateAbilities();
+    }
+
+    /** Drops suit-granted flight immediately (instead of on the next tick) - used when stepping out mid-air. */
+    public static void revokeSuitFlightNow(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        if (data.getBoolean(GRANTED_FLIGHT_TAG)) {
+            revokeFlight(player, data);
+        }
     }
 
     private static void revokeFlight(ServerPlayer player, CompoundTag data) {
@@ -229,5 +238,6 @@ public final class SuitServerEvents {
         SuitUpManager.forget(id);
         RepulsorHandler.forget(id);
         CounterHandler.forget(id);
+        StealthHandler.forget(id);
     }
 }

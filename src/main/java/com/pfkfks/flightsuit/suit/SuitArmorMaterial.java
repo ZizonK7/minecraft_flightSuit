@@ -10,6 +10,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 /** Diamond-tier protection; durability matters later for forced ejection (DESIGN.md 4-2). */
 public enum SuitArmorMaterial implements ArmorMaterial {
     MARK_1("flightsuit:mark_1", 33, 3, 8, 6, 3, 10, 2.0F, 0.1F),
+    /** Stealth: lighter plating, a little less protection. */
+    MARK_2("flightsuit:mark_2", 28, 2, 7, 5, 2, 12, 1.0F, 0.0F),
     /** EDITH glasses: no protection, zero durability = unbreakable. */
     EDITH("flightsuit:edith", 0, 0, 0, 0, 0, 15, 0.0F, 0.0F);
 

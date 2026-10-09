@@ -8,6 +8,9 @@ import com.pfkfks.flightsuit.registry.ModBlockEntities;
 import com.pfkfks.flightsuit.registry.ModBlocks;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.registry.ModItems;
+import com.pfkfks.flightsuit.suit.SuitType;
+import com.pfkfks.flightsuit.suit.WornSuit;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -44,12 +47,13 @@ public class FlightSuitMod {
                         output.accept(ModBlocks.CLEANER_DOCK.get());
                         output.accept(ModItems.CLEANER_ROBOT.get());
                         output.accept(ModItems.HOVER_CAR_CAPSULE.get());
-                        output.accept(ModItems.RYAN_MK1_CAPSULE.get().createFilledCapsule());
-                        output.accept(ModItems.RYAN_MK1_CAPSULE.get());
-                        output.accept(ModItems.RYAN_MK1_HELMET.get());
-                        output.accept(ModItems.RYAN_MK1_CHESTPLATE.get());
-                        output.accept(ModItems.RYAN_MK1_LEGGINGS.get());
-                        output.accept(ModItems.RYAN_MK1_BOOTS.get());
+                        for (SuitType type : SuitType.values()) {
+                            output.accept(ModItems.capsuleFor(type).createFilledCapsule());
+                            output.accept(ModItems.capsuleFor(type));
+                            for (EquipmentSlot slot : WornSuit.SLOTS) {
+                                output.accept(ModItems.pieceFor(type, slot));
+                            }
+                        }
                         output.accept(ModItems.ARC_REACTOR.get());
                         output.accept(ModItems.ENERGY_CELL.get());
                     })

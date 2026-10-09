@@ -29,6 +29,7 @@ public final class MainStation {
         tag.putString("Dim", player.level().dimension().location().toString());
         tag.putLong("Pos", pos.asLong());
         player.getPersistentData().put(TAG, tag);
+        OwnedStations.add(player, pos);
     }
 
     public static Link get(Player player) {
