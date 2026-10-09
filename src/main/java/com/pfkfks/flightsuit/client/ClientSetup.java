@@ -27,6 +27,7 @@ public final class ClientSetup {
     public static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         SuitArmorModels.registerLayers(event);
         event.registerLayerDefinition(HoverCarModel.LAYER, HoverCarModel::create);
+        event.registerLayerDefinition(SpaceshipModel.LAYER, SpaceshipModel::create);
     }
 
     @SubscribeEvent
@@ -55,6 +56,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.GENERAL.get(), GeneralRenderer::new);
         event.registerEntityRenderer(ModEntities.CITY_HERO.get(), CityHeroRenderer::new);
         event.registerEntityRenderer(ModEntities.THIEF.get(), ThiefRenderer::new);
+        event.registerEntityRenderer(ModEntities.SPACESHIP.get(), SpaceshipRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 
@@ -75,5 +77,6 @@ public final class ClientSetup {
         event.registerAboveAll("hover_car_hud", HoverCarHudOverlay.INSTANCE);
         event.registerAboveAll("remote_link", RemoteLinkOverlay.INSTANCE);
         event.registerAboveAll("edith_alert", EdithAlertOverlay.INSTANCE);
+        event.registerAboveAll("space_travel", SpaceTravelOverlay.INSTANCE);
     }
 }

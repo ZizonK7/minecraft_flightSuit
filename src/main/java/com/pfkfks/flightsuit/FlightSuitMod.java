@@ -48,6 +48,7 @@ public class FlightSuitMod {
                         output.accept(ModBlocks.BATTERY.get());
                         output.accept(ModBlocks.STATION_STORAGE.get());
                         output.accept(ModBlocks.SECURITY_SENSOR.get());
+                        output.accept(ModBlocks.LAUNCH_PAD.get());
                         output.accept(ModBlocks.CLEANER_DOCK.get());
                         output.accept(ModItems.CLEANER_ROBOT.get());
                         output.accept(ModItems.HOVER_CAR_CAPSULE.get());

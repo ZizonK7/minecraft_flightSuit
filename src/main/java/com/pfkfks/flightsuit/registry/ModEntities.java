@@ -100,6 +100,13 @@ public final class ModEntities {
                     .clientTrackingRange(12)
                     .build("city_hero"));
 
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.SpaceshipEntity>> SPACESHIP = ENTITY_TYPES.register("spaceship",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.SpaceshipEntity>of(com.pfkfks.flightsuit.planet.SpaceshipEntity::new, MobCategory.MISC)
+                    .sized(2.4F, 2.4F)
+                    .clientTrackingRange(16)
+                    .updateInterval(1)
+                    .build("spaceship"));
+
     public static final RegistryObject<EntityType<ThiefEntity>> THIEF = ENTITY_TYPES.register("thief",
             () -> EntityType.Builder.<ThiefEntity>of(ThiefEntity::new, MobCategory.MISC)
                     .sized(0.6F, 1.8F)

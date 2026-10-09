@@ -1,0 +1,21 @@
+{
+  "type": "flightsuit:dbz_earth",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:checkerboard",
+      "scale": 3,
+      "biomes": [
+        "minecraft:savanna",
+        "minecraft:plains",
+        "minecraft:badlands",
+        "minecraft:desert",
+        "minecraft:wooded_badlands",
+        "minecraft:savanna_plateau",
+        "minecraft:meadow",
+        "minecraft:eroded_badlands"
+      ]
+    }
+  }
+}

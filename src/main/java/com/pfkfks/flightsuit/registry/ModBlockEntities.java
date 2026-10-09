@@ -42,6 +42,9 @@ public final class ModBlockEntities {
     @SuppressWarnings("DataFlowIssue")
     public static final RegistryObject<BlockEntityType<SecuritySensorBlockEntity>> SECURITY_SENSOR = BLOCK_ENTITY_TYPES.register("security_sensor",
             () -> BlockEntityType.Builder.of(SecuritySensorBlockEntity::new, ModBlocks.SECURITY_SENSOR.get()).build(null));
+    @SuppressWarnings("DataFlowIssue")
+    public static final RegistryObject<BlockEntityType<com.pfkfks.flightsuit.planet.LaunchPadBlockEntity>> LAUNCH_PAD = BLOCK_ENTITY_TYPES.register("launch_pad",
+            () -> BlockEntityType.Builder.of(com.pfkfks.flightsuit.planet.LaunchPadBlockEntity::new, ModBlocks.LAUNCH_PAD.get()).build(null));
 
     private ModBlockEntities() {
     }

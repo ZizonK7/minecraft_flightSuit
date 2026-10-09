@@ -63,6 +63,8 @@ public final class ModNetwork {
                 ResidentActionC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, EdithAlertS2CPacket.class, EdithAlertS2CPacket::encode, EdithAlertS2CPacket::decode,
                 EdithAlertS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, SpaceTravelS2CPacket.class, SpaceTravelS2CPacket::encode, SpaceTravelS2CPacket::decode,
+                SpaceTravelS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {

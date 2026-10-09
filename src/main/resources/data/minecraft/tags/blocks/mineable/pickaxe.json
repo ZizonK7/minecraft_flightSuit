@@ -7,6 +7,7 @@
     "flightsuit:battery",
     "flightsuit:cleaner_dock",
     "flightsuit:station_storage",
-    "flightsuit:security_sensor"
+    "flightsuit:security_sensor",
+    "flightsuit:launch_pad"
   ]
 }

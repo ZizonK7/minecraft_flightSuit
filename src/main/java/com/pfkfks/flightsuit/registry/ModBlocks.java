@@ -41,6 +41,8 @@ public final class ModBlocks {
             () -> new StationStorageBlock(metal()));
     public static final RegistryObject<SecuritySensorBlock> SECURITY_SENSOR = register("security_sensor",
             () -> new SecuritySensorBlock(metal()));
+    public static final RegistryObject<com.pfkfks.flightsuit.planet.LaunchPadBlock> LAUNCH_PAD = register("launch_pad",
+            () -> new com.pfkfks.flightsuit.planet.LaunchPadBlock(metal().lightLevel(state -> 7)));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
     /** Blast-proof, so a creeper can't take the whole village down with it. */

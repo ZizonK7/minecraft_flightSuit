@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IAI",
+    "BRB",
+    "III"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_block"
+    },
+    "A": {
+      "item": "flightsuit:arc_reactor"
+    },
+    "B": {
+      "item": "flightsuit:battery"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "item": "flightsuit:launch_pad",
+    "count": 1
+  }
+}

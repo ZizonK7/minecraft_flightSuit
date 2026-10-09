@@ -1,5 +1,9 @@
 package com.pfkfks.flightsuit.suit;
 
+import net.minecraft.core.registries.Registries;
+
+import net.minecraft.resources.ResourceLocation;
+
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.entity.RemoteBodyEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
@@ -85,12 +89,15 @@ public final class RemoteLink {
     private static final class Session {
         final RemoteBodyEntity body;
         final Vec3 bodyPos;
+        /** Where the body stays - not always where the suit is (a link from another planet, DESIGN.md 4-15). */
+        final ResourceKey<Level> bodyDim;
         final float yaw;
         final float pitch;
 
-        Session(RemoteBodyEntity body, Vec3 bodyPos, float yaw, float pitch) {
+        Session(RemoteBodyEntity body, Vec3 bodyPos, ResourceKey<Level> bodyDim, float yaw, float pitch) {
             this.body = body;
             this.bodyPos = bodyPos;
+            this.bodyDim = bodyDim;
             this.yaw = yaw;
             this.pitch = pitch;
         }
@@ -164,11 +171,16 @@ public final class RemoteLink {
      * @param airborne the suit was in the air (a hovering companion) - keep it flying instead of dropping
      */
     public static void start(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, Vec3 spot, float yaw, boolean airborne) {
+        start(player, player.serverLevel(), parts, spot, yaw, airborne);
+    }
+
+    /** Same, with the suit in {@code suitLevel} - possibly another dimension than the body (DESIGN.md 4-15). */
+    public static void start(ServerPlayer player, ServerLevel suitLevel, Map<EquipmentSlot, ItemStack> parts, Vec3 spot, float yaw,
+                             boolean airborne) {
         ServerLevel level = player.serverLevel();
         Vec3 bodyPos = player.position();
         RemoteBodyEntity body = RemoteBodyEntity.spawn(player);
-        Session session = new Session(body, bodyPos, player.getYRot(), player.getXRot());
-        SESSIONS.put(player.getUUID(), session);
+        Session session = new Session(body, bodyPos, level.dimension(), player.getYRot(), player.getXRot());
         keepBodyLoaded(level, session);
 
         CompoundTag tag = new CompoundTag();
@@ -185,7 +197,9 @@ public final class RemoteLink {
         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, eyes.x, eyes.y, eyes.z, 8, 0.15D, 0.05D, 0.15D, 0.05D);
         level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8F, 1.6F);
 
-        player.teleportTo(level, spot.x, spot.y, spot.z, yaw, 0.0F);
+        // Registered only after the move: a link session blocks dimension travel (onTravel).
+        player.teleportTo(suitLevel, spot.x, spot.y, spot.z, yaw, 0.0F);
+        SESSIONS.put(player.getUUID(), session);
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0.0F;
         for (Map.Entry<EquipmentSlot, ItemStack> entry : parts.entrySet()) {
@@ -198,7 +212,7 @@ public final class RemoteLink {
         if (airborne) {
             SuitServerEvents.grantFlightNow(player);
         }
-        SuitUpManager.eyesOn(level, player);
+        SuitUpManager.eyesOn(suitLevel, player);
 
         String name = ((SuitArmorItem) parts.get(EquipmentSlot.CHEST).getItem()).getSuitType().hudName();
         send(player, true, session, name);
@@ -217,7 +231,11 @@ public final class RemoteLink {
         float suitYaw = player.getYRot();
         Map<EquipmentSlot, ItemStack> parts = SuitUpManager.stripSuit(player);
 
-        boolean near = suitPos.distanceTo(session.bodyPos) <= STAY_RANGE && suitPos.y > level.getMinBuildHeight();
+        ServerLevel bodyLevel = player.server.getLevel(session.bodyDim);
+        if (bodyLevel == null) {
+            bodyLevel = level;
+        }
+        boolean near = bodyLevel == level && suitPos.distanceTo(session.bodyPos) <= STAY_RANGE && suitPos.y > level.getMinBuildHeight();
         boolean broken = parts.values().stream().anyMatch(SuitArmorItem::isBroken);
         boolean stays = near && !broken && reason != End.RECALL && reason != End.BROKEN;
         boolean flyHome = near && !stays;
@@ -236,7 +254,7 @@ public final class RemoteLink {
             }
         }
 
-        player.teleportTo(level, session.bodyPos.x, session.bodyPos.y, session.bodyPos.z, session.yaw, session.pitch);
+        player.teleportTo(bodyLevel, session.bodyPos.x, session.bodyPos.y, session.bodyPos.z, session.yaw, session.pitch);
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0.0F;
         session.body.discard();
@@ -246,7 +264,7 @@ public final class RemoteLink {
             SuitUpManager.storeReturningSuit(player, null, parts);
         }
         player.getPersistentData().remove(TAG);
-        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.7F, 1.6F);
+        bodyLevel.playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.7F, 1.6F);
         send(player, false, session, "");
 
         String message = switch (reason) {
@@ -272,8 +290,10 @@ public final class RemoteLink {
         CompoundTag tag = player.getPersistentData().getCompound(TAG);
         player.getPersistentData().remove(TAG);
         Map<EquipmentSlot, ItemStack> parts = SuitUpManager.stripSuit(player);
-        if (tag.getString("Dim").equals(player.level().dimension().location().toString())) {
-            player.teleportTo(player.serverLevel(), tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"),
+        ResourceLocation dim = ResourceLocation.tryParse(tag.getString("Dim"));
+        ServerLevel bodyLevel = dim == null ? null : player.server.getLevel(ResourceKey.create(Registries.DIMENSION, dim));
+        if (bodyLevel != null) {
+            player.teleportTo(bodyLevel, tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"),
                     tag.getFloat("Yaw"), tag.getFloat("Pitch"));
         }
         SuitServerEvents.revokeSuitFlightNow(player);
@@ -296,7 +316,8 @@ public final class RemoteLink {
             return;
         }
         if (player.tickCount % 20 == 0) {
-            keepBodyLoaded(player.serverLevel(), session);
+            ServerLevel bodyLevel = player.server.getLevel(session.bodyDim);
+            keepBodyLoaded(bodyLevel != null ? bodyLevel : player.serverLevel(), session);
         }
         WornSuit worn = WornSuit.of(player);
         if (!worn.fullSet()) {

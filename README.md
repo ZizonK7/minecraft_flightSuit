@@ -23,7 +23,7 @@
 
 실제 마인크래프트에서 쓰려면 이 모드 jar와 함께 [PlayerAnimator](https://maven.kosmx.dev/dev/kosmx/player-anim/player-animation-lib-forge/) Forge 1.20 버전을 `mods` 폴더에 넣어야 합니다.
 
-## 현재 기능 (M1 ~ M14)
+## 현재 기능 (M1 ~ M15)
 
 크리에이티브 탭 "플라이트 슈트"에서 모든 아이템과 블록을 꺼낼 수 있습니다. **슈트가 든 캡슐**로 바로 써 보거나, 스테이션에 슈트를 넣고 이디스 안경으로 불러 보세요.
 
@@ -278,6 +278,15 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각, Mark 3는 Mark 1 
 | 연막탄 | 우클릭: 주변 8칸 몹이 나를 놓치고 5초 실명, 나는 5초 투명. 소모품 |
 | 보안 센서 | 전력망의 소비자 (버퍼 4,000 FE, 유지 1 FE/틱). 전력이 있으면 빨간 렌즈 = 감시 중. 도둑을 잡으면 5초 레드스톤 신호. 레시피: 철 5, 관측기, 레드스톤 2, 배터리 |
 
+### 우주선과 행성
+
+**발사대**(새 블록)를 전력망에 연결해 충전하고(버퍼 120,000 FE, 초당 최대 40,000 FE 받음) 우클릭하면 갈 수 있는 행성이 나옵니다. **[○○로 발사]**를 누르면 100,000 FE를 쓰고(왕복 요금) 캡슐 코퍼레이션 우주선이 나타나 나를 태우고 이륙합니다. 7초쯤 올라가면 화면이 별이 흐르는 우주로 바뀌고, 그 사이 행성으로 건너가 하늘에서 천천히 내려앉습니다. 비행 중에는 내릴 수 없습니다.
+
+- **행성 = 차원**: 지금은 **드래곤볼 지구** 하나. 사바나·평원·악지·사막·초원이 바둑판처럼 이어진 넓은 오픈 월드입니다 (시간은 지구와 같이 흐름).
+- **착륙한 우주선이 거점**: 우클릭 → **[귀환]** (타고 집의 발사대로 돌아옴, 발사대가 없어졌으면 월드 스폰으로), **[원격 접속]** (집의 메인 스테이션에 있는 슈트에 차원을 넘어 원격 접속, 몸은 행성에 남고 주변 청크는 계속 로드). 다른 사람의 우주선은 쓸 수 없습니다.
+- 행성에 있는 동안에도 마을이 습격당하거나 경보가 울리면 이디스가 알려 줍니다.
+- 레시피: 발사대 = 철 블록 5, 아크 원자로, 배터리 2, 레드스톤 블록
+
 ### 테스트 명령어 (치트 필요)
 
 - `/flightsuit durability <0-100>`: 입은 슈트와 16칸 안의 내 동료 슈트의 내구도를 %로 설정합니다. `0`이면 다음 피격에 강제 이탈합니다.
@@ -351,6 +360,7 @@ src/main/java/com/pfkfks/flightsuit/
   car/       호버카
   war/       삼국지: 나라·장수(Kingdom, General), 병사·장수 엔티티(역할 RAID/GARRISON/ALLY, 누가 누구와 싸우는지는 WarTargets), 습격(RaidManager), 성채(FortressBuilder·FortressManager), 외교·의뢰(Diplomacy, Request, Standing), 성채 전투(Battle), 원정(Army), 저장(WarData), 화공, 명령어, AI(war/ai)
   hero/      히어로 시티: 히어로 종류(HeroType), 히어로·요원 엔티티(CityHeroEntity), 도시 구조물(HeroCityBuilder), 위치·건설·관계·아이언맨 작업실·의뢰·악당 습격·함락(HeroCity), 저장(HeroData), 명령어(HeroCommands)
+  planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock), 우주선(SpaceshipEntity), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
   thief/     배트맨 일당: 도둑 종류(ThiefType), 도둑 엔티티(ThiefEntity: 몰래 털기·발견·EMP·도주), 일정·계산 처리·상자 털기(ThiefManager), 저장(ThiefData), 배트랭·갈고리 총·연막탄, 명령어
   village/   마을: 회관(VillageHallBlockEntity), 주민(ResidentEntity)과 직업·재능, 건축(VillageWorks: 복구·주문·개축·건의, Blueprint 설계도, Construction), 설계도 아이템, 피해 기록, 주민 AI(village/ai)
   entity/    착용 연출 파츠 엔티티, 미사일·카드, 동료 슈트 엔티티와 AI(entity/ai), 원격 조종 중 남는 몸
