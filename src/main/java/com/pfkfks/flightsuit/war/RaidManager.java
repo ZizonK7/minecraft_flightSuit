@@ -91,6 +91,31 @@ public final class RaidManager {
             record.population = hall.getPopulation();
             data.setDirty();
         }
+        if (record.pendingRecruits > 0 || record.pendingGenerals != 0) {
+            bringPrisoners(level, data, record, hall);
+        }
+        Diplomacy.onVillageLoaded(level, data, record, hall);
+    }
+
+    /** Prisoners taken at a fortress arrive at the village: soldiers join as residents, generals as defenders. */
+    private static void bringPrisoners(ServerLevel level, WarData data, WarData.VillageRecord record, VillageHallBlockEntity hall) {
+        net.minecraft.world.phys.Vec3 at = net.minecraft.world.phys.Vec3.atBottomCenterOf(hall.getBlockPos()).add(2.0D, 1.0D, 2.0D);
+        for (int i = 0; i < record.pendingRecruits; i++) {
+            ResidentEntity.spawnRecruit(level, hall, at, ResidentJob.SOLDIER);
+        }
+        for (General general : General.values()) {
+            if ((record.pendingGenerals & (1 << general.ordinal())) != 0) {
+                GeneralEntity entity = GeneralEntity.create(level, general, -1, hall.getBlockPos());
+                entity.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
+                level.addFreshEntity(entity);
+                entity.recruit(hall);
+            }
+        }
+        hall.addNews(Component.translatable("news.flightsuit.prisoners_arrived", record.pendingRecruits + Integer.bitCount(record.pendingGenerals)));
+        record.pendingRecruits = 0;
+        record.pendingGenerals = 0;
+        data.setDirty();
+        hall.refreshStats();
     }
 
     /** The hall was broken: no more raids on it. */
@@ -167,13 +192,25 @@ public final class RaidManager {
         raid.resolve = roll < 0.25F ? 0.85F + random.nextFloat() * 0.15F
                 : roll < 0.7F ? 0.45F + random.nextFloat() * 0.25F
                 : 0.15F + random.nextFloat() * 0.2F;
-        List<General> generals = kingdom.generals();
+        // Only a general who is at home can lead it (one beaten lately, serving the player or away elsewhere can't).
+        long today = level.getDayTime() / 24000L;
+        List<General> generals = new ArrayList<>();
+        for (General general : kingdom.generals()) {
+            if (data.generalState(general, today) == WarData.GENERAL_HOME) {
+                generals.add(general);
+            }
+        }
         raid.general = generals.isEmpty() ? null : generals.get(random.nextInt(generals.size()));
         if (raid.general != null) {
             raid.resolve = Math.min(1.0F, raid.resolve + raid.general.resolveBonus());
+            data.setGeneralState(raid.general, WarData.GENERAL_AWAY, 0L);
         }
         raid.fireAttack = random.nextFloat() < WarTuning.FIRE_RAID_CHANCE;
-        raid.approach = random.nextFloat() * 360.0F;
+        // The army comes from the direction of its fortress.
+        FortRecord fort = data.fort(kingdom);
+        raid.approach = fort != null && village.dimension == Level.OVERWORLD
+                ? (float) Math.toDegrees(Math.atan2(fort.z - village.hall.getZ(), fort.x - village.hall.getX()))
+                : random.nextFloat() * 360.0F;
         raid.startedAt = level.getGameTime();
         raid.waveSize = Math.min(WarTuning.WAVE_MAX, WarTuning.WAVE_BASE + village.population / 2);
         raid.planned = raid.waveSize * 2 + raid.waveSize / 2 + (raid.general != null ? 1 : 0);
@@ -381,6 +418,16 @@ public final class RaidManager {
         data.setDirty();
     }
 
+    /** Is this general leading a raid right now? */
+    public static boolean isOnRaid(MinecraftServer server, General general) {
+        for (RaidState raid : WarData.get(server).raids().values()) {
+            if (raid.general == general) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Is this player Guan Yu's to fight (his soldiers stand aside)? */
     public static boolean isDueling(int raidId, Player player, Mob raider) {
         if (raidId < 0) {
@@ -458,6 +505,7 @@ public final class RaidManager {
             } else if (member instanceof GeneralEntity general && general.hasYielded()) {
                 general.recruit(hall);
                 generals.add(general.getGeneral().displayName());
+                data.setGeneralState(general.getGeneral(), WarData.GENERAL_RECRUITED, 0L);
             }
         }
         data.addTrust(player.getUUID(), raid.kingdom, -5);
@@ -569,6 +617,14 @@ public final class RaidManager {
     private static void finish(MinecraftServer server, WarData data, RaidState raid, @Nullable ServerLevel level,
                                @Nullable VillageHallBlockEntity hall) {
         data.endRaid(raid);
+        if (raid.general != null) {
+            long today = (level != null ? level.getDayTime() : server.overworld().getDayTime()) / 24000L;
+            if (data.generalState(raid.general, today) == WarData.GENERAL_AWAY) {
+                // Beaten (and let go, or still kneeling when it ended): resting a few days. Otherwise just home.
+                data.setGeneralState(raid.general, raid.generalDefeated ? WarData.GENERAL_BEATEN : WarData.GENERAL_HOME,
+                        today + WarTuning.GENERAL_REST_DAYS);
+            }
+        }
         WarData.VillageRecord village = data.villages().get(raid.villageKey);
         if (village != null) {
             long day = (level != null ? level.getDayTime() : server.overworld().getDayTime()) / 24000L;

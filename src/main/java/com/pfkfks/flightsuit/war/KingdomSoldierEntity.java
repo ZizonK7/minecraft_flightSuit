@@ -3,6 +3,7 @@ package com.pfkfks.flightsuit.war;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.village.VillageHallBlockEntity;
 import com.pfkfks.flightsuit.village.Villages;
+import com.pfkfks.flightsuit.war.ai.FollowCommanderGoal;
 import com.pfkfks.flightsuit.war.ai.MarchOnVillageGoal;
 import com.pfkfks.flightsuit.war.ai.RaiderTargetGoal;
 import com.pfkfks.flightsuit.war.ai.YieldedGoal;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.MoveTowardsRestrictionGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RangedBowAttackGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
@@ -44,6 +46,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 /**
  * A Three Kingdoms foot soldier (DESIGN.md 4-11, M10): swordsman, spearman or archer, in their kingdom's
@@ -70,8 +74,18 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
     public static final String FIRE_ARROW_TAG = "flightsuit_fire_arrow";
 
     private int raidId = -1;
+    /** RAID: the hall (or fortress centre) they march on; ALLY: the fortress being invaded (null = just follow). */
     private @Nullable BlockPos hallPos;
     private boolean fireArrows;
+    private WarRole role = WarRole.RAID;
+    private @Nullable Kingdom foe;
+    private @Nullable UUID commander;
+    private @Nullable BlockPos home;
+    /** ALLY: game time they head home (0 = never). */
+    private long expiresAt;
+    /** A fortress battle they belong to (-1 = none). */
+    private int battleId = -1;
+    private long lastPenaltyAt;
 
     public KingdomSoldierEntity(EntityType<? extends KingdomSoldierEntity> type, Level level) {
         super(type, level);
@@ -129,6 +143,35 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
                 kingdom.displayName()));
     }
 
+    /** Keeps a fortress (M12): wanders inside its walls, not saved (the fortress refills it when someone comes). */
+    public KingdomSoldierEntity asGarrison(BlockPos fortCenter) {
+        role = WarRole.GARRISON;
+        home = fortCenter.immutable();
+        hallPos = null;
+        restrictTo(home, 18);
+        return this;
+    }
+
+    /** On the player's side (M12): follows {@code commander}; with a {@code foe}, marches on its fortress at {@code objective}. */
+    public KingdomSoldierEntity asAlly(UUID commander, @Nullable Kingdom foe, @Nullable BlockPos objective, long expiresAt, int battleId) {
+        role = WarRole.ALLY;
+        this.commander = commander;
+        this.foe = foe;
+        this.hallPos = objective == null ? null : objective.immutable();
+        this.expiresAt = expiresAt;
+        this.battleId = battleId;
+        return this;
+    }
+
+    /** Storms {@code fort}'s fortress at {@code objective} (M12 방어 지원 의뢰). */
+    public KingdomSoldierEntity asStorm(Kingdom fort, BlockPos objective, int battleId) {
+        role = WarRole.RAID;
+        this.foe = fort;
+        this.hallPos = objective.immutable();
+        this.battleId = battleId;
+        return this;
+    }
+
     /** Spawn egg: a random soldier of a random kingdom, marching on the village it was dropped in. */
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason,
@@ -171,7 +214,10 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
                 return !hasYielded() && super.canContinueToUse();
             }
         });
-        goalSelector.addGoal(3, new MarchOnVillageGoal(this, () -> hasYielded() ? null : hallPos));
+        goalSelector.addGoal(3, new FollowCommanderGoal(this, () -> !hasYielded() && role == WarRole.ALLY ? commander : null,
+                () -> hallPos));
+        goalSelector.addGoal(3, new MarchOnVillageGoal(this, () -> hasYielded() || role == WarRole.GARRISON ? null : hallPos));
+        goalSelector.addGoal(4, new MoveTowardsRestrictionGoal(this, 0.9D));
         goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
@@ -181,7 +227,7 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
                 return !hasYielded() && super.canUse();
             }
         });
-        targetSelector.addGoal(2, new RaiderTargetGoal(this, this::hasYielded));
+        targetSelector.addGoal(2, new RaiderTargetGoal(this, this, this::hasYielded));
     }
 
     // ---- state ----
@@ -206,6 +252,52 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
     @Override
     public boolean isNoThreat() {
         return hasYielded();
+    }
+
+    @Override
+    public Kingdom kingdom() {
+        return getKingdom();
+    }
+
+    @Override
+    public WarRole role() {
+        return role;
+    }
+
+    @Override
+    public @Nullable Kingdom foe() {
+        return foe;
+    }
+
+    @Override
+    public @Nullable UUID commander() {
+        return commander;
+    }
+
+    @Override
+    public @Nullable BlockPos home() {
+        return home;
+    }
+
+    public int battleId() {
+        return battleId;
+    }
+
+    /** Garrisons aren't saved: the fortress fills up again when someone comes, so nothing piles up while it's unloaded. */
+    @Override
+    public boolean shouldBeSaved() {
+        return role != WarRole.GARRISON && super.shouldBeSaved();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && role == WarRole.ALLY && expiresAt > 0 && level().getGameTime() > expiresAt && tickCount % 20 == 0) {
+            if (level() instanceof ServerLevel server) {
+                server.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, getX(), getY() + 1.0D, getZ(), 8, 0.3D, 0.5D, 0.3D, 0.02D);
+            }
+            discard();
+        }
     }
 
     public @Nullable BlockPos getHallPos() {
@@ -235,6 +327,17 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
         if (hasYielded() && attacker instanceof net.minecraft.world.entity.animal.IronGolem) {
             return false;
         }
+        // Support troops shrug off their own side's blows.
+        if (role == WarRole.ALLY && attacker != null && (attacker.getUUID().equals(commander) || attacker instanceof RaidMember member
+                && member.isPlayerSide() || attacker instanceof com.pfkfks.flightsuit.village.ResidentEntity
+                || attacker instanceof com.pfkfks.flightsuit.entity.SuitCompanionEntity)) {
+            return false;
+        }
+        if (role == WarRole.GARRISON && attacker instanceof net.minecraft.server.level.ServerPlayer player && !level().isClientSide
+                && level().getGameTime() - lastPenaltyAt > 40L) {
+            lastPenaltyAt = level().getGameTime();
+            Diplomacy.onGarrisonHit(player, getKingdom(), false);
+        }
         // No friendly fire inside one army (stray arrows, sweeping spears).
         if (attacker instanceof RaidMember member && !member.isNoThreat() && member.raidId() == raidId && raidId >= 0) {
             return false;
@@ -263,9 +366,20 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
     // ---- loot / misc ----
 
     @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        if (!level().isClientSide && role == WarRole.GARRISON && source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            Diplomacy.onGarrisonHit(player, getKingdom(), true);
+        }
+        if (!level().isClientSide && level() instanceof ServerLevel server && role == WarRole.GARRISON && home != null) {
+            FortressManager.onGarrisonFell(server, getKingdom(), FortressManager.byPlayerSide(source.getEntity()));
+        }
+    }
+
+    @Override
     protected void dropCustomDeathLoot(DamageSource source, int looting, boolean recentlyHit) {
         super.dropCustomDeathLoot(source, looting, recentlyHit);
-        if (raidId < 0) {
+        if (raidId < 0 && role != WarRole.GARRISON) {
             return;
         }
         if (getSoldierType() == Type.ARCHER) {
@@ -302,7 +416,7 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
 
     @Override
     public boolean isPreventingPlayerRest(Player player) {
-        return !hasYielded();
+        return !hasYielded() && role == WarRole.RAID;
     }
 
     @Override
@@ -323,6 +437,15 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
         if (hallPos != null) {
             tag.put("Hall", NbtUtils.writeBlockPos(hallPos));
         }
+        tag.putInt("Role", role.ordinal());
+        if (foe != null) {
+            tag.putInt("Foe", foe.ordinal());
+        }
+        if (commander != null) {
+            tag.putUUID("Commander", commander);
+        }
+        tag.putLong("Expires", expiresAt);
+        tag.putInt("Battle", battleId);
     }
 
     @Override
@@ -334,5 +457,10 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
         raidId = tag.contains("Raid") ? tag.getInt("Raid") : -1;
         fireArrows = tag.getBoolean("FireArrows");
         hallPos = tag.contains("Hall") ? NbtUtils.readBlockPos(tag.getCompound("Hall")) : null;
+        role = WarRole.byId(tag.getInt("Role"));
+        foe = tag.contains("Foe") ? Kingdom.byId(tag.getInt("Foe")) : null;
+        commander = tag.hasUUID("Commander") ? tag.getUUID("Commander") : null;
+        expiresAt = tag.getLong("Expires");
+        battleId = tag.contains("Battle") ? tag.getInt("Battle") : -1;
     }
 }

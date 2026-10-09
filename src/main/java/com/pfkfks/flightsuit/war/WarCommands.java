@@ -35,6 +35,30 @@ public final class WarCommands {
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("village")
+                .then(Commands.literal("list").executes(ctx -> {
+                    Diplomacy.list(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }))
+                .then(Commands.literal("accept").then(Commands.argument("id", IntegerArgumentType.integer(0))
+                        .executes(ctx -> Diplomacy.accept(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0)))
+                .then(Commands.literal("decline").then(Commands.argument("id", IntegerArgumentType.integer(0))
+                        .executes(ctx -> Diplomacy.decline(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0)))
+                .then(Commands.literal("send").then(Commands.argument("id", IntegerArgumentType.integer(0))
+                        .executes(ctx -> Diplomacy.send(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "id")) ? 1 : 0)))
+                .then(Commands.literal("muster").then(kingdomArgument()
+                        .executes(ctx -> withKingdom(ctx, kingdom -> Diplomacy.muster(ctx.getSource().getPlayerOrException(), kingdom)))))
+                .then(Commands.literal("lead").then(kingdomArgument()
+                        .executes(ctx -> withKingdom(ctx, kingdom -> Diplomacy.lead(ctx.getSource().getPlayerOrException(), kingdom)))))
+                .then(Commands.literal("war").then(kingdomArgument()
+                        .executes(ctx -> withKingdom(ctx, kingdom -> Diplomacy.war(ctx.getSource().getPlayerOrException(), kingdom)))))
+                .then(Commands.literal("army")
+                        .then(Commands.literal("follow").executes(ctx -> Army.follow(ctx.getSource().getPlayerOrException())))
+                        .then(Commands.literal("home").executes(ctx -> Army.home(ctx.getSource().getPlayerOrException()))))
+                .then(Commands.literal("fort")
+                        .then(Commands.literal("recruit").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom ->
+                                FortressManager.decide(ctx.getSource().getServer(), kingdom, ctx.getSource().getPlayerOrException(), true)))))
+                        .then(Commands.literal("release").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom ->
+                                FortressManager.decide(ctx.getSource().getServer(), kingdom, ctx.getSource().getPlayerOrException(), false))))))
                 .then(Commands.literal("recruit")
                         .then(Commands.argument("raid", IntegerArgumentType.integer(0))
                                 .executes(ctx -> RaidManager.recruit(ctx.getSource().getServer(), IntegerArgumentType.getInteger(ctx, "raid"),
@@ -57,7 +81,79 @@ public final class WarCommands {
                                 .then(Commands.argument("name", StringArgumentType.word())
                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                                 Arrays.stream(General.values()).map(General::id), builder))
-                                        .executes(WarCommands::general)))));
+                                        .executes(WarCommands::general))))
+                .then(Commands.literal("fort")
+                        .then(Commands.literal("tp").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom -> tpFort(ctx, kingdom)))))
+                        .then(Commands.literal("trust").then(kingdomArgument().then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
+                                .executes(ctx -> withKingdom(ctx, kingdom -> setTrust(ctx, kingdom, IntegerArgumentType.getInteger(ctx, "value")))))))
+                        .then(Commands.literal("done").then(kingdomArgument().then(Commands.argument("count", IntegerArgumentType.integer(0, 99))
+                                .executes(ctx -> withKingdom(ctx, kingdom -> setDone(ctx, kingdom, IntegerArgumentType.getInteger(ctx, "count")))))))
+                        .then(Commands.literal("request").then(kingdomArgument().then(Commands.argument("type", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        Arrays.stream(Request.Type.values()).map(type -> type.name().toLowerCase(java.util.Locale.ROOT)), builder))
+                                .executes(ctx -> withKingdom(ctx, kingdom -> forceRequest(ctx, kingdom, StringArgumentType.getString(ctx, "type")))))))));
+    }
+
+    private interface KingdomAction {
+        boolean run(Kingdom kingdom) throws CommandSyntaxException;
+    }
+
+    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, String> kingdomArgument() {
+        return Commands.argument("kingdom", StringArgumentType.word())
+                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(Arrays.stream(Kingdom.values()).map(Kingdom::id), builder));
+    }
+
+    private static int withKingdom(CommandContext<CommandSourceStack> ctx, KingdomAction action) throws CommandSyntaxException {
+        Kingdom kingdom = Kingdom.byName(StringArgumentType.getString(ctx, "kingdom"));
+        if (kingdom == null) {
+            ctx.getSource().sendFailure(Component.translatable("command.flightsuit.no_kingdom"));
+            return 0;
+        }
+        return action.run(kingdom) ? 1 : 0;
+    }
+
+    private static boolean tpFort(CommandContext<CommandSourceStack> ctx, Kingdom kingdom) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        FortRecord fort = WarData.get(ctx.getSource().getServer()).fort(kingdom);
+        if (fort == null) {
+            ctx.getSource().sendFailure(Component.translatable("command.flightsuit.no_fort"));
+            return false;
+        }
+        ServerLevel level = ctx.getSource().getServer().overworld();
+        int z = fort.z + FortressBuilder.CLEAR + 12;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, fort.x, z);
+        player.teleportTo(level, fort.x + 0.5D, y, z + 0.5D, 180.0F, 0.0F);
+        return true;
+    }
+
+    private static boolean setTrust(CommandContext<CommandSourceStack> ctx, Kingdom kingdom, int value) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        WarData data = WarData.get(ctx.getSource().getServer());
+        data.addTrust(player.getUUID(), kingdom, value - data.trust(player.getUUID(), kingdom));
+        ctx.getSource().sendSuccess(() -> Component.translatable("command.flightsuit.trust_set", kingdom.displayName(), value), false);
+        return true;
+    }
+
+    private static boolean setDone(CommandContext<CommandSourceStack> ctx, Kingdom kingdom, int count) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        WarData data = WarData.get(ctx.getSource().getServer());
+        while (data.standing(player.getUUID()).done(kingdom) < count) {
+            data.markDone(player.getUUID(), kingdom);
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable("command.flightsuit.done_set", kingdom.displayName(), count), false);
+        return true;
+    }
+
+    private static boolean forceRequest(CommandContext<CommandSourceStack> ctx, Kingdom kingdom, String type) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Request.Type kind;
+        try {
+            kind = Request.Type.valueOf(type.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            ctx.getSource().sendFailure(Component.translatable("command.flightsuit.no_request_type"));
+            return false;
+        }
+        return Diplomacy.forceOffer(player, kingdom, kind);
     }
 
     private static VillageHallBlockEntity hallHere(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

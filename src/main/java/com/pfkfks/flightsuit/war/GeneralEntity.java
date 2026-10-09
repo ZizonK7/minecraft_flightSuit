@@ -6,6 +6,7 @@ import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.village.ResidentEntity;
 import com.pfkfks.flightsuit.village.VillageHallBlockEntity;
 import com.pfkfks.flightsuit.village.Villages;
+import com.pfkfks.flightsuit.war.ai.FollowCommanderGoal;
 import com.pfkfks.flightsuit.war.ai.GeneralGuardGoal;
 import com.pfkfks.flightsuit.war.ai.MarchOnVillageGoal;
 import com.pfkfks.flightsuit.war.ai.RaiderTargetGoal;
@@ -46,6 +47,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.MoveTowardsRestrictionGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -92,6 +94,11 @@ public class GeneralEntity extends Monster implements RaidMember {
     private int ambushCooldown;
     private @Nullable UUID duelWith;
     private boolean duelOffered;
+    private WarRole role = WarRole.RAID;
+    private @Nullable BlockPos home;
+    private @Nullable Kingdom foe;
+    private int rallyCooldown;
+    private long lastPenaltyAt;
 
     public GeneralEntity(EntityType<? extends GeneralEntity> type, Level level) {
         super(type, level);
@@ -141,6 +148,24 @@ public class GeneralEntity extends Monster implements RaidMember {
         bossBar.setName(general.displayName());
     }
 
+    /** Keeps their kingdom's fortress (M12); the ruler is who you talk to there. Not saved, like the garrison. */
+    public GeneralEntity asGarrison(BlockPos fortCenter) {
+        role = WarRole.GARRISON;
+        home = fortCenter.immutable();
+        hallPos = null;
+        restrictTo(home, getGeneral().isLeader() ? 8 : 16);
+        bossBar.setVisible(false);
+        return this;
+    }
+
+    /** Storms {@code fort}'s fortress (a 방어 지원 battle's last wave). */
+    public GeneralEntity asStorm(Kingdom fort, BlockPos objective) {
+        role = WarRole.RAID;
+        foe = fort;
+        hallPos = objective.immutable();
+        return this;
+    }
+
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason,
                                                   @Nullable SpawnGroupData data, @Nullable CompoundTag tag) {
@@ -175,8 +200,10 @@ public class GeneralEntity extends Monster implements RaidMember {
                 return canFight() && super.canContinueToUse();
             }
         });
-        goalSelector.addGoal(3, new MarchOnVillageGoal(this, () -> canFight() && !isRecruited() ? hallPos : null));
+        goalSelector.addGoal(3, new MarchOnVillageGoal(this, () -> canFight() && !isRecruited() && role == WarRole.RAID ? hallPos : null));
         goalSelector.addGoal(3, new GeneralGuardGoal(this));
+        goalSelector.addGoal(3, new FollowCommanderGoal(this, () -> isRecruited() && canFight() && following ? ownerId : null, () -> null));
+        goalSelector.addGoal(4, new MoveTowardsRestrictionGoal(this, 0.9D));
         goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 10.0F));
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
@@ -186,7 +213,7 @@ public class GeneralEntity extends Monster implements RaidMember {
                 return canFight() && super.canUse();
             }
         });
-        targetSelector.addGoal(2, new RaiderTargetGoal(this, () -> !canFight() || isRecruited()));
+        targetSelector.addGoal(2, new RaiderTargetGoal(this, this, () -> !canFight()));
         // Recruited: the village's monsters and raiders inside it.
         targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
                 target -> isRecruited() && canFight() && !RaidMember.isNoThreat(target) && isInHomeVillage(target.blockPosition())));
@@ -223,6 +250,57 @@ public class GeneralEntity extends Monster implements RaidMember {
     @Override
     public boolean isNoThreat() {
         return hasYielded() || isRecruited();
+    }
+
+    @Override
+    public Kingdom kingdom() {
+        return getGeneral().kingdom();
+    }
+
+    @Override
+    public WarRole role() {
+        return role;
+    }
+
+    @Override
+    public @Nullable Kingdom foe() {
+        return foe;
+    }
+
+    @Override
+    public @Nullable UUID commander() {
+        return ownerId;
+    }
+
+    @Override
+    public @Nullable BlockPos home() {
+        return home;
+    }
+
+    @Override
+    public boolean isPlayerSide() {
+        return isRecruited() || role == WarRole.ALLY;
+    }
+
+    /** Marching with the lord (/village army follow), instead of keeping the village. */
+    private boolean following;
+
+    public void setFollowing(boolean following) {
+        this.following = following && isRecruited();
+        if (this.following) {
+            restrictTo(BlockPos.ZERO, -1);
+        } else if (hallPos != null) {
+            restrictTo(hallPos, 32);
+        }
+    }
+
+    public boolean isFollowing() {
+        return following;
+    }
+
+    @Override
+    public boolean shouldBeSaved() {
+        return role != WarRole.GARRISON && super.shouldBeSaved();
     }
 
     public @Nullable BlockPos getHallPos() {
@@ -279,17 +357,10 @@ public class GeneralEntity extends Monster implements RaidMember {
         if (!(entity instanceof LivingEntity living) || !living.isAlive() || entity == this) {
             return false;
         }
-        if (isRecruited()) {
-            return entity instanceof Monster && !RaidMember.isNoThreat(entity);
+        if (isRecruited() && entity instanceof Monster && !(entity instanceof RaidMember)) {
+            return true;
         }
-        if (entity instanceof RaidMember) {
-            return RaidMember.isNoThreat(entity) && entity instanceof GeneralEntity other && other.isRecruited();
-        }
-        if (entity instanceof Player player) {
-            return !player.isCreative() && !player.isSpectator();
-        }
-        return (entity instanceof ResidentEntity resident && !resident.isDowned()) || entity instanceof SuitCompanionEntity
-                || entity instanceof IronGolem || entity instanceof RemoteBodyEntity;
+        return WarTargets.isEnemy(this, this, living);
     }
 
     // ---- ticking ----
@@ -344,6 +415,12 @@ public class GeneralEntity extends Monster implements RaidMember {
         }
         if (general.has(General.Skill.ENRAGE) && !enraged && getHealth() < getMaxHealth() * 0.5F) {
             enrage(general);
+        }
+        if (rallyCooldown > 0) {
+            rallyCooldown--;
+        }
+        if (general.has(General.Skill.RALLY) && rallyCooldown <= 0 && target != null) {
+            rally(general);
         }
         if (target == null || !target.isAlive()) {
             return;
@@ -447,6 +524,21 @@ public class GeneralEntity extends Monster implements RaidMember {
         }
     }
 
+    /** 지휘: everyone of their kingdom around fights harder and heals for a while. */
+    private void rally(General general) {
+        rallyCooldown = 300;
+        say(general.line("rally"), 32.0D);
+        for (LivingEntity ally : level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(12.0D),
+                entity -> entity instanceof RaidMember member && !member.isNoThreat() && member.kingdom() == kingdom())) {
+            ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, 0));
+            ally.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0));
+        }
+        playSound(SoundEvents.BELL_BLOCK, 1.5F, 1.2F);
+        if (level() instanceof ServerLevel server) {
+            server.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 2.0D, getZ(), 10, 1.5D, 0.5D, 1.5D, 0.0D);
+        }
+    }
+
     /** 기습: gone in a puff of smoke, back behind the target. */
     private void ambush(LivingEntity target) {
         ambushCooldown = 160;
@@ -520,6 +612,10 @@ public class GeneralEntity extends Monster implements RaidMember {
             if (!isRecruited() && attacker instanceof RaidMember member && !member.isNoThreat() && member.raidId() == raidId && raidId >= 0) {
                 return false;
             }
+            if (role == WarRole.GARRISON && attacker instanceof ServerPlayer player && level().getGameTime() - lastPenaltyAt > 40L) {
+                lastPenaltyAt = level().getGameTime();
+                Diplomacy.onGarrisonHit(player, kingdom(), false);
+            }
         }
         return super.hurt(source, amount);
     }
@@ -540,6 +636,17 @@ public class GeneralEntity extends Monster implements RaidMember {
             return;
         }
         Entity killer = source.getEntity();
+        if (role == WarRole.GARRISON) {
+            say(general.line("defeated"), 64.0D);
+            yieldNow();
+            if (level() instanceof ServerLevel server) {
+                if (killer instanceof ServerPlayer player) {
+                    Diplomacy.onGarrisonHit(player, kingdom(), true);
+                }
+                FortressManager.onGeneralBeaten(server, this, FortressManager.byPlayerSide(killer));
+            }
+            return;
+        }
         boolean duel = duelWith != null && killer != null && killer.getUUID().equals(duelWith);
         say(general.line(duel ? "duel_lost" : "defeated"), 64.0D);
         yieldNow();
@@ -560,7 +667,9 @@ public class GeneralEntity extends Monster implements RaidMember {
             return InteractionResult.SUCCESS;
         }
         General general = getGeneral();
-        if (isRecruited()) {
+        if (role == WarRole.GARRISON && !hasYielded() && player instanceof ServerPlayer serverPlayer) {
+            Diplomacy.talk(serverPlayer, this);
+        } else if (isRecruited()) {
             player.displayClientMessage(general.line(woundTicks > 0 ? "wounded" : "greet", player.getName()), false);
         } else if (hasYielded()) {
             player.displayClientMessage(general.line("kneel"), false);
@@ -612,7 +721,7 @@ public class GeneralEntity extends Monster implements RaidMember {
 
     @Override
     public boolean isPreventingPlayerRest(Player player) {
-        return canFight() && !isRecruited();
+        return canFight() && !isRecruited() && role == WarRole.RAID;
     }
 
     @Override
@@ -641,6 +750,11 @@ public class GeneralEntity extends Monster implements RaidMember {
         tag.putInt("Wound", woundTicks);
         tag.putBoolean("Enraged", enraged);
         tag.putBoolean("DuelOffered", duelOffered);
+        tag.putInt("Role", role.ordinal());
+        if (foe != null) {
+            tag.putInt("Foe", foe.ordinal());
+        }
+        tag.putBoolean("Following", following);
     }
 
     @Override
@@ -655,6 +769,9 @@ public class GeneralEntity extends Monster implements RaidMember {
         woundTicks = tag.getInt("Wound");
         enraged = tag.getBoolean("Enraged");
         duelOffered = tag.getBoolean("DuelOffered");
+        role = WarRole.byId(tag.getInt("Role"));
+        foe = tag.contains("Foe") ? Kingdom.byId(tag.getInt("Foe")) : null;
+        following = tag.getBoolean("Following");
         bossBar.setName(getDisplayName());
         bossBar.setVisible(canFight() && !isRecruited());
         if (isRecruited() && hallPos != null) {

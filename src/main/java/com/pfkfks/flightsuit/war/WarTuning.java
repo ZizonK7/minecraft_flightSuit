@@ -31,6 +31,35 @@ public final class WarTuning {
     /** Chance a raid is a fire attack (화공): its archers shoot burning arrows. */
     public static final float FIRE_RAID_CHANCE = 0.5F;
 
+    // ---- fortresses and diplomacy (M12) ----
+
+    /** How far the fortresses stand from world spawn: this plus up to the spread. */
+    public static final int FORT_DISTANCE = 600;
+    public static final int FORT_DISTANCE_SPREAD = 250;
+    public static final int GARRISON_SIZE = 8;
+    public static final int FALLEN_GARRISON = 2;
+    /** A fallen fortress stays weak (and asks nothing) this long. */
+    public static final int FALLEN_DAYS = 7;
+    /** A beaten general is back home after this many days. */
+    public static final int GENERAL_REST_DAYS = 3;
+    /** Soldiers per storm wave at a fortress, and in an allied army on an invasion. */
+    public static final int STORM_WAVE = 6;
+    public static final int ALLIED_ARMY = 8;
+    /** A fortress battle that drags on longer than this is over. */
+    public static final int BATTLE_MAX_TICKS = 12000;
+    /** Days between a kingdom's requests to one player. */
+    public static final int REQUEST_INTERVAL = 3;
+    /** Support troops: how many, for how long, how often (allied / as their leader). */
+    public static final int MUSTER_SIZE = 3;
+    public static final int MUSTER_SIZE_LEADER = 6;
+    public static final int MUSTER_COOLDOWN_DAYS = 3;
+    public static final int MUSTER_COOLDOWN_LEADER = 1;
+    public static final int MUSTER_TICKS = 24000;
+    /** Becoming a kingdom's leader: full trust and this many requests done. */
+    public static final int LEADER_REQUESTS = 5;
+    /** Soldiers lent out (REINFORCE): chance each one doesn't come back. */
+    public static final float REINFORCE_LOSS = 0.1F;
+
     public static final double SOLDIER_HEALTH = 24.0D;
     public static final double SPEARMAN_HEALTH = 20.0D;
     public static final double ARCHER_HEALTH = 18.0D;

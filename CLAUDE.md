@@ -26,7 +26,7 @@
 | `block/` | 슈트 스테이션, 전력 블록, 스테이션 창고(StationStorageBlock/Entity) |
 | `energy/` | 무선 전력망(PowerGrid, 반경 8), 수치(PowerTuning) |
 | `village/` | 마을 회관(VillageHallBlockEntity: 게시판·창고·경보·아침·수업·출생), 주민(ResidentEntity, 직업 ResidentJob), 건축(VillageWorks/Blueprint/Construction), 피해 장부(DamageLedger), 불 감시(FireWatch), AI(`village/ai`) |
-| `war/` | 삼국지 습격: Kingdom, General(기술), KingdomSoldierEntity, GeneralEntity, RaidManager(일정·웨이브·항복), WarData(SavedData: 마을 기록·진행 중 습격·나라별 관계), RaidState, FireArrows, WarDamage, WarCommands, AI(`war/ai`) |
+| `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드 |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
@@ -40,9 +40,9 @@
 ## 진행 상태 (2026-10-10)
 
 - M1~M9: 사용자 인게임 테스트 통과 (M9 마지막 수정 일부 재확인 필요, DESIGN.md 참고).
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육): **구현, 인게임 테스트 전**.
-- 다음: M12 적 마을·침략·외교 → M13 히어로 시티 → M14 배트맨 일당·보안 → M15 우주선·드래곤볼 행성 → M16 타노스 사가.
+- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정): **구현, 인게임 테스트 전**.
+- 다음: M13 적 마을·침략·외교 → M13 히어로 시티 → M14 배트맨 일당·보안 → M15 우주선·드래곤볼 행성 → M16 타노스 사가.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`. 권한 없이: `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).

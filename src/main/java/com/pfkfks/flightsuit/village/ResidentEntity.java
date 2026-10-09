@@ -4,6 +4,7 @@ import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.ResidentScreenS2CPacket;
 import com.pfkfks.flightsuit.registry.ModEntities;
+import com.pfkfks.flightsuit.village.ai.ArmyTargetGoal;
 import com.pfkfks.flightsuit.village.ai.BuilderWorkGoal;
 import com.pfkfks.flightsuit.village.ai.ChildSchoolGoal;
 import com.pfkfks.flightsuit.village.ai.DoctorWorkGoal;
@@ -128,6 +129,8 @@ public class ResidentEntity extends PathfinderMob {
     private long bornDay;
     private int schoolPoints;
     private String parents = "";
+    /** On campaign (M12 원정): the player this soldier marches with (null = keeps the village). */
+    private @Nullable UUID commander;
 
     private static final UUID GUARD_HEALTH = UUID.fromString("6b1c2b9e-7f43-4a3e-9d57-1f7e0b8a2c11");
     private static final UUID GUARD_DAMAGE = UUID.fromString("0d5e8a41-3c2f-4b6d-8e9a-5a7c4f2b1d36");
@@ -161,6 +164,11 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(3, new ResidentShelterGoal(this));
         goalSelector.addGoal(3, new SoldierRallyGoal(this));
         goalSelector.addGoal(3, new GuardFirefightGoal(this));
+        goalSelector.addGoal(3, new com.pfkfks.flightsuit.war.ai.FollowCommanderGoal(this,
+                () -> commander != null && !isDowned() ? commander : null, () -> null));
+        // Back from a campaign: walk home when outside the village (its hall may be far and unloaded).
+        goalSelector.addGoal(4, new com.pfkfks.flightsuit.war.ai.MarchOnVillageGoal(this,
+                () -> commander == null && !isDowned() && getJob().isFighter() && hallPos != null && hall() == null ? hallPos : null));
         goalSelector.addGoal(4, new ResidentSleepGoal(this));
         goalSelector.addGoal(5, new FarmerWorkGoal(this));
         goalSelector.addGoal(5, new BuilderWorkGoal(this));
@@ -174,6 +182,7 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         targetSelector.addGoal(1, new GuardHurtByTargetGoal(this));
         targetSelector.addGoal(2, new GuardTargetGoal(this));
+        targetSelector.addGoal(2, new ArmyTargetGoal(this));
     }
 
     @Override
@@ -343,6 +352,16 @@ public class ResidentEntity extends PathfinderMob {
 
     public String getParents() {
         return parents;
+    }
+
+    public @Nullable UUID getCommander() {
+        return commander;
+    }
+
+    /** March with this player (M12 원정), or null to go back to keeping the village. */
+    public void setCommander(@Nullable UUID commander) {
+        this.commander = commander;
+        getNavigation().stop();
     }
 
     @Override
@@ -792,6 +811,9 @@ public class ResidentEntity extends PathfinderMob {
         tag.putLong("BornDay", bornDay);
         tag.putInt("SchoolPoints", schoolPoints);
         tag.putString("Parents", parents);
+        if (commander != null) {
+            tag.putUUID("Commander", commander);
+        }
     }
 
     @Override
@@ -827,6 +849,7 @@ public class ResidentEntity extends PathfinderMob {
         bornDay = tag.getLong("BornDay");
         schoolPoints = tag.getInt("SchoolPoints");
         parents = tag.getString("Parents");
+        commander = tag.hasUUID("Commander") ? tag.getUUID("Commander") : null;
         applyJobBonus();
     }
 }

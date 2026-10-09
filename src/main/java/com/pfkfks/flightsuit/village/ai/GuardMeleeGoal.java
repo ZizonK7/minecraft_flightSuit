@@ -33,7 +33,8 @@ public class GuardMeleeGoal extends MeleeAttackGoal {
         super.start();
         LivingEntity target = guard.getTarget();
         VillageHallBlockEntity hall = guard.hall();
-        if (hall != null && target != null) {
+        // On campaign, far from home: a fight out there is no reason to ring the village bell.
+        if (hall != null && target != null && hall.contains(target.blockPosition())) {
             hall.raiseAlarm(target.blockPosition(), target.getName());
         }
     }
