@@ -2,6 +2,9 @@ package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.network.CommandAttackC2SPacket;
+import com.pfkfks.flightsuit.network.CounterC2SPacket;
+import com.pfkfks.flightsuit.suit.CounterHandler;
+import com.pfkfks.flightsuit.suit.SuitTuning;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.RepulsorC2SPacket;
 import com.pfkfks.flightsuit.network.SuitToggleC2SPacket;
@@ -45,6 +48,7 @@ public final class ClientEvents {
             return;
         }
         tickSuitKey();
+        tickCounterKey(player);
         while (ModKeys.COMMAND_ATTACK.consumeClick()) {
             ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
@@ -87,6 +91,35 @@ public final class ClientEvents {
         }
     }
 
+    /** Counter key: the press itself opens the parry window; keep holding and it becomes the shield. */
+    private static int counterHeld = -1;
+    private static boolean shieldSent;
+
+    private static void tickCounterKey(LocalPlayer player) {
+        boolean pressedThisTick = false;
+        while (ModKeys.COUNTER.consumeClick()) {
+            pressedThisTick = true;
+        }
+        boolean wearingChest = player.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem;
+        if ((pressedThisTick || ModKeys.COUNTER.isDown()) && counterHeld < 0 && wearingChest) {
+            counterHeld = 0;
+            shieldSent = false;
+            ModNetwork.sendToServer(new CounterC2SPacket(CounterHandler.PRESS));
+        } else if (ModKeys.COUNTER.isDown() && counterHeld >= 0) {
+            counterHeld++;
+            if (!shieldSent && counterHeld >= SuitTuning.SHIELD_HOLD_TICKS) {
+                shieldSent = true;
+                ModNetwork.sendToServer(new CounterC2SPacket(CounterHandler.SHIELD_ON));
+            }
+        }
+        if (!ModKeys.COUNTER.isDown() && counterHeld >= 0) {
+            if (shieldSent) {
+                ModNetwork.sendToServer(new CounterC2SPacket(CounterHandler.RELEASE));
+            }
+            counterHeld = -1;
+        }
+    }
+
     /** Empty-hand right click on air fires the palm repulsor (needs the chestplate - it carries the arms). */
     @SubscribeEvent
     public static void onRightClickEmpty(PlayerInteractEvent.RightClickEmpty event) {
@@ -126,10 +159,15 @@ public final class ClientEvents {
     /** Stand still while the suit assembles around you. */
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
+        Input input = event.getInput();
+        if (SuitAnimator.isShielding(event.getEntity())) {
+            // Bracing behind the shield: walk slowly, like holding up a vanilla shield.
+            input.forwardImpulse *= 0.35F;
+            input.leftImpulse *= 0.35F;
+        }
         if (!CinematicCamera.isActive()) {
             return;
         }
-        Input input = event.getInput();
         input.forwardImpulse = 0.0F;
         input.leftImpulse = 0.0F;
         input.up = false;

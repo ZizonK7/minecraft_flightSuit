@@ -38,6 +38,8 @@ public final class SuitAnimator {
      * player-keyed map silently loses its entry.
      */
     private static final ResourceLocation LAYERS_KEY = new ResourceLocation(FlightSuitMod.MODID, "suit_layers");
+    /** Looping guard pose while the nano shield is up (not a SuitAnim one-shot - it lasts as long as the key is held). */
+    private static final String SHIELD_HOLD = "shield_hold";
 
     private SuitAnimator() {
     }
@@ -56,6 +58,7 @@ public final class SuitAnimator {
         final ModifierLayer<IAnimation> action = new ModifierLayer<>();
         FlightPose currentPose = FlightPose.NONE;
         SuitAnim currentAction;
+        boolean shielding;
 
         Layers(AbstractClientPlayer player) {
             // Boost: lie along the look direction like an elytra glide (body pitch = -90 - xRot).
@@ -122,6 +125,30 @@ public final class SuitAnimator {
             layers.pose.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(5, Ease.INOUTSINE),
                     new KeyframeAnimationPlayer(animation), true);
         }
+    }
+
+    /** Nano shield up/down: holds the guard pose on the action layer while active. */
+    public static void setShield(AbstractClientPlayer player, boolean active) {
+        Layers layers = layersOf(player);
+        if (layers == null || layers.shielding == active) {
+            return;
+        }
+        layers.shielding = active;
+        if (active) {
+            KeyframeAnimation animation = animation(SHIELD_HOLD);
+            if (animation != null) {
+                layers.currentAction = null;
+                layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(3, Ease.OUTQUAD),
+                        new KeyframeAnimationPlayer(animation), true);
+            }
+        } else if (layers.currentAction == null) {
+            layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(4, Ease.INOUTSINE), null);
+        }
+    }
+
+    public static boolean isShielding(Player player) {
+        Layers layers = player instanceof AbstractClientPlayer clientPlayer ? layersOf(clientPlayer) : null;
+        return layers != null && layers.shielding;
     }
 
     public static FlightPose poseOf(Player player) {

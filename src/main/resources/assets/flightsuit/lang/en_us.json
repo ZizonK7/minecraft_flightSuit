@@ -76,5 +76,7 @@
   "tooltip.flightsuit.durability": "Durability: %s / %s",
   "tooltip.flightsuit.durability_broken": "Durability: %s / %s (damaged - repair at a station)",
   "hud.flightsuit.armor": "ARMOR %s%%",
-  "command.flightsuit.set": "Set %s to %s%% (%s pieces)"
+  "command.flightsuit.set": "Set %s to %s%% (%s pieces)",
+  "key.flightsuit.counter": "Counter (tap: parry / hold: nano shield)",
+  "message.flightsuit.parried": "Countered!"
 }

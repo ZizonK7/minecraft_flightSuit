@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "name": "parry",
+  "author": "flightsuit",
+  "description": "Counter key tap: right forearm snaps up across the body to deflect.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 7,
+    "stopTick": 11,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 2, "easing": "OUTQUAD", "rightArm": {"pitch": -100, "yaw": -45, "roll": 0}},
+      {"tick": 2, "easing": "OUTQUAD", "torso": {"yaw": -12}},
+      {"tick": 7, "easing": "LINEAR", "rightArm": {"pitch": -100, "yaw": -45, "roll": 0}},
+      {"tick": 7, "easing": "LINEAR", "torso": {"yaw": -12}}
+    ]
+  }
+}

@@ -62,6 +62,7 @@ public final class SuitServerEvents {
             return;
         }
         SuitUpManager.tick(player);
+        CounterHandler.tick(player);
 
         WornSuit worn = WornSuit.of(player);
         CompoundTag data = player.getPersistentData();
@@ -227,5 +228,6 @@ public final class SuitServerEvents {
         POSES.remove(id);
         SuitUpManager.forget(id);
         RepulsorHandler.forget(id);
+        CounterHandler.forget(id);
     }
 }

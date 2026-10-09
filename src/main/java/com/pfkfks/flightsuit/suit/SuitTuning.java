@@ -35,6 +35,19 @@ public final class SuitTuning {
     public static final float SUIT_FLYING_SPEED = 0.08F;
     public static final float VANILLA_FLYING_SPEED = 0.05F;
 
+    // Counter key: tap = parry window, hold = nano shield.
+    public static final int PARRY_WINDOW_TICKS = 6;
+    public static final int PARRY_COOLDOWN_TICKS = 16;
+    public static final int PARRY_COST = 100;
+    /** Fraction of the hit that still lands on a successful parry. */
+    public static final float PARRY_DAMAGE_TAKEN = 0.2F;
+    public static final float COUNTER_DAMAGE = 6.0F;
+    public static final int COUNTER_STUN_TICKS = 40;
+    public static final int SHIELD_DRAIN = 15;
+    public static final int SHIELD_HIT_COST = 60;
+    /** Client: how long the key must be held before the parry turns into the shield. */
+    public static final int SHIELD_HOLD_TICKS = 6;
+
     // Leggings power assist.
     public static final double LEGS_SPEED_BONUS = 0.2D;
     public static final double LEGS_STEP_BONUS = 0.5D;

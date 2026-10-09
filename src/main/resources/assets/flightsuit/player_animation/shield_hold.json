@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "name": "shield_hold",
+  "author": "flightsuit",
+  "description": "Nano shield up: left forearm held out in front projecting the shield, right fist back, braced stance.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 21,
+    "stopTick": 25,
+    "isLoop": true,
+    "returnTick": 4,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 4, "easing": "OUTQUAD", "leftArm": {"pitch": -85, "yaw": 25, "roll": 0}},
+      {"tick": 4, "easing": "OUTQUAD", "rightArm": {"pitch": -25, "yaw": 0, "roll": 10}},
+      {"tick": 4, "easing": "OUTQUAD", "torso": {"pitch": 6, "yaw": 8}},
+      {"tick": 4, "easing": "OUTQUAD", "rightLeg": {"pitch": 12}},
+      {"tick": 4, "easing": "OUTQUAD", "leftLeg": {"pitch": -14}},
+      {"tick": 21, "easing": "LINEAR", "leftArm": {"pitch": -85, "yaw": 25, "roll": 0}},
+      {"tick": 21, "easing": "LINEAR", "rightArm": {"pitch": -25, "yaw": 0, "roll": 10}},
+      {"tick": 21, "easing": "LINEAR", "torso": {"pitch": 6, "yaw": 8}},
+      {"tick": 21, "easing": "LINEAR", "rightLeg": {"pitch": 12}},
+      {"tick": 21, "easing": "LINEAR", "leftLeg": {"pitch": -14}}
+    ]
+  }
+}

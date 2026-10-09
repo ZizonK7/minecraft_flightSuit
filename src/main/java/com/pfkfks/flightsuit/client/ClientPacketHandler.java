@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
+import com.pfkfks.flightsuit.network.ShieldStateS2CPacket;
 import com.pfkfks.flightsuit.network.SuitAnimS2CPacket;
 import com.pfkfks.flightsuit.suit.FlightPose;
 import com.pfkfks.flightsuit.suit.SuitAnim;
@@ -33,6 +34,13 @@ public final class ClientPacketHandler {
             } else if (anim == SuitAnim.SUIT_UP_FALL) {
                 CinematicCamera.start(packet.durationTicks, CameraType.THIRD_PERSON_BACK);
             }
+        }
+    }
+
+    public static void handleShieldState(ShieldStateS2CPacket packet) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level != null && minecraft.level.getEntity(packet.entityId) instanceof AbstractClientPlayer player) {
+            SuitAnimator.setShield(player, packet.active);
         }
     }
 

@@ -1,0 +1,25 @@
+{
+  "version": 3,
+  "name": "counter",
+  "author": "flightsuit",
+  "description": "Successful parry: the guarding arm sweeps out and the other hand drives a palm strike forward.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 10,
+    "stopTick": 16,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 1, "easing": "LINEAR", "rightArm": {"pitch": -100, "yaw": -45, "roll": 0}},
+      {"tick": 3, "easing": "OUTQUAD", "rightArm": {"pitch": -80, "yaw": 50, "roll": 20}},
+      {"tick": 3, "easing": "OUTQUAD", "leftArm": {"pitch": -40, "yaw": 0, "roll": 0}},
+      {"tick": 5, "easing": "OUTBACK", "leftArm": {"pitch": -95, "yaw": 10, "roll": 0}},
+      {"tick": 5, "easing": "OUTQUAD", "torso": {"yaw": 18}},
+      {"tick": 10, "easing": "LINEAR", "rightArm": {"pitch": -60, "yaw": 50, "roll": 20}},
+      {"tick": 10, "easing": "LINEAR", "leftArm": {"pitch": -95, "yaw": 10, "roll": 0}},
+      {"tick": 10, "easing": "LINEAR", "torso": {"yaw": 18}}
+    ]
+  }
+}

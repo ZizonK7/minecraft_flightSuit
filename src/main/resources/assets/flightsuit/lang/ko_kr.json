@@ -76,5 +76,7 @@
   "tooltip.flightsuit.durability": "내구도: %s / %s",
   "tooltip.flightsuit.durability_broken": "내구도: %s / %s (손상 - 스테이션 수리 필요)",
   "hud.flightsuit.armor": "장갑 %s%%",
-  "command.flightsuit.set": "%s를 %s%%로 설정 (파츠 %s개)"
+  "command.flightsuit.set": "%s를 %s%%로 설정 (파츠 %s개)",
+  "key.flightsuit.counter": "반격 (짧게: 패링 / 길게: 나노 쉴드)",
+  "message.flightsuit.parried": "반격!"
 }

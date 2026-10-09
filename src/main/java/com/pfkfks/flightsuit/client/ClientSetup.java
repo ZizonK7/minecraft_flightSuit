@@ -42,10 +42,12 @@ public final class ClientSetup {
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(ModKeys.SUIT_TOGGLE);
         event.register(ModKeys.COMMAND_ATTACK);
+        event.register(ModKeys.COUNTER);
     }
 
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAboveAll("helmet_targets", HelmetTargetOverlay.INSTANCE);
         event.registerAboveAll("suit_hud", SuitHudOverlay.INSTANCE);
     }
 }

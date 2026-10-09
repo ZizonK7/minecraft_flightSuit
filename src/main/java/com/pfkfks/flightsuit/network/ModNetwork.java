@@ -35,6 +35,10 @@ public final class ModNetwork {
                 SuitAnimS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, CommandAttackC2SPacket.class, CommandAttackC2SPacket::encode, CommandAttackC2SPacket::decode,
                 CommandAttackC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, CounterC2SPacket.class, CounterC2SPacket::encode, CounterC2SPacket::decode,
+                CounterC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, ShieldStateS2CPacket.class, ShieldStateS2CPacket::encode, ShieldStateS2CPacket::decode,
+                ShieldStateS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, EdithStatusS2CPacket.class, EdithStatusS2CPacket::encode, EdithStatusS2CPacket::decode,
                 EdithStatusS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
