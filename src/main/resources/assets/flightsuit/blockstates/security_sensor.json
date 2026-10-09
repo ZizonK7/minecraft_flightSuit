@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "armed=false,powered=false": {
+      "model": "flightsuit:block/security_sensor"
+    },
+    "armed=false,powered=true": {
+      "model": "flightsuit:block/security_sensor"
+    },
+    "armed=true,powered=false": {
+      "model": "flightsuit:block/security_sensor_on"
+    },
+    "armed=true,powered=true": {
+      "model": "flightsuit:block/security_sensor_on"
+    }
+  }
+}

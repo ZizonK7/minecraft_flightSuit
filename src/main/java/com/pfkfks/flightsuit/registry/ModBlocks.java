@@ -4,6 +4,7 @@ import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.block.BatteryBlock;
 import com.pfkfks.flightsuit.cleaner.CleanerDockBlock;
 import com.pfkfks.flightsuit.block.GeneratorBlock;
+import com.pfkfks.flightsuit.block.SecuritySensorBlock;
 import com.pfkfks.flightsuit.block.SolarPanelBlock;
 import com.pfkfks.flightsuit.block.StationFrameBlock;
 import com.pfkfks.flightsuit.block.StationStorageBlock;
@@ -38,6 +39,8 @@ public final class ModBlocks {
             () -> new BatteryBlock(metal()));
     public static final RegistryObject<StationStorageBlock> STATION_STORAGE = register("station_storage",
             () -> new StationStorageBlock(metal()));
+    public static final RegistryObject<SecuritySensorBlock> SECURITY_SENSOR = register("security_sensor",
+            () -> new SecuritySensorBlock(metal()));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
     /** Blast-proof, so a creeper can't take the whole village down with it. */

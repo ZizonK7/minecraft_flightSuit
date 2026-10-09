@@ -8,6 +8,9 @@ import com.pfkfks.flightsuit.suit.EnergyCellItem;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
 import com.pfkfks.flightsuit.suit.SuitType;
+import com.pfkfks.flightsuit.thief.BatarangItem;
+import com.pfkfks.flightsuit.thief.GrappleItem;
+import com.pfkfks.flightsuit.thief.SmokeBombItem;
 import com.pfkfks.flightsuit.village.BlueprintItem;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ArmorItem;
@@ -64,6 +67,15 @@ public final class ModItems {
     /** Handed out by the architects; which building is in its NBT (not in the creative tab). */
     public static final RegistryObject<BlueprintItem> BLUEPRINT = ITEMS.register("blueprint",
             () -> new BlueprintItem(new Item.Properties().stacksTo(1)));
+    /** Batman's crew (DESIGN.md 4-14): the mark they leave in a robbed chest, and what each drops when beaten. */
+    public static final RegistryObject<Item> BAT_MARK = ITEMS.register("bat_mark",
+            () -> new Item(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<BatarangItem> BATARANG = ITEMS.register("batarang",
+            () -> new BatarangItem(new Item.Properties().durability(250).rarity(Rarity.RARE)));
+    public static final RegistryObject<GrappleItem> GRAPPLE = ITEMS.register("grapple",
+            () -> new GrappleItem(new Item.Properties().durability(200).rarity(Rarity.RARE)));
+    public static final RegistryObject<SmokeBombItem> SMOKE_BOMB = ITEMS.register("smoke_bomb",
+            () -> new SmokeBombItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
     /** Test helper: drops a wanderer heading for the village it is used in. */
     public static final RegistryObject<ForgeSpawnEggItem> RESIDENT_SPAWN_EGG = ITEMS.register("resident_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.RESIDENT, 0xC99A62, 0x2F5D8C, new Item.Properties()));

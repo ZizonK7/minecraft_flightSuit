@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "flightsuit:block/security_sensor_top",
+    "side": "flightsuit:block/security_sensor_side_on"
+  }
+}

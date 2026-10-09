@@ -202,7 +202,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         return server.getServer().getPlayerList().getPlayer(owner);
     }
 
-    void tellOwner(Component message) {
+    public void tellOwner(Component message) {
         ServerPlayer player = onlineOwner();
         if (player != null) {
             player.sendSystemMessage(message);
