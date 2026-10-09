@@ -23,7 +23,7 @@
 
 실제 마인크래프트에서 쓰려면 이 모드 jar와 함께 [PlayerAnimator](https://maven.kosmx.dev/dev/kosmx/player-anim/player-animation-lib-forge/) Forge 1.20 버전을 `mods` 폴더에 넣어야 합니다.
 
-## 현재 기능 (M1 ~ M7)
+## 현재 기능 (M1 ~ M8 진행 중)
 
 크리에이티브 탭 "플라이트 슈트"에서 모든 아이템과 블록을 꺼낼 수 있습니다. **슈트가 든 캡슐**로 바로 써 보거나, 스테이션에 슈트를 넣고 이디스 안경으로 불러 보세요.
 
@@ -33,11 +33,11 @@
 |---|---|
 | **이디스 안경 + `G`** | 메인 스테이션의 슈트가 스테이션 방향에서 날아와 착용됩니다 (Mark 42) |
 | **떨어지는 중에 호출** | 큰대자 자세로 떨어지면 슈트 전체가 위에서 내리꽂히며 감싸고, 리펄서로 급제동해 호버링합니다 (Mark VII) |
-| **스테이션 빈손 우클릭** | 플랫폼 위로 올라서면 슈트가 그 자리에서 조립됩니다 (부츠는 아래, 레깅스·흉갑은 뒤, 헬멧은 위에서) |
+| **스테이션 빈손 우클릭** | 로봇 팔들이 서 있는 슈트를 분해해 들어 올리고, 플랫폼으로 걸어 들어가면 부츠 → 레깅스 → 흉갑 → 헬멧 순으로 입혀 줍니다 (아이언맨 2) |
 | **슈트 캡슐 우클릭 / `G`** | 주변에서 파츠가 날아와 착용됩니다 (휴대용 비상 슈트) |
 
 - 착용 연출 동안 카메라가 3인칭으로 바뀌고, 이동이 막히며 무적입니다.
-- **착용 중 스테이션 빈손 우클릭**: 슈트를 벗어 스테이션에 보관합니다.
+- **착용 중 스테이션 빈손 우클릭**: 플랫폼으로 걸어 들어가면 팔들이 헬멧부터 벗겨 내고, 앞으로 걸어 나오면 빈 슈트를 다시 세워 보관합니다.
 
 ### 조작키
 
@@ -59,7 +59,7 @@
 | 슈트 | 클래스 | 특징 |
 |---|---|---|
 | 라이언 Mark 1 | 기본형 | 리펄서, 헬멧 투시 32칸 (노란 라이언 얼굴 + 빨강·금색 슈트) |
-| 라이언 Mark 2 스텔스 | 스텔스형 | 풀세트로 웅크리면 **은신** (슈트까지 투명, 쫓던 몹이 놓침, 6 FE/틱) · 리펄서 대신 **냉동 빔** (얼리고 느리게) · 헬멧 투시 48칸 |
+| 춘식이 Mark 2 스텔스 | 스텔스형 | 풀세트로 웅크리면 **은신** (슈트까지 투명, 쫓던 몹이 놓침, 6 FE/틱) · 리펄서 대신 **냉동 빔** (얼리고 느리게) · 헬멧 투시 48칸 |
 
 Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각으로 만듭니다 (캡슐은 Mark 1 캡슐 + 검은색 염료).
 
@@ -68,7 +68,7 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각으로 만듭니다
 - 써 본 스테이션은 모두 기억됩니다. **메인 스테이션**(G로 부르는 곳)은 처음 쓴 스테이션이거나, 웅크리고 우클릭한 스테이션입니다.
 - 슈트는 원래 있던 스테이션을 기억해서, 귀환할 때 그 스테이션으로 돌아갑니다 (없거나 차 있으면 메인 스테이션, 그다음 캡슐).
 - **슈트 휠 (`R`)**: 스테이션에 있는 슈트, 나가 있는 동료, 캡슐을 카드로 보여 줍니다.
-  - 클릭: 동료로 출격. 먼 스테이션의 슈트는 하늘 저편에서 날아옵니다.
+  - 클릭: 동료로 출격. 슈트가 자기 스테이션의 열린 앞쪽으로 이륙해 몸을 눕힌 비행 자세로 날아옵니다. 144칸보다 먼 스테이션의 슈트는 그 방향 하늘 저편에서 나타나 날아옵니다.
   - Shift+클릭: 갈아입기. 옛 슈트에서 뛰쳐나오고 새 슈트가 입혀지며, 옛 슈트는 동료로 남습니다. 날던 중이면 떨어지는 나를 새 슈트가 낚아챕니다.
   - 가운데: **총력 모드 (하우스 파티 프로토콜)**. 스테이션의 슈트가 전부 동료로 출격합니다 (최대 4기).
 
@@ -140,7 +140,7 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각으로 만듭니다
 
 | 블록 | 역할 |
 |---|---|
-| 슈트 스테이션 | 슈트 1벌 보관(위에 서 있는 모습), 충전, 내구도 수리. 우클릭하면 메인 스테이션으로 지정 |
+| 슈트 스테이션 | 설치하면 3×3, 높이 4칸의 갠트리로 펼쳐집니다 (발판, 뒤 기둥 2개, 천장 빔, 로봇 팔 5개). 슈트 1벌 보관(위에 서 있는 모습), 충전, 내구도 수리, 로봇 팔 착용·해제. 우클릭하면 메인 스테이션으로 지정 |
 | 태양광 패널 | 낮에 하늘이 보이면 30 FE/t (비 오면 30%) |
 | 발전기 | 화로 연료를 태워 60 FE/t. 연료를 들고 우클릭해서 넣음 |
 | 배터리 | 1,000,000 FE 저장 |
@@ -183,17 +183,17 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각으로 만듭니다
 
 ```
 src/main/java/com/pfkfks/flightsuit/
-  suit/      슈트·안경 아이템, 에너지, 착용/하차/귀환/강제 이탈(SuitUpManager), 원격 조종(RemoteLink), 동료 명령(Companions), 메인 스테이션, 리펄서, 서버 틱 효과, 테스트 명령어
-  block/     슈트 스테이션, 태양광 패널, 발전기, 배터리
+  suit/      슈트·안경 아이템, 에너지, 착용/하차/귀환/강제 이탈(SuitUpManager), 스테이션 로봇 팔 착용·해제(StationRig, StationRigTimeline), 원격 조종(RemoteLink), 동료 명령(Companions), 메인 스테이션, 리펄서, 서버 틱 효과, 테스트 명령어
+  block/     슈트 스테이션(코어 + 프레임 블록), 태양광 패널, 발전기, 배터리
   energy/    무선 전력망(PowerGrid), 전력 수치
   cleaner/   청소 로봇 도크·로봇·순찰 AI·구역 지정
   car/       호버카
   entity/    착용 연출 파츠 엔티티, 동료 슈트 엔티티와 AI(entity/ai), 원격 조종 중 남는 몸
-  client/    아머·안경 모델, 몸 동작 애니메이션(SuitAnimator), 비행 조작, 카메라, HUD, 스테이션 렌더러
+  client/    아머·안경 모델, 몸 동작 애니메이션(SuitAnimator), 비행 조작, 카메라, HUD, 스테이션 렌더러(로봇 팔)
   network/   패킷
   registry/  아이템·블록·엔티티 등록
 src/main/resources/assets/flightsuit/player_animation/   몸 동작 애니메이션 (PlayerAnimator JSON)
-tools/RyanSkinGen.java    라이언 Mark 1 스킨(64x64)을 글자 지도로 그려 생성
+tools/SuitSkinGen.java    슈트 스킨(64x64)을 글자 지도로 그려 생성 (mk1 = 라이언, mk2 = 춘식이)
 tools/SkinSplitter.java   64x64 스킨 이미지를 파츠별 아머 텍스처와 아이콘으로 분리
 tools/TextureGen.java     블록·안경 임시 픽셀 아트 생성
 docs/reference/           레퍼런스 이미지와 슈트 스킨 원본
@@ -202,8 +202,10 @@ docs/reference/           레퍼런스 이미지와 슈트 스킨 원본
 외형은 아직 모델링 전입니다. 슈트는 64×64 플레이어 스킨 형식 이미지를 파츠별로 잘라 쓰고, 블록과 안경은 코드로 그린 임시 텍스처입니다. 다시 생성하려면:
 
 ```bash
-java tools/RyanSkinGen.java docs/reference/ryan_mk1_skin_source.png
+java tools/SuitSkinGen.java mk1 docs/reference/ryan_mk1_skin_source.png
+java tools/SuitSkinGen.java mk2 docs/reference/ryan_mk2_skin_source.png
 java tools/SkinSplitter.java docs/reference/ryan_mk1_skin_source.png src/main/resources/assets/flightsuit/textures ryan_mk1
+java tools/SkinSplitter.java docs/reference/ryan_mk2_skin_source.png src/main/resources/assets/flightsuit/textures ryan_mk2
 java tools/TextureGen.java src/main/resources/assets/flightsuit/textures
 ```
 

@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.block.BatteryBlock;
 import com.pfkfks.flightsuit.cleaner.CleanerDockBlock;
 import com.pfkfks.flightsuit.block.GeneratorBlock;
 import com.pfkfks.flightsuit.block.SolarPanelBlock;
+import com.pfkfks.flightsuit.block.StationFrameBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlock;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -12,6 +13,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -22,7 +24,10 @@ public final class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, FlightSuitMod.MODID);
 
     public static final RegistryObject<SuitStationBlock> SUIT_STATION = register("suit_station",
-            () -> new SuitStationBlock(metal().noOcclusion()));
+            () -> new SuitStationBlock(metal().noOcclusion().pushReaction(PushReaction.BLOCK)));
+    /** The station rig around the core; no item of its own, it comes and goes with the station. */
+    public static final RegistryObject<StationFrameBlock> STATION_FRAME = BLOCKS.register("station_frame",
+            () -> new StationFrameBlock(metal().noOcclusion().noLootTable().pushReaction(PushReaction.BLOCK)));
     public static final RegistryObject<SolarPanelBlock> SOLAR_PANEL = register("solar_panel",
             () -> new SolarPanelBlock(metal().noOcclusion()));
     public static final RegistryObject<GeneratorBlock> GENERATOR = register("generator",

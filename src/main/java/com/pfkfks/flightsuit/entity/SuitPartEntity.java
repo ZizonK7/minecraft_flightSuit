@@ -21,8 +21,7 @@ import net.minecraft.world.phys.Vec3;
  * Purely visual suit piece in flight around its owner (DESIGN.md 4-4). Three flavors:
  * - one piece flying in to lock onto the body (ground suit-up, Mark 42 style);
  * - the WHOLE suit diving onto a falling owner (mid-air suit-up, Avengers Mark VII style);
- * - REVERSE: a piece leaving the body and flying off toward the station;
- * - CLAMP: station assembly - the piece starts split open right next to the body and presses straight on.
+ * - REVERSE: a piece leaving the body and flying off toward the station.
  * The server equips / stores the real items; this entity only has to look right and then disappear.
  *
  * The path is a pure function of (owner position, launch offset, age), so both sides compute it each tick
@@ -41,7 +40,6 @@ public class SuitPartEntity extends Entity {
     private static final EntityDataAccessor<Float> OFFSET_Z = SynchedEntityData.defineId(SuitPartEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<String> SUIT_ID = SynchedEntityData.defineId(SuitPartEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> REVERSE = SynchedEntityData.defineId(SuitPartEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> CLAMP = SynchedEntityData.defineId(SuitPartEntity.class, EntityDataSerializers.BOOLEAN);
 
     public SuitPartEntity(EntityType<? extends SuitPartEntity> type, Level level) {
         super(type, level);
@@ -59,13 +57,6 @@ public class SuitPartEntity extends Entity {
 
     public static SuitPartEntity createLeaving(Level level, Player owner, EquipmentSlot slot, String suitId, Vec3 offset, int flightTicks) {
         return create(level, owner, (byte) slot.getIndex(), suitId, offset, flightTicks, true);
-    }
-
-    /** Station assembly: the piece starts just off the body (split open) and clamps straight on - no flight. */
-    public static SuitPartEntity createClamp(Level level, Player owner, EquipmentSlot slot, String suitId, Vec3 offset, int flightTicks) {
-        SuitPartEntity part = create(level, owner, (byte) slot.getIndex(), suitId, offset, flightTicks, false);
-        part.entityData.set(CLAMP, true);
-        return part;
     }
 
     private static SuitPartEntity create(Level level, Player owner, byte slot, String suitId, Vec3 offset, int flightTicks, boolean reverse) {
@@ -93,11 +84,6 @@ public class SuitPartEntity extends Entity {
         this.entityData.define(OFFSET_Z, 0.0F);
         this.entityData.define(SUIT_ID, "");
         this.entityData.define(REVERSE, false);
-        this.entityData.define(CLAMP, false);
-    }
-
-    public boolean isClamp() {
-        return entityData.get(CLAMP);
     }
 
     public Player getOwner() {
@@ -141,10 +127,6 @@ public class SuitPartEntity extends Entity {
         if (isLeaving()) {
             return progress * progress;
         }
-        if (isClamp()) {
-            // Slides in slowly, then snaps shut at the end - a machine press, not a throw.
-            return 1.0F - progress * progress * progress;
-        }
         return 1.0F - ease(progress);
     }
 
@@ -152,7 +134,7 @@ public class SuitPartEntity extends Entity {
     public Vec3 offsetAt(float progress) {
         float factor = distanceFactor(progress);
         double ox = entityData.get(OFFSET_X), oy = entityData.get(OFFSET_Y), oz = entityData.get(OFFSET_Z);
-        if (isWhole() || isClamp()) {
+        if (isWhole()) {
             // Straight dive along the launch line - the suit is aimed, not tumbling.
             return new Vec3(ox * factor, oy * factor, oz * factor);
         }
@@ -177,15 +159,7 @@ public class SuitPartEntity extends Entity {
         Vec3 pos = owner.position().add(offsetAt(progress));
         setPos(pos.x, pos.y, pos.z);
 
-        if (level().isClientSide && progress < 1.0F && isClamp()) {
-            // Welding sparks as the assembly rig presses the piece on.
-            if (progress > 0.6F) {
-                Vec3 seam = pos.add(0, pieceHeight(), 0);
-                level().addParticle(ParticleTypes.ELECTRIC_SPARK, seam.x + (random.nextDouble() - 0.5D) * 0.6D,
-                        seam.y + (random.nextDouble() - 0.5D) * 0.4D, seam.z + (random.nextDouble() - 0.5D) * 0.6D,
-                        (random.nextDouble() - 0.5D) * 0.2D, 0.05D, (random.nextDouble() - 0.5D) * 0.2D);
-            }
-        } else if (level().isClientSide && progress < 1.0F) {
+        if (level().isClientSide && progress < 1.0F) {
             // Thruster trail: every piece flies itself, like the Mark 42 pieces.
             Vec3 bodyPoint = pos.add(0, pieceHeight(), 0);
             level().addParticle(ParticleTypes.SOUL_FIRE_FLAME, bodyPoint.x, bodyPoint.y, bodyPoint.z, 0, 0, 0);

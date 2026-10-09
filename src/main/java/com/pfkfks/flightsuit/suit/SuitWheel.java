@@ -144,7 +144,7 @@ public final class SuitWheel {
                         SuitUpManager.callFromStation(player, station);
                     }
                 } else {
-                    deployCompanion(player, station.takeAll(), station.dockPoint());
+                    deployFromStation(player, station);
                 }
             }
             case CAPSULE -> {
@@ -272,7 +272,7 @@ public final class SuitWheel {
             if (station == null || !station.hasSuit() || anyBroken(station.getParts().values())) {
                 continue;
             }
-            deployCompanion(player, station.takeAll(), station.dockPoint());
+            deployFromStation(player, station);
             launched++;
         }
         player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.0F, 0.7F);
@@ -280,30 +280,45 @@ public final class SuitWheel {
                 launched, CONTROL_CAPACITY), true);
     }
 
+    /** Beyond this a summoned suit appears on the horizon instead of lifting off its (far) station. */
+    private static final double HORIZON = 144.0D;
+
     /**
-     * A suit flies out as a companion: from its station if that's close, otherwise it "arrives" from that
-     * direction - spawned high up a short way off and flying in, since the station itself may be unloaded.
+     * A docked suit flies out as a companion. It lifts off its own station - out of the rig's open front - and
+     * flies in, however far that is (the chunks along the way are kept ticking). A station further off than
+     * {@link #HORIZON} would take too long: the suit shows up high on the horizon in that direction instead,
+     * where it's only a speck, and streaks in from there.
      */
-    private static void deployCompanion(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, Vec3 origin) {
+    private static void deployFromStation(ServerPlayer player, SuitStationBlockEntity station) {
+        Map<EquipmentSlot, ItemStack> parts = station.takeAll();
         if (parts.isEmpty()) {
             return;
         }
+        Vec3 origin = station.dockPoint();
         Vec3 toOrigin = origin.subtract(player.position());
-        double distance = toOrigin.length();
         ServerLevel level = player.serverLevel();
-        if (distance <= 40.0D) {
-            // Close by: lift off from the station / unfold right there and fly over.
-            SuitCompanionEntity.spawn(player, parts, origin, player.getYRot());
+        if (toOrigin.length() <= HORIZON) {
+            Vec3 front = Vec3.atLowerCornerOf(station.getBlockState().getValue(SuitStationBlock.FACING).getNormal());
+            SuitCompanionEntity.spawnArriving(player, parts, origin, front.scale(0.6D).add(0.0D, 0.8D, 0.0D).normalize());
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, origin.x, origin.y, origin.z, 20, 0.3D, 0.2D, 0.3D, 0.1D);
             level.playSound(null, BlockPos.containing(origin), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.2F);
             return;
         }
-        // Far: it shows up on the horizon in the station's direction, high up, and streaks in under its own power
-        // (the station itself may be unloaded, so it can't literally take off from there).
-        Vec3 spawn = player.position().add(toOrigin.normalize().scale(Math.min(distance, 80.0D))).add(0.0D, 16.0D, 0.0D);
-        SuitCompanionEntity suit = SuitCompanionEntity.spawn(player, parts, spawn, player.getYRot());
-        suit.startArrival();
+        Vec3 horizon = player.position().add(toOrigin.normalize().scale(HORIZON));
+        double height = Math.min(player.getY() + 30.0D, level.getMaxBuildHeight() - 4.0D);
+        SuitCompanionEntity.spawnArriving(player, parts, new Vec3(horizon.x, height, horizon.z), null);
         level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.5F, 0.6F);
+    }
+
+    /** A capsule suit unfolds right where it's aimed and joins as a companion. */
+    private static void deployCompanion(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, Vec3 origin) {
+        if (parts.isEmpty()) {
+            return;
+        }
+        SuitCompanionEntity.spawn(player, parts, origin, player.getYRot());
+        ServerLevel level = player.serverLevel();
+        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, origin.x, origin.y, origin.z, 20, 0.3D, 0.2D, 0.3D, 0.1D);
+        level.playSound(null, BlockPos.containing(origin), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.2F);
     }
 
     private static boolean refuseBroken(ServerPlayer player, Collection<ItemStack> parts) {

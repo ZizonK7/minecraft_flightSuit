@@ -1,0 +1,71 @@
+{
+  "version": 3,
+  "name": "station_unrig",
+  "author": "flightsuit",
+  "description": "Suit-off on the station rig: arms go a little out while walking onto the platform and the arms take the suit off top-down, then drop as you step out. Held pose must match RIG_ARM_ROLL_DEG in client/SuitUpPose.java and the ticks in suit/StationRigTimeline.java.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 42,
+    "stopTick": 46,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {
+        "tick": 10,
+        "easing": "OUTQUAD",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 25
+        }
+      },
+      {
+        "tick": 10,
+        "easing": "OUTQUAD",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": -25
+        }
+      },
+      {
+        "tick": 34,
+        "easing": "LINEAR",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 25
+        }
+      },
+      {
+        "tick": 34,
+        "easing": "LINEAR",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": -25
+        }
+      },
+      {
+        "tick": 42,
+        "easing": "INOUTSINE",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 42,
+        "easing": "INOUTSINE",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        }
+      }
+    ]
+  }
+}

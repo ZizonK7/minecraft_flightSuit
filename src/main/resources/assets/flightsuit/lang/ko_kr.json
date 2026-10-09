@@ -105,11 +105,11 @@
   "message.flightsuit.cleaner_low_power": "도크 전력이 부족합니다 (청소 1회에 2,000 FE).",
   "message.flightsuit.cleaner_needs_dock": "청소 로봇 도크에 사용하세요.",
   "message.flightsuit.cleaner_dock_taken": "이 도크에는 이미 로봇이 있습니다.",
-  "item.flightsuit.ryan_mk2_helmet": "라이언 Mark 2 스텔스 헬멧",
-  "item.flightsuit.ryan_mk2_chestplate": "라이언 Mark 2 스텔스 흉갑",
-  "item.flightsuit.ryan_mk2_leggings": "라이언 Mark 2 스텔스 레깅스",
-  "item.flightsuit.ryan_mk2_boots": "라이언 Mark 2 스텔스 부츠",
-  "item.flightsuit.ryan_mk2_capsule": "라이언 Mark 2 스텔스 슈트 캡슐",
+  "item.flightsuit.ryan_mk2_helmet": "춘식이 Mark 2 스텔스 헬멧",
+  "item.flightsuit.ryan_mk2_chestplate": "춘식이 Mark 2 스텔스 흉갑",
+  "item.flightsuit.ryan_mk2_leggings": "춘식이 Mark 2 스텔스 레깅스",
+  "item.flightsuit.ryan_mk2_boots": "춘식이 Mark 2 스텔스 부츠",
+  "item.flightsuit.ryan_mk2_capsule": "춘식이 Mark 2 스텔스 슈트 캡슐",
   "hud.flightsuit.cloaked": "은신 중",
   "tooltip.flightsuit.class.stealth": "스텔스: 풀세트로 웅크리면 은신 · 리펄서 대신 냉동 빔 · 헬멧 투시 48칸",
   "key.flightsuit.suit_wheel": "슈트 휠",
@@ -148,5 +148,8 @@
   "message.flightsuit.remote_dismount": "탈것에서 내려야 원격 조종할 수 있습니다.",
   "message.flightsuit.remote_full_set": "풀세트 슈트만 원격 조종할 수 있습니다.",
   "message.flightsuit.remote_no_charge": "슈트 전력이 없습니다. 먼저 충전하세요.",
-  "message.flightsuit.remote_capsule": "캡슐에 든 슈트는 원격 조종할 수 없습니다. 먼저 출격시키세요."
+  "message.flightsuit.remote_capsule": "캡슐에 든 슈트는 원격 조종할 수 없습니다. 먼저 출격시키세요.",
+  "block.flightsuit.station_frame": "슈트 스테이션 프레임",
+  "message.flightsuit.station_no_room": "스테이션을 세울 공간이 부족합니다 (3×3, 높이 4칸, 뒤쪽에 기둥).",
+  "message.flightsuit.station_busy": "스테이션이 작동 중입니다."
 }

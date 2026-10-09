@@ -1,0 +1,71 @@
+{
+  "version": 3,
+  "name": "station_rig",
+  "author": "flightsuit",
+  "description": "Suit-up on the station rig: arms stay down while walking onto the platform, then go a little out for the sleeves while the arms dress you. Only the arms move (the walk on stays natural). Held pose must match RIG_ARM_ROLL_DEG in client/SuitUpPose.java and the ticks in suit/StationRigTimeline.java.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 62,
+    "stopTick": 68,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {
+        "tick": 16,
+        "easing": "LINEAR",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 16,
+        "easing": "LINEAR",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "OUTQUAD",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 25
+        }
+      },
+      {
+        "tick": 24,
+        "easing": "OUTQUAD",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": -25
+        }
+      },
+      {
+        "tick": 62,
+        "easing": "LINEAR",
+        "rightArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 25
+        }
+      },
+      {
+        "tick": 62,
+        "easing": "LINEAR",
+        "leftArm": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": -25
+        }
+      }
+    ]
+  }
+}

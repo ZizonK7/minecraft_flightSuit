@@ -8,11 +8,18 @@ import net.minecraft.util.Mth;
 /**
  * Pose source for the companion suit. The body itself is never visible (transparent texture); the armor
  * layer copies these part poses onto the suit pieces. Airborne it holds the same hover stance as a flying
- * player (palms down, arms out), aiming raises the right palm at the target, unpowered it slumps.
+ * player (palms down, arms out), streaking in from afar it lies out like a boosting player, aiming raises the
+ * right palm at the target, unpowered it slumps.
  */
 public class SuitCompanionModel extends HumanoidModel<SuitCompanionEntity> {
     public SuitCompanionModel(ModelPart root) {
         super(root);
+    }
+
+    /** 0 = upright, 1 = fully laid out in fast flight (see SuitCompanionEntity#flightPoseTicks). */
+    public static float flightBlend(SuitCompanionEntity suit, float partialTick) {
+        float ticks = suit.flightPoseTicks + (suit.isArriving() ? partialTick : -partialTick);
+        return Mth.clamp(ticks / 5.0F, 0.0F, 1.0F);
     }
 
     @Override
@@ -44,6 +51,22 @@ public class SuitCompanionModel extends HumanoidModel<SuitCompanionEntity> {
             leftLeg.xRot = -0.07F;
             rightLeg.zRot = 0.05F;
             leftLeg.zRot = -0.05F;
+        }
+        float flight = flightBlend(suit, ageInTicks - (int) ageInTicks);
+        if (flight > 0.0F) {
+            // Laid out along the flight path (the renderer tilts the whole body): arms back along the sides,
+            // legs together, head up to see where it's going - player_animation/boost.json.
+            head.xRot = Mth.lerp(flight, head.xRot, -0.785F);
+            head.yRot = Mth.lerp(flight, head.yRot, 0.0F);
+            rightArm.xRot = Mth.lerp(flight, rightArm.xRot, 0.0F);
+            leftArm.xRot = Mth.lerp(flight, leftArm.xRot, 0.0F);
+            rightArm.zRot = Mth.lerp(flight, rightArm.zRot, 0.14F);
+            leftArm.zRot = Mth.lerp(flight, leftArm.zRot, -0.14F);
+            rightLeg.xRot = Mth.lerp(flight, rightLeg.xRot, 0.0F);
+            leftLeg.xRot = Mth.lerp(flight, leftLeg.xRot, 0.0F);
+            rightLeg.zRot = Mth.lerp(flight, rightLeg.zRot, 0.02F);
+            leftLeg.zRot = Mth.lerp(flight, leftLeg.zRot, -0.02F);
+            return;
         }
         if (suit.isOpening()) {
             // Splitting open for the owner to step in from behind: helmet lifts and tips forward, arms swing

@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.car.HoverCarEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -20,7 +21,7 @@ public class HoverCarRenderer extends EntityRenderer<HoverCarEntity> {
     public HoverCarRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.model = new HoverCarModel(context.bakeLayer(HoverCarModel.LAYER));
-        this.shadowRadius = 0.8F;
+        this.shadowRadius = 1.1F;
     }
 
     @Override
@@ -33,6 +34,8 @@ public class HoverCarRenderer extends EntityRenderer<HoverCarEntity> {
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         model.renderToBuffer(poseStack, buffers.getBuffer(model.renderType(TEXTURE)), packedLight,
                 OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        model.renderGlass(poseStack, buffers.getBuffer(RenderType.entityTranslucent(TEXTURE)), packedLight,
+                OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
         super.render(car, entityYaw, partialTick, poseStack, buffers, packedLight);
     }

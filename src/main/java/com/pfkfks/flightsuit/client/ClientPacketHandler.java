@@ -29,9 +29,9 @@ public final class ClientPacketHandler {
         SuitAnim anim = SuitAnim.byId(packet.value);
         SuitAnimator.playOneShot(player, anim);
         if (player == minecraft.player) {
-            // Ground: watch the pieces arrive from the front. Fall / boarding: from behind, to see the suit
-            // dive onto your back, or its back open as you step in.
-            if (anim == SuitAnim.SUIT_UP_GROUND || anim == SuitAnim.SUIT_UP_STATION) {
+            // Ground / station rig: watch the pieces (and the arms) from the front. Fall / boarding: from behind,
+            // to see the suit dive onto your back, or its back open as you step in.
+            if (anim == SuitAnim.SUIT_UP_GROUND || anim == SuitAnim.STATION_RIG || anim == SuitAnim.STATION_UNRIG) {
                 CinematicCamera.start(packet.durationTicks, CameraType.THIRD_PERSON_FRONT);
             } else if (anim == SuitAnim.SUIT_UP_FALL || anim == SuitAnim.SUIT_UP_BOARD) {
                 CinematicCamera.start(packet.durationTicks, CameraType.THIRD_PERSON_BACK);

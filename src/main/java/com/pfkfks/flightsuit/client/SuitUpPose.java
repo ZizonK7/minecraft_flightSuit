@@ -19,9 +19,10 @@ public final class SuitUpPose {
     public static final float FALL_LEG_ROLL_DEG = 20.0F;
     public static final float FALL_HEAD_PITCH_DEG = -35.0F;
 
-    // suit_up_station.json (standing on the platform, arms slightly out for the sleeves)
-    public static final float STATION_ARM_ROLL_DEG = 25.0F;
-    public static final float STATION_LEG_ROLL_DEG = 3.0F;
+    // station_rig.json / station_unrig.json (standing on the rig, arms a little out for the sleeves; legs
+    // aren't animated so the walk on and off stays natural)
+    public static final float RIG_ARM_ROLL_DEG = 25.0F;
+    private static final float STANDING_ARM_ROLL_DEG = 5.0F;
 
     private static final float DEG = (float) (Math.PI / 180.0D);
 
@@ -38,14 +39,14 @@ public final class SuitUpPose {
         set(model, FALL_HEAD_PITCH_DEG, FALL_ARM_ROLL_DEG, FALL_LEG_ROLL_DEG);
     }
 
-    /** Station assembly: standing on the platform, arms a little out. */
-    public static void applyStation(HumanoidModel<?> model) {
-        set(model, 0.0F, STATION_ARM_ROLL_DEG, STATION_LEG_ROLL_DEG);
+    /** Station rig: from the docked suit's at-ease pose (0) to the wearer's arms-out rig pose (1). */
+    public static void applyRig(HumanoidModel<?> model, float blend) {
+        set(model, 0.0F, STANDING_ARM_ROLL_DEG + (RIG_ARM_ROLL_DEG - STANDING_ARM_ROLL_DEG) * blend, 0.0F);
     }
 
     /** Standing at ease - the docked suit and pieces leaving the body. */
     public static void applyStanding(HumanoidModel<?> model) {
-        set(model, 0.0F, 5.0F, 0.0F);
+        set(model, 0.0F, STANDING_ARM_ROLL_DEG, 0.0F);
     }
 
     private static void set(HumanoidModel<?> model, float headPitch, float armRoll, float legRoll) {

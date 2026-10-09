@@ -1,6 +1,5 @@
 package com.pfkfks.flightsuit.suit;
 
-import com.pfkfks.flightsuit.block.SuitStationBlock;
 import com.pfkfks.flightsuit.block.SuitStationBlockEntity;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.entity.SuitPartEntity;
@@ -46,9 +45,6 @@ public final class SuitUpManager {
     private static final int FALL_FINALE_TICKS = 8;
     private static final int RETURN_FLIGHT_TICKS = 16;
 
-    private static final int[] STATION_LAUNCH_TICK = {0, 5, 10, 15};
-    private static final int STATION_PRESS_TICKS = 7;
-
     private enum Mode {
         GROUND,
         FALL,
@@ -67,22 +63,15 @@ public final class SuitUpManager {
         final int launchTick;
         final int flightTicks;
         final Vec3 offset;
-        /** Pressed on in place by the station rig instead of flying in. */
-        final boolean clamp;
         boolean launched;
         boolean equipped;
 
         Step(EquipmentSlot slot, ItemStack stack, int launchTick, int flightTicks, Vec3 offset) {
-            this(slot, stack, launchTick, flightTicks, offset, false);
-        }
-
-        Step(EquipmentSlot slot, ItemStack stack, int launchTick, int flightTicks, Vec3 offset, boolean clamp) {
             this.slot = slot;
             this.stack = stack;
             this.launchTick = launchTick;
             this.flightTicks = flightTicks;
             this.offset = offset;
-            this.clamp = clamp;
         }
 
         int landTick() {
@@ -116,7 +105,7 @@ public final class SuitUpManager {
     }
 
     public static boolean isSuitingUp(ServerPlayer player) {
-        return ACTIVE.containsKey(player.getUUID());
+        return ACTIVE.containsKey(player.getUUID()) || StationRig.isActive(player);
     }
 
     // ---------------------------------------------------------------- entry points
@@ -221,9 +210,8 @@ public final class SuitUpManager {
     }
 
     /**
-     * Right-click the station empty-handed with a suit docked (Iron Man 2 / Avengers catwalk): you step onto
-     * the platform into the waiting suit and it is assembled around you in place - boots rise from the
-     * platform, legs and chest press on from behind, the helmet lowers last. No flying pieces.
+     * Right-click the station empty-handed with a suit docked (Iron Man 2 / Avengers catwalk): the rig's arms
+     * take the standing suit apart, you walk onto the platform, and they put it on you (StationRig).
      */
     public static boolean suitUpAtStation(ServerPlayer player, SuitStationBlockEntity station) {
         if (isSuitingUp(player) || WornSuit.of(player).any()) {
@@ -232,46 +220,19 @@ public final class SuitUpManager {
         if (refuseBroken(player, station.getParts())) {
             return true;
         }
-        Map<EquipmentSlot, ItemStack> parts = station.takeAll();
-        if (parts.isEmpty()) {
+        if (!station.hasSuit()) {
             return false;
         }
-        // Step into the suit: stand where it stood, facing the way it faced.
-        float yaw = station.getBlockState().getValue(SuitStationBlock.FACING).toYRot();
-        Vec3 spot = Vec3.atBottomCenterOf(station.getBlockPos()).add(0.0D, 0.25D, 0.0D);
-        player.connection.teleport(spot.x, spot.y, spot.z, yaw, 0.0F);
-        player.setYBodyRot(yaw);
-        player.setYHeadRot(yaw);
-        startClamp(player, parts, yaw);
+        StationRig.startSuitUp(player, station);
         return true;
     }
 
-    /** In-place assembly around the player (station platform, or a companion suit wrapping its owner). */
-    private static void startClamp(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts, float yaw) {
-        Vec3 back = Vec3.directionFromRotation(0.0F, yaw).scale(-1.0D);
-        List<Step> steps = new ArrayList<>();
-        for (int i = 0; i < ORDER.length; i++) {
-            ItemStack stack = parts.get(ORDER[i]);
-            if (stack == null) {
-                continue;
-            }
-            Vec3 offset = switch (ORDER[i]) {
-                case FEET -> new Vec3(0.0D, -0.6D, 0.0D);
-                case LEGS -> back.scale(0.7D).add(0.0D, -0.2D, 0.0D);
-                case CHEST -> back.scale(0.8D).add(0.0D, 0.15D, 0.0D);
-                default -> back.scale(0.3D).add(0.0D, 0.9D, 0.0D);
-            };
-            steps.add(new Step(ORDER[i], stack, STATION_LAUNCH_TICK[i], STATION_PRESS_TICKS, offset, true));
-        }
-        startGround(player, steps, SuitAnim.SUIT_UP_STATION);
-    }
-
-    /** Right-click the station empty-handed while wearing suit pieces: they come off and dock. */
+    /** Right-click the station empty-handed while wearing suit pieces: walk in and the arms take them off. */
     public static boolean dockAtStation(ServerPlayer player, SuitStationBlockEntity station) {
         if (isSuitingUp(player) || !WornSuit.of(player).any() || !station.canDock(wornPieces(player))) {
             return false;
         }
-        sendHome(player, station);
+        StationRig.startSuitOff(player, station, wornPieces(player));
         return true;
     }
 
@@ -619,6 +580,7 @@ public final class SuitUpManager {
                 pending.action().run();
             }
         }
+        StationRig.tick(player);
         Sequence sequence = ACTIVE.get(player.getUUID());
         if (sequence == null) {
             return;
@@ -682,6 +644,7 @@ public final class SuitUpManager {
 
     /** Ends a sequence immediately, equipping everything still in flight. */
     public static void finishNow(ServerPlayer player) {
+        StationRig.finishNow(player);
         Sequence sequence = ACTIVE.remove(player.getUUID());
         if (sequence == null) {
             return;
@@ -700,11 +663,6 @@ public final class SuitUpManager {
     private static void launch(ServerLevel level, ServerPlayer player, Step step) {
         String suitId = step.stack.getItem() instanceof SuitArmorItem armor ? armor.getSuitType().id() : "";
         Vec3 from = player.position().add(step.offset);
-        if (step.clamp) {
-            level.addFreshEntity(SuitPartEntity.createClamp(level, player, step.slot, suitId, step.offset, step.flightTicks));
-            level.playSound(null, from.x, from.y, from.z, SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 0.5F, 1.4F);
-            return;
-        }
         level.addFreshEntity(SuitPartEntity.create(level, player, step.slot, suitId, step.offset, step.flightTicks));
         level.playSound(null, from.x, from.y, from.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.35F, 1.9F);
     }
@@ -714,16 +672,21 @@ public final class SuitUpManager {
             return;
         }
         step.equipped = true;
-        ItemStack previous = player.getItemBySlot(step.slot);
+        equipPiece(player, step.slot, step.stack, effects);
+    }
+
+    /** Puts a piece on (whatever was in that slot goes to the inventory), with the lock-on sparks and clank. */
+    static void equipPiece(ServerPlayer player, EquipmentSlot slot, ItemStack stack, boolean effects) {
+        ItemStack previous = player.getItemBySlot(slot);
         if (!previous.isEmpty() && !player.getInventory().add(previous)) {
             player.drop(previous, false);
         }
-        player.setItemSlot(step.slot, step.stack);
+        player.setItemSlot(slot, stack);
         if (!effects) {
             return;
         }
         ServerLevel level = player.serverLevel();
-        double y = player.getY() + switch (step.slot) {
+        double y = player.getY() + switch (slot) {
             case HEAD -> 1.6D;
             case CHEST -> 1.1D;
             case LEGS -> 0.6D;
@@ -857,6 +820,7 @@ public final class SuitUpManager {
 
     public static void forget(UUID playerId) {
         ACTIVE.remove(playerId);
+        StationRig.forget(playerId);
         EJECT_REQUESTS.remove(playerId);
         PENDING.remove(playerId);
     }

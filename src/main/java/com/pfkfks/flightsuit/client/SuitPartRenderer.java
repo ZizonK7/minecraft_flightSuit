@@ -65,16 +65,11 @@ public class SuitPartRenderer extends EntityRenderer<SuitPartEntity> {
         float factor = entity.distanceFactor(progress);
         float pivot = (float) entity.pieceHeight();
         poseStack.pushPose();
-        if (entity.isClamp()) {
-            // Station assembly: held upright and square to the body by the rig, no tumbling.
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyYaw));
-        } else {
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyYaw + factor * 540.0F));
-            // Tumble around the piece's own center while in the air, level out on the body.
-            poseStack.translate(0.0D, pivot, 0.0D);
-            poseStack.mulPose(Axis.XP.rotationDegrees(factor * 200.0F));
-            poseStack.translate(0.0D, -pivot, 0.0D);
-        }
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyYaw + factor * 540.0F));
+        // Tumble around the piece's own center while in the air, level out on the body.
+        poseStack.translate(0.0D, pivot, 0.0D);
+        poseStack.mulPose(Axis.XP.rotationDegrees(factor * 200.0F));
+        poseStack.translate(0.0D, -pivot, 0.0D);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0D, -1.501D, 0.0D);
 
@@ -82,8 +77,6 @@ public class SuitPartRenderer extends EntityRenderer<SuitPartEntity> {
         HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(slot);
         if (entity.isLeaving()) {
             SuitUpPose.applyStanding(model);
-        } else if (entity.isClamp()) {
-            SuitUpPose.applyStation(model);
         } else {
             SuitUpPose.apply(model);
         }

@@ -30,6 +30,8 @@ public class TextureGen {
         write(stationTop(), new File(block, "suit_station_top.png"));
         write(stationSide(), new File(block, "suit_station_side.png"));
         write(plate(METAL_DARK), new File(block, "suit_station_bottom.png"));
+        write(stationPlatformTop(), new File(block, "station_platform_top.png"));
+        write(stationFrame(), new File(block, "station_frame.png"));
         write(solarTop(), new File(block, "solar_panel_top.png"));
         write(solarSide(), new File(block, "solar_panel_side.png"));
         write(generatorFront(false), new File(block, "generator_front.png"));
@@ -47,7 +49,7 @@ public class TextureGen {
         write(cleanerDockSide(), new File(block, "cleaner_dock_side.png"));
         write(cleanerRobotIcon(), new File(item, "cleaner_robot.png"));
         write(carCapsuleIcon(), new File(item, "hover_car_capsule.png"));
-        write(hoverCar(), new File(entity, "hover_car.png"));
+        write(stationArm(), new File(entity, "station_arm.png"));
     }
 
     static BufferedImage cleanerDockTop() {
@@ -107,32 +109,6 @@ public class TextureGen {
         return img;
     }
 
-    /** 128x64, laid out for HoverCarModel box UVs. */
-    static BufferedImage hoverCar() {
-        BufferedImage img = img(128, 64);
-        int yellow = 0xFFF2C94C, white = 0xFFF4F1E8, dark = 0xFF3A3E44, glass = 0xFF8FD8F0, glassHi = 0xFFD8F5FF;
-        // Hull (0,0) 20x6x34: sides yellow with a red stripe, top white, bottom dark.
-        fill(img, 0, 0, 108, 40, yellow);
-        fill(img, 34, 0, 20, 34, white);
-        fill(img, 54, 0, 20, 34, dark);
-        fill(img, 0, 36, 108, 1, RED);
-        fill(img, 0, 39, 108, 1, 0xFFC79A2A);
-        // Nose (0,40) 16x4x4.
-        fill(img, 0, 40, 40, 8, white);
-        fill(img, 0, 46, 40, 1, RED);
-        // Cabin bubble (40,40) 14x5x14.
-        fill(img, 40, 40, 56, 19, glass);
-        for (int i = 0; i < 6; i++) {
-            img.setRGB(44 + i, 55 - i, glassHi);
-        }
-        fill(img, 40, 58, 56, 1, white);
-        // Fins (96,40) 2x4x4.
-        fill(img, 96, 40, 12, 8, RED);
-        // Hover pads (96,52) 4x1x4.
-        fill(img, 96, 52, 16, 5, CYAN);
-        return img;
-    }
-
     static BufferedImage plate(int base) {
         BufferedImage img = img(16, 16);
         fill(img, 0, 0, 16, 16, base);
@@ -177,6 +153,46 @@ public class TextureGen {
             img.setRGB(x, 2, CYAN);
         }
         fill(img, 0, 3, 16, 1, GOLD_DARK);
+        return img;
+    }
+
+    /** The platform around the center: deck plating with a hazard edge on the outside. */
+    static BufferedImage stationPlatformTop() {
+        BufferedImage img = plate(METAL);
+        for (int i = 4; i < 12; i++) {
+            img.setRGB(i, 7, METAL_DARK);
+            img.setRGB(7, i, METAL_DARK);
+        }
+        for (int x = 3; x < 13; x += 3) {
+            img.setRGB(x, 3, CYAN_DARK);
+            img.setRGB(x, 12, CYAN_DARK);
+        }
+        return img;
+    }
+
+    /** Pillars and beams: dark girder with a gold service stripe and bolts. */
+    static BufferedImage stationFrame() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, METAL_DARK);
+        fill(img, 0, 0, 1, 16, EDGE);
+        fill(img, 15, 0, 1, 16, EDGE);
+        fill(img, 6, 0, 4, 16, METAL);
+        fill(img, 7, 0, 2, 16, GOLD_DARK);
+        for (int y = 2; y < 16; y += 4) {
+            img.setRGB(3, y, METAL_LIGHT);
+            img.setRGB(12, y, METAL_LIGHT);
+        }
+        return img;
+    }
+
+    /** Robot arm plating (tinted per part by the renderer): light panel with seams. */
+    static BufferedImage stationArm() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, 0xFFE4E7EB);
+        border(img, 0, 0, 16, 16, 0xFF9AA1AA);
+        fill(img, 0, 7, 16, 1, 0xFFB7BDC4);
+        img.setRGB(3, 3, 0xFF9AA1AA);
+        img.setRGB(12, 12, 0xFF9AA1AA);
         return img;
     }
 

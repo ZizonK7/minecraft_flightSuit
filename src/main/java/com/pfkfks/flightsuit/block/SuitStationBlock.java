@@ -7,12 +7,14 @@ import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
 import com.pfkfks.flightsuit.suit.SuitUpManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -34,9 +36,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 
 /**
- * Suit station platform. Right-click (empty hand):
- * - wearing suit pieces -> dock them here (walk-in unsuit);
- * - suit docked, not wearing one -> suit up from the station;
+ * Suit station core: the center of the platform, where the suit stands. Placing it raises the rest of the
+ * rig around it (StationFrameBlock: platform, back pillars, overhead beam), so it needs a free 3x3x4 space.
+ * Right-click (empty hand, here or anywhere on the frame):
+ * - wearing suit pieces -> walk in and the arms take them off (StationRig);
+ * - suit docked, not wearing one -> walk in and the arms put it on you;
  * - otherwise / sneaking -> status, and this becomes your main station.
  * Right-click with a filled capsule -> move that suit into the station.
  */
@@ -45,7 +49,7 @@ public class SuitStationBlock extends HorizontalDirectionalBlock implements Enti
 
     public SuitStationBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
@@ -55,8 +59,23 @@ public class SuitStationBlock extends HorizontalDirectionalBlock implements Enti
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        // The docked suit faces the player who placed the station.
-        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        // The docked suit faces the player who placed the station (the rig is open toward them).
+        Direction facing = context.getHorizontalDirection().getOpposite();
+        if (!StationFrameBlock.hasRoom(context.getLevel(), context.getClickedPos(), facing)) {
+            if (context.getPlayer() != null && !context.getLevel().isClientSide) {
+                context.getPlayer().displayClientMessage(Component.translatable("message.flightsuit.station_no_room"), true);
+            }
+            return null;
+        }
+        return defaultBlockState().setValue(FACING, facing);
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide) {
+            StationFrameBlock.build(level, pos, state.getValue(FACING));
+        }
     }
 
     @Override
@@ -99,6 +118,10 @@ public class SuitStationBlock extends HorizontalDirectionalBlock implements Enti
             }
         }
         ItemStack held = player.getItemInHand(hand);
+        if (station.isRigBusy()) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.station_busy"), true);
+            return InteractionResult.CONSUME;
+        }
 
         if (held.getItem() instanceof SuitCapsuleItem && SuitCapsuleItem.hasParts(held)) {
             Map<EquipmentSlot, ItemStack> parts = SuitCapsuleItem.getParts(held);
@@ -135,10 +158,13 @@ public class SuitStationBlock extends HorizontalDirectionalBlock implements Enti
     @Override
     @SuppressWarnings("deprecation")
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof SuitStationBlockEntity station) {
-            for (ItemStack stack : station.takeAll().values()) {
-                Containers.dropItemStack(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, stack);
+        if (!state.is(newState.getBlock())) {
+            if (level.getBlockEntity(pos) instanceof SuitStationBlockEntity station) {
+                for (ItemStack stack : station.takeAll().values()) {
+                    Containers.dropItemStack(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, stack);
+                }
             }
+            StationFrameBlock.clear(level, pos, state.getValue(FACING));
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

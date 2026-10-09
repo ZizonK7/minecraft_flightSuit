@@ -105,11 +105,11 @@
   "message.flightsuit.cleaner_low_power": "Dock power too low (2,000 FE per run).",
   "message.flightsuit.cleaner_needs_dock": "Use it on a cleaner robot dock.",
   "message.flightsuit.cleaner_dock_taken": "This dock already has a robot.",
-  "item.flightsuit.ryan_mk2_helmet": "Ryan Mark 2 Stealth Helmet",
-  "item.flightsuit.ryan_mk2_chestplate": "Ryan Mark 2 Stealth Chestplate",
-  "item.flightsuit.ryan_mk2_leggings": "Ryan Mark 2 Stealth Leggings",
-  "item.flightsuit.ryan_mk2_boots": "Ryan Mark 2 Stealth Boots",
-  "item.flightsuit.ryan_mk2_capsule": "Ryan Mark 2 Stealth Suit Capsule",
+  "item.flightsuit.ryan_mk2_helmet": "Choonsik Mark 2 Stealth Helmet",
+  "item.flightsuit.ryan_mk2_chestplate": "Choonsik Mark 2 Stealth Chestplate",
+  "item.flightsuit.ryan_mk2_leggings": "Choonsik Mark 2 Stealth Leggings",
+  "item.flightsuit.ryan_mk2_boots": "Choonsik Mark 2 Stealth Boots",
+  "item.flightsuit.ryan_mk2_capsule": "Choonsik Mark 2 Stealth Suit Capsule",
   "hud.flightsuit.cloaked": "CLOAKED",
   "tooltip.flightsuit.class.stealth": "Stealth: sneak in the full set to cloak · freeze beam instead of repulsor · 48-block helmet sensors",
   "key.flightsuit.suit_wheel": "Suit Wheel",
@@ -148,5 +148,8 @@
   "message.flightsuit.remote_dismount": "Get off your ride before remote-piloting.",
   "message.flightsuit.remote_full_set": "Only a full suit can be remote-piloted.",
   "message.flightsuit.remote_no_charge": "That suit has no power. Charge it first.",
-  "message.flightsuit.remote_capsule": "A suit in a capsule can't be piloted. Deploy it first."
+  "message.flightsuit.remote_capsule": "A suit in a capsule can't be piloted. Deploy it first.",
+  "block.flightsuit.station_frame": "Suit Station Frame",
+  "message.flightsuit.station_no_room": "Not enough room for the station (3x3, 4 high, pillars at the back).",
+  "message.flightsuit.station_busy": "The station is busy."
 }

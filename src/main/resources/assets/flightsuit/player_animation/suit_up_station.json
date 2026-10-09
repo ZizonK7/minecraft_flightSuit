@@ -2,7 +2,7 @@
   "version": 3,
   "name": "suit_up_station",
   "author": "flightsuit",
-  "description": "Standing on the station platform while the suit is assembled around you: arms a little out for the sleeves, steady stance. Held pose must match the STATION_* constants in client/SuitUpPose.java.",
+  "description": "Stepping into an opened companion suit (boarding): arms a little out for the sleeves, steady stance.",
   "emote": {
     "beginTick": 1,
     "endTick": 28,

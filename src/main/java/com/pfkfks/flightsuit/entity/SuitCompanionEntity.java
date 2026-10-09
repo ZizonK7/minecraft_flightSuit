@@ -10,12 +10,15 @@ import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
 import com.pfkfks.flightsuit.suit.SuitUpManager;
 import com.pfkfks.flightsuit.suit.WornSuit;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
@@ -32,9 +35,11 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +60,12 @@ public class SuitCompanionEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> FLYING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     /** Back split open for the owner to step in (boarding sequence). */
     private static final EntityDataAccessor<Boolean> OPENING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Streaking in from far away - drives the laid-out flight pose on clients. */
+    private static final EntityDataAccessor<Boolean> ARRIVING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Keeps the chunk under an arriving suit ticking, wherever its flight takes it (refreshed while it flies). */
+    private static final TicketType<ChunkPos> FLIGHT_TICKET =
+            TicketType.create("flightsuit_suit_flight", Comparator.comparingLong(ChunkPos::toLong), 40);
+    private static final int LAUNCH_TICKS = 10;
 
     public static final int IDLE_DRAIN = 1;
     public static final int MOVE_DRAIN = 2;
@@ -69,12 +80,17 @@ public class SuitCompanionEntity extends PathfinderMob {
     private Vec3 homeDirection = Vec3.ZERO;
     private int aimTicks;
     private LivingEntity commandTarget;
-    /** Streaking in from far away (summoned / left far behind) - flies straight through, no AI. */
+    /** Streaking in from far away (summoned / left far behind) - flies through, no AI. */
     private boolean arriving;
+    /** Arrival that starts by lifting off a station: this way out first (null = already airborne). */
+    private Vec3 launchDirection;
+    private int arrivalTicks;
     /** Held in place by the boarding sequence while the owner steps in. */
     private boolean held;
     /** Client: ticks since the back opened, for the opening animation. */
     public int openTicks;
+    /** Client: 0-5, eases the laid-out flight pose in and out. */
+    public int flightPoseTicks;
 
     public SuitCompanionEntity(EntityType<? extends SuitCompanionEntity> type, Level level) {
         super(type, level);
@@ -116,6 +132,7 @@ public class SuitCompanionEntity extends PathfinderMob {
         this.entityData.define(POWERED, true);
         this.entityData.define(FLYING, true);
         this.entityData.define(OPENING, false);
+        this.entityData.define(ARRIVING, false);
     }
 
     @Override
@@ -200,13 +217,48 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     /** Fly in from wherever it is now (far away) instead of popping in next to the owner. */
     public void startArrival() {
+        startArrival(null);
+    }
+
+    /** @param launch lift off this way first (out of a station), or null when already in the air */
+    public void startArrival(Vec3 launch) {
         arriving = true;
+        launchDirection = launch;
+        arrivalTicks = 0;
         noPhysics = true;
         setTarget(null);
+        entityData.set(ARRIVING, true);
+    }
+
+    private void stopArrival() {
+        arriving = false;
+        noPhysics = false;
+        launchDirection = null;
+        setXRot(0.0F);
+        entityData.set(ARRIVING, false);
     }
 
     public boolean isArriving() {
-        return arriving;
+        return level().isClientSide ? entityData.get(ARRIVING) : arriving;
+    }
+
+    /**
+     * A suit sent for from far away (suit wheel, House Party): spawned at {@code pos} - a station to lift off
+     * from, or a point out on the horizon - with its chunk loaded and kept ticking, and flying in.
+     */
+    public static SuitCompanionEntity spawnArriving(ServerPlayer owner, Map<EquipmentSlot, ItemStack> parts, Vec3 pos, Vec3 launch) {
+        if (owner.level() instanceof ServerLevel level) {
+            keepTicking(level, BlockPos.containing(pos));
+            level.getChunkAt(BlockPos.containing(pos));
+        }
+        SuitCompanionEntity suit = spawn(owner, parts, pos, owner.getYRot());
+        suit.startArrival(launch);
+        return suit;
+    }
+
+    private static void keepTicking(ServerLevel level, BlockPos pos) {
+        ChunkPos chunk = new ChunkPos(pos);
+        level.getChunkSource().addRegionTicket(FLIGHT_TICKET, chunk, 3, chunk);
     }
 
     public void setCommandTarget(LivingEntity target) {
@@ -296,6 +348,8 @@ public class SuitCompanionEntity extends PathfinderMob {
         super.tick();
         if (level().isClientSide) {
             openTicks = isOpening() ? openTicks + 1 : 0;
+            boolean streaking = isArriving() && position().subtract(xo, yo, zo).lengthSqr() > 0.16D;
+            flightPoseTicks = Math.max(0, Math.min(5, flightPoseTicks + (streaking ? 1 : -1)));
             if (isFlying()) {
                 spawnThrusterParticles();
                 // Contrail when streaking in fast, so an arriving suit is visible from far off.
@@ -321,32 +375,46 @@ public class SuitCompanionEntity extends PathfinderMob {
         }
     }
 
-    /** Rocket in toward the owner's side, fast while far, easing off as it closes in; normal AI resumes nearby. */
+    /**
+     * Fly in to the owner's side: lift off first if it starts on a station, then cruise high while far and
+     * glide down as it closes in - fast while far, easing off near; normal AI resumes beside the owner.
+     */
     private void tickArrival() {
         LivingEntity owner = getAnchor();
         if (owner == null || !isPowered()) {
-            arriving = false;
-            noPhysics = false;
+            stopArrival();
             return;
         }
-        Vec3 forward = Vec3.directionFromRotation(0.0F, owner.getYRot());
-        Vec3 spot = owner.position().add(-forward.z * 1.5D, 0.5D, forward.x * 1.5D);
-        Vec3 to = spot.subtract(position());
-        double distance = to.length();
-        if (distance < 6.0D) {
-            arriving = false;
-            noPhysics = false;
-            setDeltaMovement(to.normalize().scale(0.3D));
-            level().playSound(null, blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.7F, 0.8F);
-            return;
+        if (arrivalTicks++ % 5 == 0 && level() instanceof ServerLevel server) {
+            keepTicking(server, blockPosition());
         }
-        double speed = Math.max(0.6D, Math.min(3.0D, distance * 0.12D));
-        Vec3 velocity = to.scale(speed / distance);
+        Vec3 velocity;
+        if (launchDirection != null && arrivalTicks <= LAUNCH_TICKS) {
+            // Out of the rig's open front and up, accelerating.
+            velocity = launchDirection.scale(0.15D + 0.5D * arrivalTicks / LAUNCH_TICKS);
+        } else {
+            Vec3 forward = Vec3.directionFromRotation(0.0F, owner.getYRot());
+            Vec3 spot = owner.position().add(-forward.z * 1.5D, 0.5D, forward.x * 1.5D);
+            Vec3 to = spot.subtract(position());
+            if (to.length() < 6.0D) {
+                stopArrival();
+                setDeltaMovement(to.normalize().scale(0.3D));
+                level().playSound(null, blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.7F, 0.8F);
+                return;
+            }
+            // Aim above the owner while far (over the terrain), coming down as the gap closes.
+            Vec3 aim = spot.add(0.0D, Math.min(24.0D, to.horizontalDistance() * 0.3D), 0.0D).subtract(position());
+            double distance = aim.length();
+            double speed = Math.max(0.6D, Math.min(3.0D, to.length() * 0.12D));
+            velocity = aim.scale(speed / distance);
+        }
         setDeltaMovement(velocity);
-        float yaw = (float) (Math.atan2(to.z, to.x) * (180.0D / Math.PI)) - 90.0F;
+        float yaw = (float) (Math.atan2(velocity.z, velocity.x) * (180.0D / Math.PI)) - 90.0F;
+        float pitch = (float) -(Math.atan2(velocity.y, velocity.horizontalDistance()) * (180.0D / Math.PI));
         setYRot(yaw);
         setYBodyRot(yaw);
         setYHeadRot(yaw);
+        setXRot(pitch);
     }
 
     private void tickPower() {

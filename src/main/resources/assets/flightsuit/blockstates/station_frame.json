@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "part=platform": {
+      "model": "flightsuit:block/station_frame_platform"
+    },
+    "part=pillar": {
+      "model": "flightsuit:block/station_frame_pillar"
+    },
+    "part=pillar_top": {
+      "model": "flightsuit:block/station_frame_pillar_top"
+    },
+    "part=beam": {
+      "model": "flightsuit:block/station_frame_beam"
+    }
+  }
+}

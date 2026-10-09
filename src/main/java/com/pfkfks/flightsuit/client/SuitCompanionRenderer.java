@@ -1,6 +1,8 @@
 package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -22,6 +24,21 @@ public class SuitCompanionRenderer extends HumanoidMobRenderer<SuitCompanionEnti
                 new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
                 context.getModelManager()));
+    }
+
+    /**
+     * Streaking in from afar, the suit lies along its flight path like a boosting player (same rotation as
+     * vanilla's elytra glide), pivoting around its middle; eased in and out by flightPoseTicks.
+     */
+    @Override
+    protected void setupRotations(SuitCompanionEntity suit, PoseStack poseStack, float ageInTicks, float rotationYaw, float partialTick) {
+        super.setupRotations(suit, poseStack, ageInTicks, rotationYaw, partialTick);
+        float blend = SuitCompanionModel.flightBlend(suit, partialTick);
+        if (blend > 0.0F) {
+            poseStack.translate(0.0D, 0.9D, 0.0D);
+            poseStack.mulPose(Axis.XP.rotationDegrees(blend * (-90.0F - suit.getViewXRot(partialTick))));
+            poseStack.translate(0.0D, -0.9D, 0.0D);
+        }
     }
 
     @Override
