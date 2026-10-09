@@ -56,7 +56,7 @@ public class DoctorWorkGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (doctor.getJob() != ResidentJob.DOCTOR || doctor.isWanderer() || doctor.isDowned() || doctor.tickCount % 20 != 0) {
+        if (doctor.getJob() != ResidentJob.DOCTOR || doctor.isWanderer() || doctor.isDowned() || doctor.getRandom().nextInt(reducedTickDelay(20)) != 0) {
             return false;
         }
         patient = findPatient();

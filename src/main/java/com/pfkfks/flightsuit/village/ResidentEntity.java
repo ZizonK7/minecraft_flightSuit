@@ -96,6 +96,8 @@ public class ResidentEntity extends PathfinderMob {
     /** School days so far, and the job the child is drawn to (ResidentJob ordinal), for the screen. */
     private static final EntityDataAccessor<Integer> LESSONS = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> FAVORITE = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
+    /** Shown on the child's page of the resident screen, so it has to reach the client. */
+    private static final EntityDataAccessor<String> PARENTS = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.STRING);
 
     public static final int ACTION_ACCEPT = 0;
     public static final int ACTION_DISMISS = 1;
@@ -128,7 +130,6 @@ public class ResidentEntity extends PathfinderMob {
     /** Children: the day they were born, what school has given them so far (teacher stars summed), their parents. */
     private long bornDay;
     private int schoolPoints;
-    private String parents = "";
     /** On campaign (M12 원정): the player this soldier marches with (null = keeps the village). */
     private @Nullable UUID commander;
 
@@ -194,6 +195,7 @@ public class ResidentEntity extends PathfinderMob {
         entityData.define(CHILD_DAYS, 0);
         entityData.define(LESSONS, 0);
         entityData.define(FAVORITE, ResidentJob.FARMER.ordinal());
+        entityData.define(PARENTS, "");
     }
 
     // ---- arriving ----
@@ -241,7 +243,7 @@ public class ResidentEntity extends PathfinderMob {
         child.entityData.set(FAVORITE, favorite);
         child.entityData.set(CHILD_DAYS, VillageTuning.CHILDHOOD_DAYS);
         child.bornDay = level.getDayTime() / 24000L;
-        child.parents = parents;
+        child.entityData.set(PARENTS, parents);
         child.refreshDimensions();
         child.homeBed = hall.claimBed(child);
         level.addFreshEntity(child);
@@ -351,7 +353,7 @@ public class ResidentEntity extends PathfinderMob {
     }
 
     public String getParents() {
-        return parents;
+        return entityData.get(PARENTS);
     }
 
     public @Nullable UUID getCommander() {
@@ -810,7 +812,7 @@ public class ResidentEntity extends PathfinderMob {
         tag.putInt("Favorite", getFavorite().ordinal());
         tag.putLong("BornDay", bornDay);
         tag.putInt("SchoolPoints", schoolPoints);
-        tag.putString("Parents", parents);
+        tag.putString("Parents", getParents());
         if (commander != null) {
             tag.putUUID("Commander", commander);
         }
@@ -848,7 +850,7 @@ public class ResidentEntity extends PathfinderMob {
         }
         bornDay = tag.getLong("BornDay");
         schoolPoints = tag.getInt("SchoolPoints");
-        parents = tag.getString("Parents");
+        entityData.set(PARENTS, tag.getString("Parents"));
         commander = tag.hasUUID("Commander") ? tag.getUUID("Commander") : null;
         applyJobBonus();
     }

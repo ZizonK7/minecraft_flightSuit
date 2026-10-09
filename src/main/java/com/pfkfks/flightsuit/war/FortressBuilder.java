@@ -317,7 +317,7 @@ public final class FortressBuilder {
 
     /** Lamp posts along the roads and a few straw dummies in the yard. */
     private void yard() {
-        for (int[] post : new int[][]{{-3, -16}, {3, 16}, {-16, -3}, {16, 3}, {-3, 5}, {3, -5}, {8, -3}, {-8, 3}}) {
+        for (int[] post : new int[][]{{-3, -16}, {-16, -3}, {16, 3}, {-3, 5}, {8, -3}, {-8, 3}}) {
             put(post[0], 1, post[1], Blocks.OAK_FENCE.defaultBlockState());
             put(post[0], 2, post[1], Blocks.OAK_FENCE.defaultBlockState());
             put(post[0], 3, post[1], Blocks.LANTERN.defaultBlockState());

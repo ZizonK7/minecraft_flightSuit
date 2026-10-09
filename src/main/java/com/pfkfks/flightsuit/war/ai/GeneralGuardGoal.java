@@ -24,7 +24,7 @@ public class GeneralGuardGoal extends Goal {
     }
 
     private BlockPos pick() {
-        if (!general.isRecruited() || !general.canFight() || general.getTarget() != null) {
+        if (!general.isRecruited() || general.isFollowing() || !general.canFight() || general.getTarget() != null) {
             return null;
         }
         VillageHallBlockEntity hall = Villages.hallAt(general.level(), general.getHallPos());

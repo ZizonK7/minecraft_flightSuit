@@ -46,7 +46,7 @@ public class ChildSchoolGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!child.isBaby() || child.isDowned() || !schoolHours(child) || child.tickCount % 40 != 0) {
+        if (!child.isBaby() || child.isDowned() || !schoolHours(child) || child.getRandom().nextInt(reducedTickDelay(40)) != 0) {
             return false;
         }
         VillageHallBlockEntity hall = child.hall();

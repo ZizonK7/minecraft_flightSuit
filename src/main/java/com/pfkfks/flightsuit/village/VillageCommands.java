@@ -39,9 +39,11 @@ public final class VillageCommands {
             return 0;
         }
         java.util.List<ResidentEntity> adults = hall.residents().stream().filter(r -> !r.isBaby()).toList();
-        String parents = adults.size() >= 2 ? adults.get(0).getName().getString() + " · " + adults.get(1).getName().getString() : "";
+        Component first = adults.size() >= 2 ? adults.get(0).getName() : Component.literal("-");
+        Component second = adults.size() >= 2 ? adults.get(1).getName() : Component.literal("-");
+        String parents = adults.size() >= 2 ? first.getString() + " · " + second.getString() : "";
         ResidentEntity child = ResidentEntity.spawnChild(player.serverLevel(), hall, player.position(), parents);
-        hall.addNews(Component.translatable("news.flightsuit.born", child.getName(), parents, ""));
+        hall.addNews(Component.translatable("news.flightsuit.born", child.getName(), first, second));
         hall.refreshStats();
         ctx.getSource().sendSuccess(() -> Component.translatable("command.flightsuit.child", child.getName()), false);
         return 1;

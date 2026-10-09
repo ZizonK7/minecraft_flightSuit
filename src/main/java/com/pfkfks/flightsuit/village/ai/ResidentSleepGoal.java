@@ -36,13 +36,16 @@ public class ResidentSleepGoal extends Goal {
             return false;
         }
         bed = resident.getHomeBed();
+        if (!resident.level().isLoaded(bed)) {
+            return false;
+        }
         BlockState state = resident.level().getBlockState(bed);
         // Not loaded yet, or someone else (a player) is in it.
         return state.getBlock() instanceof BedBlock && !state.getValue(BedBlock.OCCUPIED);
     }
 
     private boolean shouldSleep() {
-        if (resident.isWanderer() || resident.getJob() == ResidentJob.GUARD || resident.isDowned()
+        if (resident.isWanderer() || resident.getJob() == ResidentJob.GUARD || resident.isDowned() || resident.getCommander() != null
                 || !resident.isNightTime() || resident.getHomeBed() == null || !resident.isBedHead(resident.getHomeBed())) {
             return false;
         }

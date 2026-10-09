@@ -474,7 +474,8 @@ public final class FortressManager {
                 data.setDirty();
             }
             data.addTrust(lord, kingdom, -10);
-        } else {
+        } else if (player != null) {
+            // Only an actual choice to let them go earns the goodwill - a timed-out surrender doesn't.
             data.addTrust(lord, kingdom, 15);
         }
         ServerPlayer owner = player != null ? player : server.getPlayerList().getPlayer(lord);

@@ -153,7 +153,12 @@ public class GeneralEntity extends Monster implements RaidMember {
         role = WarRole.GARRISON;
         home = fortCenter.immutable();
         hallPos = null;
-        restrictTo(home, getGeneral().isLeader() ? 8 : 16);
+        // The ruler keeps to the throne at the back of the palace; the others walk the whole fortress.
+        if (getGeneral().isLeader()) {
+            restrictTo(FortressBuilder.throne(home), 4);
+        } else {
+            restrictTo(home, 16);
+        }
         bossBar.setVisible(false);
         return this;
     }
@@ -376,7 +381,7 @@ public class GeneralEntity extends Monster implements RaidMember {
             }
             return;
         }
-        if (hasYielded() && raidId < 0 && !isRecruited()) {
+        if (hasYielded() && raidId < 0 && !isRecruited() && role == WarRole.RAID && foe == null) {
             // Spawned by hand (egg / command): no raid to recruit or release him, so he gets back up after a while.
             if (++standUpTicks >= WOUND_TICKS) {
                 standUpTicks = 0;
@@ -774,7 +779,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         following = tag.getBoolean("Following");
         bossBar.setName(getDisplayName());
         bossBar.setVisible(canFight() && !isRecruited());
-        if (isRecruited() && hallPos != null) {
+        if (isRecruited() && hallPos != null && !following) {
             restrictTo(hallPos, 32);
         }
     }

@@ -23,7 +23,7 @@ public class TeacherWorkGoal extends Goal {
     @Override
     public boolean canUse() {
         if (teacher.getJob() != ResidentJob.TEACHER || teacher.isWanderer() || teacher.isDowned()
-                || !ChildSchoolGoal.schoolHours(teacher) || teacher.tickCount % 40 != 0) {
+                || !ChildSchoolGoal.schoolHours(teacher) || teacher.getRandom().nextInt(reducedTickDelay(40)) != 0) {
             return false;
         }
         VillageHallBlockEntity hall = teacher.hall();
