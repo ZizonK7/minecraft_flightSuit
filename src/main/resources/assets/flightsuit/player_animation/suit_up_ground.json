@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "name": "suit_up_ground",
+  "author": "flightsuit",
+  "description": "Mark 42 style ground suit-up: arms thrown out and chin up while the pieces fly in. Held pose must match client/SuitUpPose.java.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 34,
+    "stopTick": 40,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 5, "easing": "OUTBACK", "rightArm": {"pitch": 0, "yaw": 0, "roll": 75}},
+      {"tick": 5, "easing": "OUTBACK", "leftArm": {"pitch": 0, "yaw": 0, "roll": -75}},
+      {"tick": 5, "easing": "OUTQUAD", "rightLeg": {"pitch": 0, "roll": 7}},
+      {"tick": 5, "easing": "OUTQUAD", "leftLeg": {"pitch": 0, "roll": -7}},
+      {"tick": 5, "easing": "OUTQUAD", "head": {"pitch": -15, "yaw": 0}},
+      {"tick": 34, "easing": "LINEAR", "rightArm": {"pitch": 0, "yaw": 0, "roll": 75}},
+      {"tick": 34, "easing": "LINEAR", "leftArm": {"pitch": 0, "yaw": 0, "roll": -75}},
+      {"tick": 34, "easing": "LINEAR", "rightLeg": {"pitch": 0, "roll": 7}},
+      {"tick": 34, "easing": "LINEAR", "leftLeg": {"pitch": 0, "roll": -7}},
+      {"tick": 34, "easing": "LINEAR", "head": {"pitch": -15, "yaw": 0}}
+    ]
+  }
+}

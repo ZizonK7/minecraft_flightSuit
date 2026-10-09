@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "name": "hover",
+  "author": "flightsuit",
+  "description": "Hovering: arms out and slightly back with palms down as stabilizers, gentle bob.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 41,
+    "stopTick": 46,
+    "isLoop": true,
+    "returnTick": 1,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 1, "easing": "INOUTSINE", "rightArm": {"pitch": 12, "roll": 22}},
+      {"tick": 1, "easing": "INOUTSINE", "leftArm": {"pitch": 12, "roll": -22}},
+      {"tick": 1, "easing": "INOUTSINE", "rightLeg": {"pitch": 6, "roll": 3}},
+      {"tick": 1, "easing": "INOUTSINE", "leftLeg": {"pitch": -4, "roll": -3}},
+      {"tick": 1, "easing": "INOUTSINE", "body": {"y": 0.0}},
+      {"tick": 21, "easing": "INOUTSINE", "rightArm": {"pitch": 16, "roll": 26}},
+      {"tick": 21, "easing": "INOUTSINE", "leftArm": {"pitch": 16, "roll": -26}},
+      {"tick": 21, "easing": "INOUTSINE", "body": {"y": 0.05}},
+      {"tick": 41, "easing": "INOUTSINE", "rightArm": {"pitch": 12, "roll": 22}},
+      {"tick": 41, "easing": "INOUTSINE", "leftArm": {"pitch": 12, "roll": -22}},
+      {"tick": 41, "easing": "INOUTSINE", "rightLeg": {"pitch": 6, "roll": 3}},
+      {"tick": 41, "easing": "INOUTSINE", "leftLeg": {"pitch": -4, "roll": -3}},
+      {"tick": 41, "easing": "INOUTSINE", "body": {"y": 0.0}}
+    ]
+  }
+}

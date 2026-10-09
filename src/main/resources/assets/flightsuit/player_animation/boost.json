@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "name": "boost",
+  "author": "flightsuit",
+  "description": "High-speed flight: body laid along the look direction (pitch adjusted by -xRot in SuitAnimator), arms back along the sides, head up.",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 21,
+    "stopTick": 26,
+    "isLoop": true,
+    "returnTick": 4,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 4, "easing": "OUTQUAD", "body": {"pitch": -90}},
+      {"tick": 4, "easing": "OUTQUAD", "head": {"pitch": -45}},
+      {"tick": 4, "easing": "OUTQUAD", "rightArm": {"pitch": 0, "roll": 8}},
+      {"tick": 4, "easing": "OUTQUAD", "leftArm": {"pitch": 0, "roll": -8}},
+      {"tick": 4, "easing": "OUTQUAD", "rightLeg": {"pitch": 0, "roll": 1}},
+      {"tick": 4, "easing": "OUTQUAD", "leftLeg": {"pitch": 0, "roll": -1}},
+      {"tick": 21, "easing": "LINEAR", "body": {"pitch": -90}},
+      {"tick": 21, "easing": "LINEAR", "head": {"pitch": -45}},
+      {"tick": 21, "easing": "LINEAR", "rightArm": {"pitch": 0, "roll": 8}},
+      {"tick": 21, "easing": "LINEAR", "leftArm": {"pitch": 0, "roll": -8}},
+      {"tick": 21, "easing": "LINEAR", "rightLeg": {"pitch": 0, "roll": 1}},
+      {"tick": 21, "easing": "LINEAR", "leftLeg": {"pitch": 0, "roll": -1}}
+    ]
+  }
+}

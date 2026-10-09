@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["I I", "GBG"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "G": {"item": "minecraft:gold_ingot"},
+    "B": {"item": "minecraft:blaze_powder"}
+  },
+  "result": {"item": "flightsuit:ryan_mk1_boots"}
+}

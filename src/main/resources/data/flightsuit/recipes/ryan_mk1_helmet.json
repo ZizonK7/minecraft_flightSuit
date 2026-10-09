@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["IGI", "IPI"],
+  "key": {
+    "I": {"item": "minecraft:iron_ingot"},
+    "G": {"item": "minecraft:gold_ingot"},
+    "P": {"item": "minecraft:glass_pane"}
+  },
+  "result": {"item": "flightsuit:ryan_mk1_helmet"}
+}

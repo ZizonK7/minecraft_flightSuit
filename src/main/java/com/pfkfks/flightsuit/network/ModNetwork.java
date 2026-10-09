@@ -1,0 +1,45 @@
+package com.pfkfks.flightsuit.network;
+
+import com.pfkfks.flightsuit.FlightSuitMod;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
+
+import java.util.Optional;
+
+public final class ModNetwork {
+    private static final String PROTOCOL = "1";
+
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation(FlightSuitMod.MODID, "main"),
+            () -> PROTOCOL,
+            PROTOCOL::equals,
+            PROTOCOL::equals
+    );
+
+    private ModNetwork() {
+    }
+
+    public static void register() {
+        int id = 0;
+        CHANNEL.registerMessage(id++, SuitToggleC2SPacket.class, SuitToggleC2SPacket::encode, SuitToggleC2SPacket::decode,
+                SuitToggleC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, RepulsorC2SPacket.class, RepulsorC2SPacket::encode, RepulsorC2SPacket::decode,
+                RepulsorC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, ThrustStateC2SPacket.class, ThrustStateC2SPacket::encode, ThrustStateC2SPacket::decode,
+                ThrustStateC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, SuitAnimS2CPacket.class, SuitAnimS2CPacket::encode, SuitAnimS2CPacket::decode,
+                SuitAnimS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+    }
+
+    public static void sendToServer(Object packet) {
+        CHANNEL.sendToServer(packet);
+    }
+
+    public static void sendToTrackingAndSelf(ServerPlayer player, Object packet) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), packet);
+    }
+}
