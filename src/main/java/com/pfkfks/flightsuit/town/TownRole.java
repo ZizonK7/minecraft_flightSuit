@@ -20,7 +20,12 @@ public enum TownRole {
     CITY_POLICE("city_police", Place.PATROL),
     CITY_SHOPKEEPER("city_shopkeeper", Place.SHOP),
     CITY_CITIZEN("city_citizen", Place.SQUARE),
-    CITY_CHILD("city_child", Place.PLAY);
+    CITY_CHILD("city_child", Place.PLAY),
+    // M17: Dragon Ball Earth's West City, round Capsule Corp; the Namekian village.
+    DBZ_CITIZEN("dbz_citizen", Place.SQUARE),
+    DBZ_SHOPKEEPER("dbz_shopkeeper", Place.SHOP),
+    DBZ_CHILD("dbz_child", Place.PLAY),
+    NAMEKIAN("namekian", Place.SQUARE);
 
     /** Where their day is spent (the town's plan has spots of each kind). */
     public enum Place { FIELD, SHOP, SMITHY, KITCHEN, SQUARE, PLAY, OFFICE, LAB, PATROL }
@@ -44,7 +49,7 @@ public enum TownRole {
     }
 
     public boolean isChild() {
-        return this == FORT_CHILD || this == CITY_CHILD;
+        return this == FORT_CHILD || this == CITY_CHILD || this == DBZ_CHILD;
     }
 
     /** Opens the trading screen when spoken to. */
@@ -54,6 +59,11 @@ public enum TownRole {
 
     public boolean isCity() {
         return name().startsWith("CITY_");
+    }
+
+    /** Which towns they're from: "fort", "city" (Hero City), "dbz" (West City) or "namek" - for shop names and lines. */
+    public String group() {
+        return this == NAMEKIAN ? "namek" : name().startsWith("DBZ_") ? "dbz" : isCity() ? "city" : "fort";
     }
 
     public Component displayName() {
@@ -68,6 +78,7 @@ public enum TownRole {
             case FORT_COOK -> new ItemStack(Items.BREAD);
             case FORT_MERCHANT -> new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get());
             case CITY_SHOPKEEPER -> new ItemStack(com.pfkfks.flightsuit.registry.ModItems.DOLLAR.get());
+            case DBZ_SHOPKEEPER -> new ItemStack(com.pfkfks.flightsuit.registry.ModItems.ZENI.get());
             case FORT_ELDER -> new ItemStack(Items.STICK);
             case CITY_SCIENTIST -> new ItemStack(Items.BOOK);
             case CITY_WORKER -> new ItemStack(Items.PAPER);

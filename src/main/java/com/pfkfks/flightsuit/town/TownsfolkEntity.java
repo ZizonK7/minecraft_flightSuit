@@ -57,8 +57,10 @@ import java.util.List;
  */
 public class TownsfolkEntity extends PathfinderMob implements Merchant {
     private static final EntityDataAccessor<Integer> ROLE = SynchedEntityData.defineId(TownsfolkEntity.class, EntityDataSerializers.INT);
-    /** Which town: 0..2 a kingdom's fortress (Kingdom ordinal), 3 Hero City. */
+    /** Which town: 0..2 a kingdom's fortress (Kingdom ordinal), 3 Hero City; M17: 4 West City, 5 the Namekian village. */
     public static final int HERO_CITY = 3;
+    public static final int WEST_CITY = 4;
+    public static final int NAMEK = 5;
     private static final long DAY_START = 1000L;
     private static final long EVENING = 11000L;
     private static final long NIGHT = 13000L;
@@ -100,7 +102,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         person.home = plan.home(index);
         person.setItemSlot(EquipmentSlot.MAINHAND, role.tool());
         person.setCustomName(person.title());
-        person.request = role.trades() ? null : TownRequests.roll(role, level.random);
+        person.request = role.trades() ? null : TownRequests.roll(role, level.random, town >= WEST_CITY || role.isCity() ? 5 : 4);
         person.refreshDimensions();
         return person;
     }
@@ -135,7 +137,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
     private Component title() {
         TownRole role = getRole();
         if (role.trades()) {
-            return Component.translatable("town.flightsuit.shop." + (role.isCity() ? "city_" : "fort_") + Math.floorMod(index, shopKinds()))
+            return Component.translatable("town.flightsuit.shop." + role.group() + "_" + Math.floorMod(index, shopKinds()))
                     .withStyle(ChatFormatting.GREEN);
         }
         return role.displayName();
@@ -170,8 +172,13 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
 
     // ---------------------------------------------------------------- the town's goodwill
 
+    /** The Dragon Ball towns (M17) keep no goodwill score: they're friendly to everyone. */
+    private boolean keepsTrust() {
+        return town < WEST_CITY;
+    }
+
     private int trust(Player player) {
-        if (!(level() instanceof ServerLevel server)) {
+        if (!(level() instanceof ServerLevel server) || !keepsTrust()) {
             return 0;
         }
         return isCity() ? HeroData.get(server.getServer()).trust(player.getUUID())
@@ -179,7 +186,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
     }
 
     private void addTrust(Player player, int delta) {
-        if (!(level() instanceof ServerLevel server)) {
+        if (!(level() instanceof ServerLevel server) || !keepsTrust()) {
             return;
         }
         if (isCity()) {
@@ -192,6 +199,13 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
     /** Whether the town is under attack right now (a fortress battle, Hero City's invasion): everyone indoors. */
     private boolean underAttack() {
         if (!(level() instanceof ServerLevel server)) {
+            return false;
+        }
+        if (town == NAMEK) {
+            // Frieza's men at the village: everyone into the domes.
+            return com.pfkfks.flightsuit.planet.dbz.DbzSaga.isFighting(com.pfkfks.flightsuit.planet.Planet.NAMEK);
+        }
+        if (town == WEST_CITY) {
             return false;
         }
         return isCity() ? HeroData.get(server.getServer()).storm != null
@@ -241,7 +255,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
                 if (!player.getAbilities().instabuild) {
                     held.shrink(request.count());
                 }
-                ItemStack reward = new ItemStack(TownTrades.money(isCity()), request.pay());
+                ItemStack reward = new ItemStack(TownTrades.money(town), request.pay());
                 if (!player.getInventory().add(reward)) {
                     player.drop(reward, false);
                 }
@@ -253,7 +267,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
                 return InteractionResult.CONSUME;
             }
             say(serverPlayer, Component.translatable("town.flightsuit.request", new ItemStack(request.item()).getHoverName(),
-                    request.count(), new ItemStack(TownTrades.money(isCity())).getHoverName(), request.pay()).withStyle(ChatFormatting.YELLOW));
+                    request.count(), new ItemStack(TownTrades.money(town)).getHoverName(), request.pay()).withStyle(ChatFormatting.YELLOW));
             return InteractionResult.CONSUME;
         }
         say(serverPlayer, Component.translatable("town.flightsuit.line." + role.id() + "." + level().random.nextInt(3)));

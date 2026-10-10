@@ -90,7 +90,7 @@ public final class DbzSaga {
             this.from = from;
         }
 
-        String key() {
+        public String key() {
             return "saga_" + name().toLowerCase(java.util.Locale.ROOT);
         }
 
@@ -267,12 +267,27 @@ public final class DbzSaga {
         }
         CompoundTag world = data.world(planet);
         for (Site site : Site.values()) {
-            if (site.planet != planet || site == Site.CRATER || world.contains(site.key())) {
+            if (site.planet != planet || site == Site.CRATER) {
+                continue;
+            }
+            if (world.contains(site.key())) {
+                // M17: the Namekian village grew - one built before is built again (when no fight is on there).
+                BlockPos built = BlockPos.of(world.getLong(site.key()));
+                if (site == Site.NAMEK_VILLAGE && world.getInt(site.key() + "_layout") < NAMEK_LAYOUT && !FIGHTS.containsKey(planet)
+                        && level.isLoaded(built.offset(24, 0, 24)) && level.isLoaded(built.offset(-24, 0, -24))
+                        && someoneAt(level, built, 96.0D, site.from)) {
+                    namekVillage(level, built);
+                    world.putInt(site.key() + "_layout", NAMEK_LAYOUT);
+                    data.setDirty();
+                }
                 continue;
             }
             BlockPos column = site.around(landing);
             if (level.isLoaded(column) && someoneAt(level, column, 96.0D, site.from)) {
                 world.putLong(site.key(), build(level, site, column).asLong());
+                if (site == Site.NAMEK_VILLAGE) {
+                    world.putInt(site.key() + "_layout", NAMEK_LAYOUT);
+                }
                 data.setDirty();
             }
         }
@@ -500,6 +515,12 @@ public final class DbzSaga {
             }
         }
         play(level, fight, wave.intro(), () -> bindAll(level, fight), actors -> {
+            DbzFighterEntity gohan = actors.get("gohan");
+            if ("dbz.gohan_awakens".equals(wave.intro()) && gohan != null) {
+                // Super Saiyan 2: twice the damage from here on.
+                gohan.buff(2.0F, 1.0F, 0);
+                gohan.setAura(DbzFighterEntity.AURA_GOLD, 0);
+            }
             for (int i = 0; i < wave.foes().length; i++) {
                 double angle = i * Math.PI * 2.0D / Math.max(1, wave.foes().length);
                 int r = wave.foes().length > 1 ? 6 : 0;
@@ -899,15 +920,15 @@ public final class DbzSaga {
                 }
             }
         }
-        com.pfkfks.flightsuit.town.TownPlan plan = com.pfkfks.flightsuit.town.TownPlan.city(c);
-        com.pfkfks.flightsuit.town.TownRole[] crowd = {com.pfkfks.flightsuit.town.TownRole.CITY_CITIZEN,
-                com.pfkfks.flightsuit.town.TownRole.CITY_WORKER, com.pfkfks.flightsuit.town.TownRole.CITY_CHILD};
+        com.pfkfks.flightsuit.town.TownPlan plan = com.pfkfks.flightsuit.town.TownPlan.westCity(c);
+        com.pfkfks.flightsuit.town.TownRole[] crowd = {com.pfkfks.flightsuit.town.TownRole.DBZ_CITIZEN,
+                com.pfkfks.flightsuit.town.TownRole.DBZ_CITIZEN, com.pfkfks.flightsuit.town.TownRole.DBZ_CHILD};
         for (int i = 0; i < 10; i++) {
             int side = i % 2 == 0 ? -1 : 1;
             int row = (i / 2) % 3;
             BlockPos seat = c.offset(-6 + (i / 2) * 3, 1 + row, side * (12 + row));
             com.pfkfks.flightsuit.town.TownsfolkEntity fan = com.pfkfks.flightsuit.town.TownsfolkEntity.create(level,
-                    com.pfkfks.flightsuit.town.TownsfolkEntity.HERO_CITY, plan, crowd[i % crowd.length], i);
+                    com.pfkfks.flightsuit.town.TownsfolkEntity.WEST_CITY, plan, crowd[i % crowd.length], i);
             fan.moveTo(seat.getX() + 0.5D, seat.getY() + 0.5D, seat.getZ() + 0.5D, side < 0 ? 0.0F : 180.0F, 0.0F);
             fan.setNoAi(true);
             fan.setYHeadRot(side < 0 ? 0.0F : 180.0F);
@@ -1118,8 +1139,8 @@ public final class DbzSaga {
         }
     }
 
-    /** A Namekian dome: a half sphere of white with round green windows, a doorway to the south. */
-    static void dome(ServerLevel level, BlockPos base, int radius) {
+    /** A Namekian dome: a half sphere of white with round green windows, a doorway on {@code door}'s side. */
+    static void dome(ServerLevel level, BlockPos base, int radius, net.minecraft.core.Direction door) {
         BlockState wall = Blocks.WHITE_CONCRETE.defaultBlockState();
         BlockState window = Blocks.LIME_STAINED_GLASS.defaultBlockState();
         for (int dy = 0; dy <= radius; dy++) {
@@ -1135,25 +1156,52 @@ public final class DbzSaga {
                 }
             }
         }
-        set(level, base.offset(0, 1, radius), Blocks.AIR.defaultBlockState());
-        set(level, base.offset(0, 2, radius), Blocks.AIR.defaultBlockState());
+        BlockPos doorway = base.relative(door, radius);
+        set(level, doorway.above(), Blocks.AIR.defaultBlockState());
+        set(level, doorway.above(2), Blocks.AIR.defaultBlockState());
         set(level, base.offset(0, radius, 0), Blocks.SEA_LANTERN.defaultBlockState());
     }
 
-    private static void namekVillage(ServerLevel level, BlockPos center) {
-        clearRound(level, center, 14, Blocks.GRASS_BLOCK.defaultBlockState());
-        dome(level, center.offset(-8, 0, -6), 3);
-        dome(level, center.offset(8, 0, -6), 3);
-        dome(level, center.offset(0, 0, -10), 4);
-        // An Ajisa tree: a tall pale trunk under a round blue-green crown.
-        for (int dy = 1; dy <= 7; dy++) {
-            set(level, center.offset(6, dy, 7), Blocks.BIRCH_LOG.defaultBlockState());
+    /** The Namekian village's layout (M17 bundle D: ten domes round the green); older villages are rebuilt once. */
+    public static final int NAMEK_LAYOUT = 2;
+    /** The domes (x, z from the village centre), their doors facing the green - the villagers' homes (town.TownPlan.namek). */
+    public static final int[][] NAMEK_DOMES = namekDomes();
+
+    private static int[][] namekDomes() {
+        int[][] out = new int[10][];
+        for (int i = 0; i < out.length; i++) {
+            double angle = Math.toRadians(i * 36.0D + 18.0D);
+            out[i] = new int[]{(int) Math.round(Math.cos(angle) * 17.0D), (int) Math.round(Math.sin(angle) * 17.0D)};
         }
-        for (int dy = -2; dy <= 2; dy++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                for (int dx = -2; dx <= 2; dx++) {
-                    if (dx * dx + dy * dy + dz * dz <= 5) {
-                        set(level, center.offset(6 + dx, 9 + dy, 7 + dz), Blocks.CYAN_WOOL.defaultBlockState());
+        return out;
+    }
+
+    /** Which way a dome at (x, z) opens: towards the green in the middle. */
+    public static net.minecraft.core.Direction namekDoor(int[] at) {
+        if (Math.abs(at[0]) >= Math.abs(at[1])) {
+            return at[0] > 0 ? net.minecraft.core.Direction.WEST : net.minecraft.core.Direction.EAST;
+        }
+        return at[1] > 0 ? net.minecraft.core.Direction.NORTH : net.minecraft.core.Direction.SOUTH;
+    }
+
+    private static void namekVillage(ServerLevel level, BlockPos center) {
+        clearRound(level, center, 22, Blocks.GRASS_BLOCK.defaultBlockState());
+        for (int[] at : NAMEK_DOMES) {
+            dome(level, center.offset(at[0], 0, at[1]), 3, namekDoor(at));
+        }
+        // Ajisa trees between the green and the domes: a tall trunk under a round blue-green crown.
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.toRadians(60.0D + i * 120.0D);
+            BlockPos tree = center.offset((int) Math.round(Math.cos(angle) * 11.0D), 0, (int) Math.round(Math.sin(angle) * 11.0D));
+            for (int dy = 1; dy <= 7; dy++) {
+                set(level, tree.above(dy), Blocks.OAK_LOG.defaultBlockState());
+            }
+            for (int dy = -2; dy <= 2; dy++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dx = -2; dx <= 2; dx++) {
+                        if (dx * dx + dy * dy + dz * dz <= 5) {
+                            set(level, tree.offset(dx, 9 + dy, dz), Blocks.WARPED_WART_BLOCK.defaultBlockState());
+                        }
                     }
                 }
             }

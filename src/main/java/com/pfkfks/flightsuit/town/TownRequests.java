@@ -30,17 +30,26 @@ public final class TownRequests {
             case CITY_POLICE -> new Want[]{new Want(Items.IRON_INGOT, 4, 2), new Want(Items.COOKED_BEEF, 4, 2)};
             case CITY_CITIZEN -> new Want[]{new Want(Items.POPPY, 6, 1), new Want(Items.CAKE, 1, 3), new Want(Items.SWEET_BERRIES, 12, 1)};
             case CITY_CHILD -> new Want[]{new Want(Items.COOKIE, 6, 1), new Want(Items.SLIME_BALL, 2, 2), new Want(Items.GLOW_BERRIES, 6, 1)};
+            case DBZ_CITIZEN -> new Want[]{new Want(Items.CAKE, 1, 3), new Want(Items.COPPER_INGOT, 8, 2), new Want(Items.GLASS, 16, 2)};
+            case DBZ_CHILD -> new Want[]{new Want(Items.COOKIE, 6, 1), new Want(Items.FIREWORK_ROCKET, 3, 2), new Want(Items.MELON_SLICE, 8, 1)};
+            // Namekians drink only water: they ask for it, and for seeds for the Ajisa groves.
+            case NAMEKIAN -> new Want[]{new Want(Items.WATER_BUCKET, 1, 2), new Want(Items.OAK_SAPLING, 4, 2), new Want(Items.BONE_MEAL, 12, 2)};
             default -> new Want[0];
         };
     }
 
     /** A request for this role, or none (about a third have nothing to ask). */
     public static @Nullable TownsfolkEntity.Request roll(TownRole role, RandomSource random) {
+        return roll(role, random, role.isCity() ? 5 : 4);
+    }
+
+    /** The same, paid at {@code perEmerald} of the town's money (zeni: 5). */
+    public static @Nullable TownsfolkEntity.Request roll(TownRole role, RandomSource random, int perEmerald) {
         Want[] wants = wants(role);
         if (wants.length == 0 || random.nextInt(3) == 0) {
             return null;
         }
         Want want = wants[random.nextInt(wants.length)];
-        return new TownsfolkEntity.Request(want.item(), want.count(), want.emeralds() * (role.isCity() ? 5 : 4));
+        return new TownsfolkEntity.Request(want.item(), want.count(), want.emeralds() * perEmerald);
     }
 }

@@ -25,6 +25,11 @@ public final class TownTrades {
         return city ? ModItems.DOLLAR.get() : ModItems.WUZHU_COIN.get();
     }
 
+    /** The money of a town by its id (TownsfolkEntity.town): zeni on Dragon Ball Earth and Namek (M17). */
+    public static Item money(int town) {
+        return town == TownsfolkEntity.WEST_CITY || town == TownsfolkEntity.NAMEK ? ModItems.ZENI.get() : money(town == TownsfolkEntity.HERO_CITY);
+    }
+
     private static Item money;
 
     /** Pay {@code price} of the town's money for {@code count} of {@code item}. */
@@ -45,7 +50,11 @@ public final class TownTrades {
 
     public static MerchantOffers offers(TownRole role, int kind, int town) {
         MerchantOffers offers = new MerchantOffers();
-        money = money(role.isCity());
+        money = money(town);
+        if (role == TownRole.DBZ_SHOPKEEPER) {
+            dbzOffers(offers, kind);
+            return offers;
+        }
         if (role.isCity()) {
             switch (kind) {
                 case 0 -> {
@@ -123,5 +132,38 @@ public final class TownTrades {
             }
         }
         return offers;
+    }
+
+    /** West City (M17): a Capsule Corp shop, a bakery, a training goods shop (who changes emeralds: 1 = 5 zeni). */
+    private static void dbzOffers(MerchantOffers offers, int kind) {
+        switch (kind) {
+            case 0 -> {
+                // Capsule Corp: machines and power.
+                offers.add(sell(ModItems.ENERGY_CELL.get(), 1, 20));
+                offers.add(sell(ModItems.ARC_REACTOR.get(), 1, 120));
+                offers.add(sell(Items.REDSTONE, 8, 5));
+                offers.add(sell(Items.PISTON, 2, 6));
+                offers.add(buy(Items.COPPER_INGOT, 6, 5));
+                offers.add(buy(Items.IRON_INGOT, 4, 5));
+            }
+            case 1 -> {
+                // Bakery.
+                offers.add(sell(Items.BREAD, 6, 4));
+                offers.add(sell(Items.CAKE, 1, 8));
+                offers.add(sell(Items.PUMPKIN_PIE, 3, 5));
+                offers.add(sell(Items.COOKIE, 12, 4));
+                offers.add(buy(Items.WHEAT, 20, 5));
+                offers.add(buy(Items.SUGAR_CANE, 16, 5));
+            }
+            default -> {
+                // Training goods: for fighters - and a senzu bean, at a price.
+                offers.add(sell(ModItems.SENZU_BEAN.get(), 1, 60));
+                offers.add(sell(Items.IRON_CHESTPLATE, 1, 30));
+                offers.add(sell(Items.GOLDEN_APPLE, 1, 30));
+                offers.add(sell(Items.COOKED_BEEF, 6, 6));
+                offers.add(buy(Items.DIAMOND, 1, 20));
+                exchange(offers, 5);
+            }
+        }
     }
 }

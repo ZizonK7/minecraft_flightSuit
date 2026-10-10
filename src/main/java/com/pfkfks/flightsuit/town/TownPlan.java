@@ -141,4 +141,45 @@ public final class TownPlan {
         plan.roles(TownRole.CITY_CHILD, 3);
         return plan;
     }
+
+    /** M17: West City round Capsule Corp ({@code cc}: its centre at standing height - planet.dbz.WestCity). */
+    public static TownPlan westCity(BlockPos cc) {
+        TownPlan plan = new TownPlan();
+        for (int[] at : com.pfkfks.flightsuit.planet.dbz.WestCity.HOUSES) {
+            plan.homes.add(cc.offset(at[0], 0, at[1]));
+        }
+        for (int[] at : com.pfkfks.flightsuit.planet.dbz.WestCity.SHOPS) {
+            // Behind the counter inside the door.
+            net.minecraft.core.Direction door = com.pfkfks.flightsuit.planet.dbz.WestCity.doorFacing(at);
+            plan.add(TownRole.Place.SHOP, cc.offset(at[0], 0, at[1]).relative(door.getOpposite()));
+        }
+        for (int[] at : com.pfkfks.flightsuit.planet.dbz.WestCity.SQUARE) {
+            plan.add(TownRole.Place.SQUARE, cc.offset(at[0], 0, at[1]));
+        }
+        int[] park = com.pfkfks.flightsuit.planet.dbz.WestCity.PARK;
+        for (int[] at : new int[][]{{-3, 0}, {3, 1}, {0, 3}, {1, -3}}) {
+            plan.add(TownRole.Place.PLAY, cc.offset(park[0] + at[0], 0, park[1] + at[1]));
+            plan.add(TownRole.Place.SQUARE, cc.offset(park[0] + at[0], 0, park[1] + at[1]));
+        }
+        plan.roles(TownRole.DBZ_SHOPKEEPER, 3);
+        plan.roles(TownRole.DBZ_CITIZEN, 7);
+        plan.roles(TownRole.DBZ_CHILD, 3);
+        return plan;
+    }
+
+    /** M17: the Namekian village ({@code center}: on the ground, as DbzSaga keeps it) - six Namekians among the domes. */
+    public static TownPlan namek(BlockPos center) {
+        TownPlan plan = new TownPlan();
+        BlockPos base = center.above();
+        for (int[] at : com.pfkfks.flightsuit.planet.dbz.DbzSaga.NAMEK_DOMES) {
+            plan.homes.add(base.offset(at[0], 0, at[1]));
+        }
+        // The green between the domes (the middle is kept for Dende, and for fights).
+        for (int i = 0; i < 8; i++) {
+            double angle = Math.toRadians(i * 45.0D);
+            plan.add(TownRole.Place.SQUARE, base.offset((int) Math.round(Math.cos(angle) * 9.0D), 0, (int) Math.round(Math.sin(angle) * 9.0D)));
+        }
+        plan.roles(TownRole.NAMEKIAN, 6);
+        return plan;
+    }
 }

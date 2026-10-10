@@ -3,10 +3,17 @@ package com.pfkfks.flightsuit.town;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.hero.HeroCityBuilder;
 import com.pfkfks.flightsuit.hero.HeroData;
+import com.pfkfks.flightsuit.planet.Planet;
+import com.pfkfks.flightsuit.planet.PlanetData;
+import com.pfkfks.flightsuit.planet.dbz.DbzEarth;
+import com.pfkfks.flightsuit.planet.dbz.DbzLandmarks;
+import com.pfkfks.flightsuit.planet.dbz.DbzSaga;
+import com.pfkfks.flightsuit.planet.dbz.WestCity;
 import com.pfkfks.flightsuit.war.FortRecord;
 import com.pfkfks.flightsuit.war.FortressBuilder;
 import com.pfkfks.flightsuit.war.WarData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -33,8 +40,14 @@ public final class TownLife {
 
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !(event.level instanceof ServerLevel level) || level.dimension() != Level.OVERWORLD
-                || level.getGameTime() % 100L != 37L) {
+        if (event.phase != TickEvent.Phase.END || !(event.level instanceof ServerLevel level) || level.getGameTime() % 100L != 37L) {
+            return;
+        }
+        if (level.dimension() == Planet.DBZ_EARTH.dimension() || level.dimension() == Planet.NAMEK.dimension()) {
+            planetTowns(level);
+            return;
+        }
+        if (level.dimension() != Level.OVERWORLD) {
             return;
         }
         WarData war = WarData.get(level.getServer());
@@ -50,6 +63,26 @@ public final class TownLife {
             BlockPos center = heroes.center();
             keep(level, TownsfolkEntity.HERO_CITY, TownPlan.city(center),
                     new AABB(center).inflate(HeroCityBuilder.EDGE + 12, 64.0D, HeroCityBuilder.EDGE + 12));
+        }
+    }
+
+    /** M17: West City on Dragon Ball Earth, the Namekian village on Namek - once they're built. */
+    private static void planetTowns(ServerLevel level) {
+        PlanetData data = PlanetData.get(level.getServer());
+        if (level.dimension() == Planet.DBZ_EARTH.dimension()) {
+            CompoundTag world = data.world(Planet.DBZ_EARTH);
+            BlockPos cc = DbzEarth.center(world, DbzLandmarks.CAPSULE_CORP);
+            if (cc != null && world.contains(WestCity.KEY) && anyoneNear(level, cc, CITY_NEAR)) {
+                keep(level, TownsfolkEntity.WEST_CITY, TownPlan.westCity(cc),
+                        new AABB(cc).inflate(WestCity.REACH, 24.0D, WestCity.REACH));
+            }
+            return;
+        }
+        CompoundTag world = data.world(Planet.NAMEK);
+        BlockPos village = DbzSaga.center(world, DbzSaga.Site.NAMEK_VILLAGE);
+        if (village != null && world.getInt(DbzSaga.Site.NAMEK_VILLAGE.key() + "_layout") >= DbzSaga.NAMEK_LAYOUT
+                && anyoneNear(level, village, FORT_NEAR)) {
+            keep(level, TownsfolkEntity.NAMEK, TownPlan.namek(village), new AABB(village).inflate(28.0D, 16.0D, 28.0D));
         }
     }
 

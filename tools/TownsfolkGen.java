@@ -39,7 +39,12 @@ public class TownsfolkGen {
         File dir = new File(new File(args[0]), "entity/townsfolk");
         dir.mkdirs();
         String[] names = {"fort_farmer", "fort_merchant", "fort_smith", "fort_cook", "fort_elder", "fort_child",
-                "city_worker", "city_scientist", "city_police", "city_shopkeeper", "city_citizen", "city_child"};
+                "city_worker", "city_scientist", "city_police", "city_shopkeeper", "city_citizen", "city_child",
+                "dbz_citizen", "dbz_shopkeeper", "dbz_child", "namekian"};
+        if (args.length > 1) {
+            // Only the skins named (M17: the new ones, without redrawing the rest).
+            names = java.util.Arrays.copyOfRange(args, 1, args.length);
+        }
         for (String name : names) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
@@ -58,6 +63,10 @@ public class TownsfolkGen {
                 case "city_shopkeeper" -> cityShopkeeper();
                 case "city_citizen" -> cityCitizen();
                 case "city_child" -> cityChild();
+                case "dbz_citizen" -> dbzCitizen();
+                case "dbz_shopkeeper" -> dbzShopkeeper();
+                case "dbz_child" -> dbzChild();
+                case "namekian" -> namekian();
                 default -> throw new IllegalStateException(name);
             }
             ImageIO.write(skin, "png", new File(dir, name + ".png"));
@@ -219,6 +228,59 @@ public class TownsfolkGen {
         head("short", "none", false);
         tunic('A', 'B', 11, 'A');
         limbs("AAASSSSSSSSS", "PPPPPSSSSSWW");
+    }
+
+    // ---------------------------------------------------------------- Dragon Ball Earth's West City, Namek (M17)
+
+    /** West City citizen: lavender hair, a blue Capsule Corp jacket (white CC patch on the back), brown trousers. */
+    static void dbzCitizen() {
+        tone(TONE_FAIR, 0xFF3A3A6A, 0xFF2A2A4A);
+        hair(0xFF8A7AD8);
+        colors("A", 0xFF2A5AB0, "a", 0xFF1E4488, "w", 0xFFF0F0F0, "P", 0xFF6A4A2E, "p", 0xFF4A321E);
+        head("short", "none", false);
+        wrap(BODY, (f, i, j) -> f == Face.BACK && j >= 2 && j <= 4 && i >= 2 && i <= 5 ? ((i + j) % 2 == 0 ? 'w' : 'A')
+                : f == Face.FRONT && (i == 3 || i == 4) ? 'a' : j == 11 ? 'a' : 'A');
+        top(BODY, 'A');
+        limbs("AAAAAAAAAAaS", "PPPPPPPPPPpK");
+    }
+
+    /** West City shopkeeper: an orange shirt, a yellow cap, a white apron. */
+    static void dbzShopkeeper() {
+        tone(TONE_TAN, 0xFF1A1410, 0xFF1A1410);
+        hair(0xFF1A1410);
+        colors("A", 0xFFE8742A, "w", 0xFFF2F2EE, "g", 0xFFC8C8C4, "Y", 0xFFF0C83A, "y", 0xFFC8A02A, "P", 0xFF2E3A5A);
+        head("short", "mustache", false);
+        top(HAT, 'Y');
+        ring(HAT, "YYy");
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && i >= 1 && i <= 6 && j >= 2 ? (j == 2 ? 'g' : 'w') : 'A');
+        top(BODY, 'A');
+        limbs("AAAASSSSSSSS", "PPPPPPPPPPKK");
+    }
+
+    /** A West City kid: a little orange training gi with a blue sash, black hair sticking up. */
+    static void dbzChild() {
+        tone(TONE_FAIR, 0xFF1A1410, 0xFF1A1410);
+        hair(0xFF141012);
+        colors("A", 0xFFF07A1E, "B", 0xFFC85E14, "N", 0xFF2A4AB0, "n", 0xFF1E3480);
+        head("short", "none", false);
+        top(HAT, (f, i, j) -> (i + j) % 3 == 0 && j < 4 ? 'H' : '.');
+        wrap(BODY, (f, i, j) -> j == 8 ? 'N' : f == Face.FRONT && i == 3 + (j < 6 ? 0 : 1) && j < 8 ? 'B' : 'A');
+        top(BODY, 'A');
+        limbs("AAAASSSSSSSS", "AAAAAAAAANnn");
+    }
+
+    /** A Namekian (after Dende): green skin with pink forearms, antennae, a white robe with a purple sash. */
+    static void namekian() {
+        tone(0xFF6AB04A, 0xFF3A6A2A, 0xFF141216);
+        hair(0xFF5A9A3E);
+        colors("w", 0xFFF2F0EA, "g", 0xFFC8C6BE, "V", 0xFF6A3A9A, "v", 0xFF4A2A70, "k", 0xFFE89AA8, "B", 0xFF4A3424);
+        head("bald", "none", false);
+        // Antennae: two dark stalks on the forehead, drawn on the hat layer.
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "..s..s..", 1, "..M..M.."));
+        top(HAT, (f, i, j) -> (i == 2 || i == 5) && j >= 5 ? 'M' : '.');
+        wrap(BODY, (f, i, j) -> j == 7 ? 'V' : j == 8 ? 'v' : f == Face.FRONT && (i == 3 || i == 4) && j < 7 ? 'g' : 'w');
+        top(BODY, 'w');
+        limbs("wwwwSSSkkkSS", "wwwwwwwwwwBB");
     }
 
     static void limbs(String armRows, String legRows) {

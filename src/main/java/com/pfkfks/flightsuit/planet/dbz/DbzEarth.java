@@ -21,8 +21,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Dragon Ball Earth's open world (DESIGN.md 4-16, M15): builds its sights as people come near, keeps Bulma and
- * Goku at home and lets Saibamen roam at night. The fights at the crater (chapter 1) are DbzSaga's scenes since M17.
+ * Dragon Ball Earth's open world (DESIGN.md 4-16, M15): builds its sights as people come near (West City round
+ * Capsule Corp since M17), keeps Bulma and Goku at home and lets Saibamen roam at night. The fights at the crater (chapter 1) are DbzSaga's scenes since M17.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class DbzEarth {
@@ -50,6 +50,13 @@ public final class DbzEarth {
                 world.putLong(mark.id(), center.asLong());
                 data.setDirty();
             }
+        }
+        // M17: West City round Capsule Corp, once Capsule Corp is up and everything it covers is loaded.
+        BlockPos cc = center(world, DbzLandmarks.CAPSULE_CORP);
+        if (cc != null && world.getInt(WestCity.KEY) < WestCity.LAYOUT && anyoneWithin(level, cc, 96.0D) && WestCity.loaded(level, cc)) {
+            WestCity.build(level, cc);
+            world.putInt(WestCity.KEY, WestCity.LAYOUT);
+            data.setDirty();
         }
         // After the sights: a ball set down this tick isn't then built over.
         DragonBalls.tick(level, data, site);
@@ -161,7 +168,9 @@ public final class DbzEarth {
     private static boolean nearHome(CompoundTag world, ServerPlayer player) {
         for (DbzLandmarks mark : new DbzLandmarks[]{DbzLandmarks.CAPSULE_CORP, DbzLandmarks.KAME_HOUSE}) {
             BlockPos center = center(world, mark);
-            if (center != null && player.distanceToSqr(center.getX(), player.getY(), center.getZ()) < 64.0D * 64.0D) {
+            // West City reaches 62 blocks out from Capsule Corp, and Saibamen come up to 40 from you.
+            double reach = mark == DbzLandmarks.CAPSULE_CORP ? 110.0D : 64.0D;
+            if (center != null && player.distanceToSqr(center.getX(), player.getY(), center.getZ()) < reach * reach) {
                 return true;
             }
         }

@@ -8,6 +8,8 @@ import java.io.IOException;
  * so pixel art is drawn in code). Re-run after changing a palette:
  *
  *   java tools/TextureGen.java src/main/resources/assets/flightsuit/textures
+ *
+ * With "zeni" after the directory, only the M17 zeni note is drawn (nothing else is overwritten).
  */
 public class TextureGen {
     // Palette.
@@ -26,6 +28,10 @@ public class TextureGen {
         block.mkdirs();
         item.mkdirs();
         armor.mkdirs();
+        if (args.length > 1 && args[1].equals("zeni")) {
+            write(zeni(), new File(item, "zeni.png"));
+            return;
+        }
 
         write(stationTop(), new File(block, "suit_station_top.png"));
         write(stationSide(), new File(block, "suit_station_side.png"));
@@ -572,6 +578,22 @@ public class TextureGen {
         fill(img, 7, 7, 2, 2, paper);
         px(img, 3, 6, ink);
         px(img, 12, 9, ink);
+        return img;
+    }
+
+    /** Zeni (Dragon Ball Earth's money, M17): a cream note with an orange band and a red seal. */
+    static BufferedImage zeni() {
+        BufferedImage img = img(16, 16);
+        int edge = 0xFF8A5A1E, paper = 0xFFF2E2B0, band = 0xFFE8962A, seal = 0xFFC0302A, ink = 0xFF6A3A12;
+        fill(img, 1, 4, 14, 8, edge);
+        fill(img, 2, 5, 12, 6, paper);
+        fill(img, 2, 5, 3, 6, band);
+        fill(img, 9, 6, 3, 4, seal);
+        px(img, 10, 7, paper);
+        px(img, 10, 8, paper);
+        fill(img, 6, 6, 2, 1, ink);
+        fill(img, 6, 9, 2, 1, ink);
+        px(img, 13, 10, ink);
         return img;
     }
 

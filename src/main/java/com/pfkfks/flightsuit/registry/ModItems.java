@@ -91,6 +91,8 @@ public final class ModItems {
      */
     public static final RegistryObject<Item> WUZHU_COIN = ITEMS.register("wuzhu_coin", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> DOLLAR = ITEMS.register("dollar", () -> new Item(new Item.Properties()));
+    /** M17: Dragon Ball Earth's money (West City's shops). */
+    public static final RegistryObject<Item> ZENI = ITEMS.register("zeni", () -> new Item(new Item.Properties()));
     /** The guide book: controls and how to start (guide/GuideBookItem). */
     public static final RegistryObject<Item> GUIDE_BOOK = ITEMS.register("guide_book",
             () -> new com.pfkfks.flightsuit.guide.GuideBookItem(new Item.Properties().stacksTo(1)));

@@ -65,6 +65,7 @@ public class FlightSuitMod {
                         output.accept(ModItems.SENZU_BEAN.get());
                         output.accept(ModItems.WUZHU_COIN.get());
                         output.accept(ModItems.DOLLAR.get());
+                        output.accept(ModItems.ZENI.get());
                         output.accept(ModItems.DRAGON_RADAR.get());
                         output.accept(ModItems.INFINITY_GAUNTLET.get());
                         for (com.pfkfks.flightsuit.thanos.InfinityStone stone : com.pfkfks.flightsuit.thanos.InfinityStone.values()) {
