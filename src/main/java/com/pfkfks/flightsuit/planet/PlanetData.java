@@ -28,8 +28,10 @@ public class PlanetData extends SavedData {
     /** One player's progress on the planets. */
     public static final class Traveller {
         public @Nullable Home home;
-        /** Story stage per planet (Story.Stage ordinal). */
+        /** Story stage per planet by ordinal - how it was saved before M17 (PlanetStory converts it on reading). */
         public final Map<Planet, Integer> stage = new EnumMap<>(Planet.class);
+        /** M17: story stage per planet by name (PlanetStory.DbzStage). */
+        public final Map<Planet, String> stageName = new EnumMap<>(Planet.class);
         /** Day the next story beat may happen (e.g. the Saiyans land a day after Raditz). */
         public long nextBeatDay;
         /** Chapters cleared, per planet. */
@@ -48,6 +50,9 @@ public class PlanetData extends SavedData {
             CompoundTag stages = new CompoundTag();
             stage.forEach((planet, value) -> stages.putInt(planet.id(), value));
             tag.put("Stage", stages);
+            CompoundTag names = new CompoundTag();
+            stageName.forEach((planet, value) -> names.putString(planet.id(), value));
+            tag.put("StageName", names);
             CompoundTag clears = new CompoundTag();
             cleared.forEach((planet, value) -> clears.putInt(planet.id(), value));
             tag.put("Cleared", clears);
@@ -66,8 +71,12 @@ public class PlanetData extends SavedData {
                 traveller.home = new Home(ResourceKey.create(Registries.DIMENSION, dim), BlockPos.of(tag.getLong("HomePos")));
             }
             CompoundTag stages = tag.getCompound("Stage");
+            CompoundTag names = tag.getCompound("StageName");
             CompoundTag clears = tag.getCompound("Cleared");
             for (Planet planet : Planet.values()) {
+                if (names.contains(planet.id())) {
+                    traveller.stageName.put(planet, names.getString(planet.id()));
+                }
                 if (stages.contains(planet.id())) {
                     traveller.stage.put(planet, stages.getInt(planet.id()));
                 }

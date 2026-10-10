@@ -22,25 +22,44 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Each planet's main story (DESIGN.md 4-16: 오픈 월드 + 메인 스토리). Dragon Ball Earth, chapter 1 - the
- * Saiyan saga: land → Bulma at Capsule Corp → Goku at Kame House → Raditz at the crater (Goku fights beside
- * you; the scouter is yours) → a day later the Saiyans land there: Saibamen, Nappa, Vegeta → chapter clear.
- * Chapters 2-4 (Namek, the androids and Cell, Majin Buu) follow on from there - their scenes run in DbzSaga.
+ * Saiyan saga: land → Bulma at Capsule Corp → Goku at Kame House → Raditz at the crater (Goku and Piccolo fight
+ * beside you; the scouter is yours) → a day later the Saibamen and Nappa → Vegeta → chapter clear. Chapters 2-4
+ * (Namek, the androids and Cell, Majin Buu) follow on from there. Every fight, with its cutscenes, runs in DbzSaga.
  * "/planet" shows what's next and which way it is.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class PlanetStory {
+    /**
+     * The Dragon Ball story's points, in the order they come (declaration order = progress). Since M17 saved by name,
+     * so new points can go in the middle (NAPPA_BEATEN did); an ordinal saved before is read in the old order
+     * ({@link #LEGACY}).
+     */
     public enum DbzStage {
-        ARRIVED, MET_BULMA, MET_GOKU, RADITZ_BEATEN, SAIYANS_BEATEN,
-        // Chapter 2 (Namek), 3 (androids, Cell), 4 (Majin Buu) - added after the M16 test; saved by ordinal.
+        ARRIVED, MET_BULMA, MET_GOKU, RADITZ_BEATEN,
+        /** M17: the Saibamen and Nappa are beaten (Yamcha and Piccolo fell); Vegeta comes at once. */
+        NAPPA_BEATEN,
+        SAIYANS_BEATEN,
+        // Chapter 2 (Namek), 3 (androids, Cell), 4 (Majin Buu).
         NAMEK_OPEN, MET_DENDE, ZARBON_BEATEN, GINYU_BEATEN, FRIEZA_BEATEN,
         MET_TRUNKS, ANDROIDS_BEATEN, CELL_BEATEN,
-        BUU_BEATEN, KID_BUU_BEATEN
+        BUU_BEATEN, KID_BUU_BEATEN;
+
+        /** Whether this is at least as far as {@code other}. */
+        public boolean atLeast(DbzStage other) {
+            return ordinal() >= other.ordinal();
+        }
     }
+
+    /** The order the stages were saved in (by ordinal) before M17. */
+    private static final DbzStage[] LEGACY = {DbzStage.ARRIVED, DbzStage.MET_BULMA, DbzStage.MET_GOKU, DbzStage.RADITZ_BEATEN,
+            DbzStage.SAIYANS_BEATEN, DbzStage.NAMEK_OPEN, DbzStage.MET_DENDE, DbzStage.ZARBON_BEATEN, DbzStage.GINYU_BEATEN,
+            DbzStage.FRIEZA_BEATEN, DbzStage.MET_TRUNKS, DbzStage.ANDROIDS_BEATEN, DbzStage.CELL_BEATEN, DbzStage.BUU_BEATEN,
+            DbzStage.KID_BUU_BEATEN};
 
     /** Whether the player has got as far as {@code stage}. */
     public static boolean reached(ServerPlayer player, DbzStage stage) {
         DbzStage theirs = dbzStage(player);
-        return theirs != null && theirs.ordinal() >= stage.ordinal();
+        return theirs != null && theirs.atLeast(stage);
     }
 
     /** Namek opens on the launch pad once Bulma has the coordinates (chapter 1 done, then a word with her). */
@@ -85,13 +104,32 @@ public final class PlanetStory {
     }
 
     public static @Nullable DbzStage dbzStage(ServerPlayer player) {
-        Integer stage = PlanetData.get(player.server).traveller(player.getUUID()).stage.get(Planet.DBZ_EARTH);
-        return stage == null ? null : DbzStage.values()[Math.max(0, Math.min(DbzStage.values().length - 1, stage))];
+        PlanetData data = PlanetData.get(player.server);
+        PlanetData.Traveller traveller = data.traveller(player.getUUID());
+        String name = traveller.stageName.get(Planet.DBZ_EARTH);
+        if (name != null) {
+            for (DbzStage stage : DbzStage.values()) {
+                if (stage.name().equals(name)) {
+                    return stage;
+                }
+            }
+        }
+        Integer legacy = traveller.stage.get(Planet.DBZ_EARTH);
+        if (legacy == null) {
+            return null;
+        }
+        // Saved by ordinal before M17: read it in the old order, and keep it by name from now on.
+        DbzStage stage = LEGACY[Math.max(0, Math.min(LEGACY.length - 1, legacy))];
+        traveller.stageName.put(Planet.DBZ_EARTH, stage.name());
+        traveller.stage.remove(Planet.DBZ_EARTH);
+        data.setDirty();
+        return stage;
     }
 
     public static void setStage(ServerPlayer player, DbzStage stage) {
         PlanetData data = PlanetData.get(player.server);
-        data.traveller(player.getUUID()).stage.put(Planet.DBZ_EARTH, stage.ordinal());
+        data.traveller(player.getUUID()).stageName.put(Planet.DBZ_EARTH, stage.name());
+        data.traveller(player.getUUID()).stage.remove(Planet.DBZ_EARTH);
         data.setDirty();
     }
 
@@ -161,7 +199,7 @@ public final class PlanetStory {
         DbzLandmarks target = switch (stage) {
             case ARRIVED, SAIYANS_BEATEN, FRIEZA_BEATEN -> DbzLandmarks.CAPSULE_CORP;
             case MET_BULMA -> DbzLandmarks.KAME_HOUSE;
-            case MET_GOKU, RADITZ_BEATEN -> DbzLandmarks.CRATER;
+            case MET_GOKU, RADITZ_BEATEN, NAPPA_BEATEN -> DbzLandmarks.CRATER;
             default -> null;
         };
         // Chapters 2-4: the scene's sight (DbzSaga), on Namek or back on Earth.
@@ -276,10 +314,12 @@ public final class PlanetStory {
                 } else if (stage == DbzStage.SAIYANS_BEATEN) {
                     // Chapter 2: the Namekian dragon balls - she sets the ship's course.
                     player.sendSystemMessage(who.line("namek", player.getName()));
+                    player.sendSystemMessage(who.line("namek_2"));
+                    player.sendSystemMessage(who.line("namek_3"));
                     setStage(player, DbzStage.NAMEK_OPEN);
                     objective(player);
                 } else {
-                    player.sendSystemMessage(who.line(stage.ordinal() > DbzStage.SAIYANS_BEATEN.ordinal() ? "later"
+                    player.sendSystemMessage(who.line(stage.atLeast(DbzStage.NAMEK_OPEN) ? "later"
                             : stage.name().toLowerCase(java.util.Locale.ROOT)));
                     if (!player.getInventory().contains(new ItemStack(ModItems.DRAGON_RADAR.get()))) {
                         give(player, new ItemStack(ModItems.DRAGON_RADAR.get()));
@@ -290,25 +330,30 @@ public final class PlanetStory {
             case GOKU -> {
                 if (stage == DbzStage.MET_BULMA) {
                     player.sendSystemMessage(who.line("raditz", player.getName()));
+                    player.sendSystemMessage(who.line("raditz_2"));
                     setStage(player, DbzStage.MET_GOKU);
                     objective(player);
                 } else {
-                    player.sendSystemMessage(who.line(stage.ordinal() > DbzStage.SAIYANS_BEATEN.ordinal() ? "later"
+                    player.sendSystemMessage(who.line(stage.atLeast(DbzStage.NAMEK_OPEN) ? "later"
                             : stage.name().toLowerCase(java.util.Locale.ROOT)));
                 }
             }
             case DENDE -> {
                 if (stage == DbzStage.NAMEK_OPEN) {
                     player.sendSystemMessage(who.line("help", player.getName()));
+                    player.sendSystemMessage(who.line("help_2"));
+                    player.sendSystemMessage(who.line("help_3"));
                     setStage(player, DbzStage.MET_DENDE);
                     objective(player);
                 } else {
-                    player.sendSystemMessage(who.line(stage.ordinal() > DbzStage.MET_DENDE.ordinal() ? "thanks" : "hello"));
+                    player.sendSystemMessage(who.line(stage.atLeast(DbzStage.ZARBON_BEATEN) ? "thanks" : "hello"));
                 }
             }
             case TRUNKS -> {
                 if (stage == DbzStage.FRIEZA_BEATEN) {
                     player.sendSystemMessage(who.line("future", player.getName()));
+                    player.sendSystemMessage(who.line("future_2"));
+                    player.sendSystemMessage(who.line("future_3"));
                     setStage(player, DbzStage.MET_TRUNKS);
                     objective(player);
                 } else {
@@ -320,35 +365,11 @@ public final class PlanetStory {
         }
     }
 
-    /** A Saiyan is beaten: everyone fighting at the crater at that point in the story moves on. */
+    /**
+     * A boss withdrew. Since M17 every story fight moves on through DbzSaga's scenes (cutscenes at their moments, the
+     * scene's end), so there's nothing more to do here.
+     */
     public static void onBossBeaten(ServerLevel level, DbzFighterEntity boss, @Nullable Entity killer) {
-        DbzCharacter who = boss.getCharacter();
-        long day = level.getDayTime() / 24000L;
-        for (ServerPlayer player : level.players()) {
-            if (player.distanceToSqr(boss) > 96.0D * 96.0D) {
-                continue;
-            }
-            DbzStage stage = dbzStage(player);
-            if (who == DbzCharacter.RADITZ && stage == DbzStage.MET_GOKU) {
-                setStage(player, DbzStage.RADITZ_BEATEN);
-                PlanetData data = PlanetData.get(level.getServer());
-                data.traveller(player.getUUID()).nextBeatDay = day + 1;
-                data.setDirty();
-                give(player, new ItemStack(ModItems.SCOUTER.get()));
-                player.sendSystemMessage(Component.translatable("story.flightsuit.dbz_earth.raditz_done").withStyle(ChatFormatting.GOLD));
-                objective(player);
-            } else if (who == DbzCharacter.VEGETA && stage == DbzStage.RADITZ_BEATEN) {
-                setStage(player, DbzStage.SAIYANS_BEATEN);
-                PlanetData data = PlanetData.get(level.getServer());
-                data.traveller(player.getUUID()).cleared.merge(Planet.DBZ_EARTH, 1, Integer::sum);
-                data.setDirty();
-                give(player, new ItemStack(ModItems.SENZU_BEAN.get(), 3));
-                give(player, new ItemStack(Items.DIAMOND, 8));
-                give(player, new ItemStack(ModItems.ARC_REACTOR.get(), 2));
-                player.sendSystemMessage(Component.translatable("story.flightsuit.dbz_earth.chapter_clear").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-                objective(player);
-            }
-        }
     }
 
     private static void give(ServerPlayer player, ItemStack stack) {

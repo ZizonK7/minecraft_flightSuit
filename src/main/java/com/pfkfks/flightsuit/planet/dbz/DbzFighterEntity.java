@@ -120,6 +120,18 @@ public class DbzFighterEntity extends PathfinderMob {
     private record Milestone(float share, Runnable action) {
     }
 
+    /** Aura colours round a powered-up fighter (synced; drawn by the server as particles). */
+    public static final int AURA_NONE = 0;
+    public static final int AURA_GOLD = 1;
+    public static final int AURA_RED = 2;
+    public static final int AURA_WHITE = 3;
+    private int aura;
+    private int auraUntil;
+    /** The story has hung its moments on it (DbzSaga.arm) - once. */
+    private boolean armed;
+    /** M17: flying along with this player after a scene (DbzSaga), not fighting. */
+    private @Nullable java.util.UUID escortOf;
+
     public DbzFighterEntity(EntityType<? extends DbzFighterEntity> type, Level level) {
         super(type, level);
         setPersistenceRequired();
@@ -331,6 +343,35 @@ public class DbzFighterEntity extends PathfinderMob {
         return ran;
     }
 
+    public boolean isArmed() {
+        return armed;
+    }
+
+    public void setArmed() {
+        armed = true;
+    }
+
+    /** An aura round it (AURA_*) for {@code ticks} (0 = for good). */
+    public void setAura(int colour, int ticks) {
+        aura = colour;
+        auraUntil = ticks > 0 ? tickCount + ticks : 0;
+    }
+
+    /** After a scene: flies along with {@code player} (follows within 20 blocks, flies when farther, gone past 96). */
+    public void escort(java.util.UUID player) {
+        escortOf = player;
+        setFighting(false);
+        setActing(false);
+        clearRestriction();
+        setTarget(null);
+        bossBar.setVisible(false);
+        addTag("flightsuit_escort");
+    }
+
+    public boolean isEscort() {
+        return escortOf != null;
+    }
+
     /** Story buffs (Gohan's rage, Goku's Kaioken): damage dealt and taken, for {@code ticks} (0 = for good). */
     public void buff(float dealt, float taken, int ticks) {
         damageDealt = dealt;
@@ -350,6 +391,16 @@ public class DbzFighterEntity extends PathfinderMob {
                 damageDealt = 1.0F;
                 damageTaken = 1.0F;
                 buffUntil = 0;
+            }
+            if (aura != AURA_NONE && level() instanceof ServerLevel server) {
+                if (auraUntil > 0 && tickCount >= auraUntil) {
+                    aura = AURA_NONE;
+                } else if (tickCount % 2 == 0) {
+                    drawAura(server);
+                }
+            }
+            if (escortOf != null) {
+                tickEscort();
             }
         }
     }
@@ -1041,6 +1092,50 @@ public class DbzFighterEntity extends PathfinderMob {
     void goldAura(ServerLevel server) {
         server.sendParticles(GOLD, getX(), getY() + getBbHeight() / 2.0D, getZ(), 3, getBbWidth() * 0.7D, getBbHeight() * 0.45D,
                 getBbWidth() * 0.7D, 0.0D);
+    }
+
+    private static final DustParticleOptions RED = new DustParticleOptions(new Vector3f(1.0F, 0.2F, 0.15F), 2.0F);
+    private static final DustParticleOptions WHITE = new DustParticleOptions(new Vector3f(0.95F, 0.95F, 1.0F), 1.6F);
+
+    private void drawAura(ServerLevel server) {
+        DustParticleOptions dust = aura == AURA_RED ? RED : aura == AURA_WHITE ? WHITE : GOLD;
+        server.sendParticles(dust, getX(), getY() + getBbHeight() / 2.0D, getZ(), 3, getBbWidth() * 0.7D, getBbHeight() * 0.45D,
+                getBbWidth() * 0.7D, 0.0D);
+    }
+
+    /** Escorting: walks after its player when close, flies after them when they're far, leaves when they're gone. */
+    private void tickEscort() {
+        Player player = escortOf == null ? null : level().getPlayerByUUID(escortOf);
+        if (player == null || player.isSpectator() || distanceToSqr(player) > 96.0D * 96.0D) {
+            discard();
+            return;
+        }
+        double distance = distanceTo(player);
+        getLookControl().setLookAt(player, 30.0F, 30.0F);
+        if (distance > 12.0D || !player.onGround() && distance > 5.0D) {
+            // Fly: straight at a spot beside and above the player.
+            setNoGravity(true);
+            Vec3 spot = player.position().add(-Math.sin(Math.toRadians(player.getYRot() + 60.0F)) * 3.0D, 1.5D,
+                    Math.cos(Math.toRadians(player.getYRot() + 60.0F)) * 3.0D);
+            Vec3 to = spot.subtract(position());
+            double speed = Math.min(2.2D, Math.max(0.4D, to.length() * 0.15D));
+            setDeltaMovement(to.normalize().scale(speed));
+            float yaw = (float) (Math.atan2(to.z, to.x) * (180.0D / Math.PI)) - 90.0F;
+            setYRot(yaw);
+            yBodyRot = yaw;
+            if (getAction() != DbzAction.FLY) {
+                setAction(DbzAction.FLY);
+            }
+            getNavigation().stop();
+        } else {
+            if (isNoGravity()) {
+                setNoGravity(false);
+                setAction(DbzAction.IDLE);
+            }
+            if (distance > 4.0D && tickCount % 10 == 0) {
+                getNavigation().moveTo(player, 1.2D);
+            }
+        }
     }
 
     /** Short blindness etc. for what it hits - for DbzMoves. */

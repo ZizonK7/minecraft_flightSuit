@@ -9,8 +9,10 @@ import java.util.Map;
  * Draws the Dragon Ball Earth people (DESIGN.md 4-16, M15) as 64x64 classic player skins: Goku, Bulma, Raditz,
  * Nappa, Vegeta and the Saibamen; plus the scouter, senzu bean and dragon radar icons.
  *
- * Usage: java tools/DbzSkinGen.java <assets/flightsuit/textures dir>
- *   writes entity/dbz/<id>.png and item/{scouter,senzu_bean}.png
+ * Usage: java tools/DbzSkinGen.java <assets/flightsuit/textures dir> [new|preview]
+ *   writes entity/dbz/<id>.png and item/{scouter,senzu_bean}.png;
+ *   "new" only the M17 cast (M17_NEW), "preview" only docs/reference/dbz_preview.png (front and back of everyone,
+ *   the textures dir must be the repo's: the sheet goes to ../../../../../../docs/reference)
  *
  * Skin painting helpers are copied from HeroSkinGen (colours are letters looked up in the current palette).
  */
@@ -41,8 +43,17 @@ public class DbzSkinGen {
         File item = new File(root, "item");
         dir.mkdirs();
         item.mkdirs();
+        String mode = args.length > 1 ? args[1] : "all";
         java.util.List<String> names = new java.util.ArrayList<>(java.util.List.of("goku", "bulma", "raditz", "nappa", "vegeta", "saibaman"));
         names.addAll(java.util.List.of(SAGA));
+        names.addAll(java.util.List.of(M17_NEW));
+        if (mode.equals("preview")) {
+            preview(dir, new java.util.ArrayList<>(new java.util.LinkedHashSet<>(names)), new File(root, "../../../../../../docs/reference/dbz_preview.png"));
+            return;
+        }
+        if (mode.equals("new")) {
+            names = java.util.List.of(M17_NEW);
+        }
         for (String name : names) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
@@ -55,11 +66,20 @@ public class DbzSkinGen {
                 case "nappa" -> nappa();
                 case "vegeta" -> vegeta();
                 case "saibaman" -> saibaman();
-                default -> sagaSkin(name);
+                default -> {
+                    if (java.util.List.of(M17_NEW).contains(name)) {
+                        m17Skin(name);
+                    } else {
+                        sagaSkin(name);
+                    }
+                }
             }
             File out = new File(dir, name + ".png");
             ImageIO.write(skin, "png", out);
             System.out.println("wrote " + out);
+        }
+        if (mode.equals("new")) {
+            return;
         }
         ImageIO.write(icon(SCOUTER, Map.of('G', 0xFF3ADB5A, 'g', 0xFF1E8A34, 'V', 0xFFC8CDD8, 'v', 0xFF8C93A0, 'R', 0xFFD03A2A)), "png", new File(item, "scouter.png"));
         ImageIO.write(icon(SENZU, Map.of('G', 0xFF6FBF3A, 'g', 0xFF3E8A24, 'h', 0xFFB8E68A)), "png", new File(item, "senzu_bean.png"));
@@ -93,8 +113,13 @@ public class DbzSkinGen {
 
     /** Goku: orange gi with the blue belt and wristbands, blue undershirt at the neck, wild black hair. */
     static void goku() {
-        tone(0xFFF0C8A0, 0xFF141216, 0xFF141216);
-        hair(0xFF141216);
+        goku(0xFF141216, 0xFF141216);
+    }
+
+    /** Goku with this hair and these eyes (M17: golden and teal for the Super Saiyan). */
+    static void goku(int hairColour, int eyes) {
+        tone(0xFFF0C8A0, hairColour, eyes);
+        hair(hairColour);
         colors("O", 0xFFF07A1E, "o", 0xFFC85A10, "B", 0xFF2A4AB0, "b", 0xFF1E3480, "Y", 0xFFF2C230);
         head("short", "none", false);
         spikes('H');
@@ -285,7 +310,7 @@ public class DbzSkinGen {
     }
 
     /** Frieza (final form): white, purple domes on head, shoulders, chest and forearms, red eyes. */
-    static void frieza() {
+    static void friezaFinal() {
         tone(0xFFF4F2F4, 0xFF8A3A9A, 0xFFC82A3A);
         hair(0xFFE8E6EA);
         colors("P", 0xFF8A3AAA, "p", 0xFF6A2A8A, "w", 0xFFF4F2F4, "g", 0xFFC8C4CC);
@@ -393,6 +418,7 @@ public class DbzSkinGen {
             case "jeice" -> jeice();
             case "ginyu" -> ginyu();
             case "frieza" -> frieza();
+            case "frieza_final" -> friezaFinal();
             case "trunks" -> trunks();
             case "android_17" -> android17();
             case "android_18" -> android18();
@@ -406,6 +432,258 @@ public class DbzSkinGen {
 
     static final String[] SAGA = {"dende", "frieza_soldier", "dodoria", "zarbon", "guldo", "recoome", "burter", "jeice", "ginyu",
             "frieza", "trunks", "android_17", "android_18", "cell_jr", "cell", "majin_buu", "kid_buu"};
+
+    // ---------------------------------------------------------------- the M17 cast
+
+    /** Skins added in M17 ("new" draws only these; frieza is redrawn as his first form, the old drawing is frieza_final). */
+    static final String[] M17_NEW = {"goku_ssj", "gohan_kid", "gohan_teen", "gohan_teen_ssj2", "piccolo", "krillin", "yamcha", "tien",
+            "yajirobe", "mr_satan", "frieza", "frieza_final", "android_16", "cell_imperfect", "cell_semi", "super_buu", "super_buu_absorbed"};
+
+    static final int GOLD_HAIR = 0xFFF2D24A, TEAL_EYES = 0xFF2AAA8A;
+
+    static void m17Skin(String name) {
+        switch (name) {
+            case "goku_ssj" -> goku(GOLD_HAIR, TEAL_EYES);
+            case "gohan_kid" -> gohan(0xFF141216, 0xFF141216, true);
+            case "gohan_teen" -> gohan(0xFF141216, 0xFF141216, false);
+            case "gohan_teen_ssj2" -> gohan(GOLD_HAIR, TEAL_EYES, false);
+            case "piccolo" -> piccolo();
+            case "krillin" -> krillin();
+            case "yamcha" -> yamcha();
+            case "tien" -> tien();
+            case "yajirobe" -> yajirobe();
+            case "mr_satan" -> mrSatan();
+            case "frieza" -> frieza();
+            case "frieza_final" -> friezaFinal();
+            case "android_16" -> android16();
+            case "cell_imperfect" -> cellImperfect();
+            case "cell_semi" -> cellSemi();
+            case "super_buu" -> superBuu(false);
+            case "super_buu_absorbed" -> superBuu(true);
+            default -> throw new IllegalStateException(name);
+        }
+    }
+
+    /** Gohan: Piccolo's purple gi with a red sash, black (or Super Saiyan gold) spiky hair; the kid has a tuft on top. */
+    static void gohan(int hairColour, int eyes, boolean kid) {
+        tone(0xFFF0C8A0, hairColour, eyes);
+        hair(hairColour);
+        colors("P", 0xFF5A3A9A, "p", 0xFF3E2870, "R", 0xFFC8322A, "W", 0xFFF2F1EC);
+        head("short", "none", false);
+        spikes('H');
+        if (kid) {
+            top(HAT, (f, i, j) -> i >= 3 && i <= 4 && j >= 3 && j <= 4 ? 'H' : '.');
+        }
+        wrap(BODY, (f, i, j) -> j == 8 ? 'R' : 'P');
+        top(BODY, 'P');
+        face(BODY, Face.FRONT, rowsOf(12, "PPPPPPPP", 0, "PpSSSSpP", 1, "PPpSSpPP", 8, "RRRRRRRR", 9, "PPPRRPPP"));
+        limbs("PPPPSSSSSSRR", "PPPPPPPPPpKK");
+    }
+
+    /** Piccolo: green Namekian with antennae, purple gi, red sash, white turban with a purple band, pink arm patches. */
+    static void piccolo() {
+        namekian(0xFF5AAA4A);
+        colors("P", 0xFF5A3A9A, "p", 0xFF3E2870, "R", 0xFFC8322A, "T", 0xFFF2F1EC, "t", 0xFFC8C6BE, "K", 0xFF6A3A2A, "Q", 0xFFE88AA8);
+        top(HAT, (f, i, j) -> 'T');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "TTTTTTTT", 1, "TTTPPTTT", 2, "tttttttt"));
+        face(HAT, Face.RIGHT, rowsOf(8, "........", 0, "TTTTTTTT", 1, "TTTTTTTT", 2, "tttttttt"));
+        face(HAT, Face.LEFT, rowsOf(8, "........", 0, "TTTTTTTT", 1, "TTTTTTTT", 2, "tttttttt"));
+        face(HAT, Face.BACK, rowsOf(8, "........", 0, "TTTTTTTT", 1, "TTTTTTTT", 2, "tttttttt"));
+        wrap(BODY, (f, i, j) -> j == 8 ? 'R' : 'P');
+        top(BODY, 'P');
+        limbs("PPSSQSSSSSRR", "PPPPPPPPPpKK");
+    }
+
+    /** Krillin: bald with six dots on his forehead, the orange turtle gi and blue belt. */
+    static void krillin() {
+        tone(0xFFF0C8A0, 0xFF141216, 0xFF141216);
+        hair(0xFF8A6A50);
+        colors("O", 0xFFF07A1E, "o", 0xFFC85A10, "B", 0xFF2A4AB0, "D", 0xFF6A4A30);
+        head("bald", "none", false);
+        face(HEAD, Face.FRONT, rowsOf(8, "SSSSSSSS", 0, "SSSSSSSS", 1, "SSDSDSDS", 2, "SDSDSDSS", 3, "SbbSSbbS", 4, "SWeSSeWS", 5, "SSSssSSS",
+                6, "SSSMMSSS", 7, "SSSSSSSS"));
+        wrap(BODY, (f, i, j) -> j == 9 ? 'B' : 'O');
+        top(BODY, 'O');
+        face(BODY, Face.FRONT, "OBBBBBBO", "OOBBBBOO", "OOOBBOOO", "OOOOOOOO", "OOOOOOOO", "oOOOOOOo", "OOOOOOOO", "OOOOOOOO",
+                "OOOOOOOO", "BBBBBBBB", "OOOOOOOO", "oOOOOOOo");
+        limbs("OOOOSSSSBBSS", "OOOOOOOOBBBB");
+    }
+
+    /** Yamcha: shaggy black hair, a scar across his cheek, the orange turtle gi. */
+    static void yamcha() {
+        tone(0xFFE8BC92, 0xFF141216, 0xFF141216);
+        hair(0xFF141216);
+        colors("O", 0xFFF07A1E, "o", 0xFFC85A10, "B", 0xFF2A4AB0, "X", 0xFFB06A50);
+        head("long", "none", false);
+        face(HEAD, Face.FRONT, rowsOf(8, "HHHHHHHH", 0, "HHHHHHHH", 1, "HHHhhHHH", 2, "HSSSSSSH", 3, "HbbSSbbH", 4, "HWeSSeWH", 5, "HXSssSSH",
+                6, "HSXMMSSH", 7, "HSSSSSSH"));
+        wrap(BODY, (f, i, j) -> j == 9 ? 'B' : 'O');
+        top(BODY, 'O');
+        limbs("OOOOSSSSBBSS", "OOOOOOOOBBBB");
+    }
+
+    /** Tien: bald, a third eye in his forehead, a green top over black trousers, a red sash. */
+    static void tien() {
+        tone(0xFFF0C8A0, 0xFF141216, 0xFF141216);
+        hair(0xFF8A6A50);
+        colors("G", 0xFF2E8A4A, "g", 0xFF1E5A30, "R", 0xFFC8322A, "K", 0xFF1E1E22, "E", 0xFFC8322A);
+        head("bald", "none", false);
+        face(HEAD, Face.FRONT, rowsOf(8, "SSSSSSSS", 0, "SSSSSSSS", 1, "SSSWWSSS", 2, "SSSEESSS", 3, "SbbSSbbS", 4, "SWeSSeWS", 5, "SSSssSSS",
+                6, "SSSMMSSS", 7, "SSSSSSSS"));
+        wrap(BODY, (f, i, j) -> j >= 9 ? (j == 9 ? 'R' : 'K') : 'G');
+        top(BODY, 'G');
+        limbs("GGGSSSSSSSSS", "KKKKKKKKKKKK");
+    }
+
+    /** Yajirobe: round, a black topknot, a brown jacket over orange, a sword on his belt. */
+    static void yajirobe() {
+        tone(0xFFE8BC92, 0xFF141216, 0xFF141216);
+        hair(0xFF141216);
+        colors("N", 0xFF8A5A30, "n", 0xFF6A4220, "O", 0xFFE8901E, "K", 0xFF1E1E22);
+        head("ponytail", "stubble", false);
+        top(HAT, (f, i, j) -> i >= 3 && i <= 4 && j >= 3 && j <= 4 ? 'H' : '.');
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && i >= 3 && i <= 4 ? 'O' : 'N');
+        top(BODY, 'N');
+        face(BODY, Face.FRONT, rowsOf(12, "NNNOONNN", 8, "KKKKKKKK"));
+        limbs("NNNNNNNNSSSS", "nnnnnnnnnnKK");
+    }
+
+    /** Mr. Satan: a black afro and moustache, a white gi with a gold belt, black wristbands. */
+    static void mrSatan() {
+        tone(0xFFE8BC92, 0xFF141216, 0xFF141216);
+        hair(0xFF141216);
+        colors("w", 0xFFF2F1EC, "g", 0xFFC8C6BE, "Y", 0xFFE8C030, "K", 0xFF1E1E22);
+        head("short", "mustache", false);
+        top(HAT, 'H');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "HHHHHHHH", 1, "HHHHHHHH", 2, "H......H"));
+        face(HAT, Face.RIGHT, rowsOf(8, "........", 0, "HHHHHHHH", 1, "HHHHHHHH", 2, "HHHHHH.."));
+        face(HAT, Face.LEFT, rowsOf(8, "........", 0, "HHHHHHHH", 1, "HHHHHHHH", 2, "..HHHHHH"));
+        face(HAT, Face.BACK, rowsOf(8, "........", 0, "HHHHHHHH", 1, "HHHHHHHH", 2, "HHHHHHHH", 3, "HHHHHHHH"));
+        wrap(BODY, (f, i, j) -> j == 9 ? 'Y' : 'w');
+        top(BODY, 'w');
+        face(BODY, Face.FRONT, rowsOf(12, "wwwwwwww", 0, "wgSSSSgw", 1, "wwgSSgww", 9, "YYYYYYYY"));
+        limbs("wwwwSSSSSKKS", "wwwwwwwwwgKK");
+    }
+
+    /** Frieza's first form: horns, the purple dome on his head, his armour with brown shoulders. */
+    static void frieza() {
+        tone(0xFFF4F2F4, 0xFF8A3A9A, 0xFFC82A3A);
+        hair(0xFF1E1A1E);
+        colors("P", 0xFF8A3AAA, "w", 0xFFF4F2F4);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> i >= 2 && i <= 5 && j >= 2 && j <= 5 ? 'P' : 'S');
+        top(HAT, (f, i, j) -> (i == 0 || i == 7) && j >= 2 && j <= 4 ? 'H' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "H......H", 1, "H......H"));
+        forceArmour(0xFF2A2A44, 0xFF8A5A3A);
+        limbs("aaawwwwwPPww", "wwwwwwwwwwww");
+    }
+
+    /** Android 16: tall, a red crest of hair, green armour over a dark suit, a red ribbon at the shoulder. */
+    static void android16() {
+        tone(0xFFF0D0B4, 0xFFC8322A, 0xFF3A5A8A);
+        hair(0xFFD8402A);
+        colors("G", 0xFF3E8A3E, "g", 0xFF2A5E2A, "D", 0xFF3A3A44, "K", 0xFF1E1E22);
+        head("short", "none", false);
+        top(HAT, (f, i, j) -> i >= 2 && i <= 5 ? 'H' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "..HHHH.."));
+        wrap(BODY, (f, i, j) -> j < 8 ? (j == 0 && (i == 0 || i == 7) ? 'g' : 'G') : 'D');
+        top(BODY, 'G');
+        limbs("gggDDDDDDDSS", "DDDDDDDDKKKK");
+    }
+
+    /** Imperfect Cell: a dark green insect body with black spots, an orange beak of a mouth, a crest back over the head. */
+    static void cellImperfect() {
+        tone(0xFF3E7A3A, 0xFF141216, 0xFFC82A3A);
+        hair(0xFF2A5A2A);
+        colors("G", 0xFF4A8A3E, "g", 0xFF141216, "O", 0xFFE8901E, "K", 0xFF1E1E22);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> (i + j) % 3 == 0 ? 'g' : 'G');
+        face(HEAD, Face.FRONT, rowsOf(8, "GGGGGGGG", 3, "GbbGGbbG", 4, "GWeGGeWG", 5, "GGGOOGGG", 6, "GGOOOOGG", 7, "GGGGGGGG"));
+        top(HAT, (f, i, j) -> i >= 2 && i <= 5 && j >= 4 ? 'G' : '.');
+        wrap(BODY, (f, i, j) -> (i * 3 + j * 5) % 6 == 0 ? 'g' : 'G');
+        top(BODY, 'G');
+        limbs("GgGGgGGgGKKK", "GGgGGgGGKKKK");
+    }
+
+    /** Semi-perfect Cell: bulkier, the spotted green body, a pale purple face, a bigger crest. */
+    static void cellSemi() {
+        tone(0xFFD8C8E0, 0xFF8A3A9A, 0xFFC82A3A);
+        hair(0xFF4A8A3A);
+        colors("G", 0xFF5AAA4A, "g", 0xFF141216, "K", 0xFF1E1E22);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> (i + j) % 3 == 0 ? 'g' : 'G');
+        top(HAT, (f, i, j) -> i >= 1 && i <= 6 && j >= 2 ? 'G' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "GG....GG", 1, "G......G"));
+        wrap(BODY, (f, i, j) -> (i * 5 + j * 3) % 5 == 0 ? 'g' : 'G');
+        top(BODY, 'G');
+        limbs("GGgGGgKKKKKK", "GgGGgGKKKKKK");
+    }
+
+    /** Super Buu: lean, pink, a long antenna, a black vest over a bare chest, white trousers; absorbed, he wears Gohan's purple. */
+    static void superBuu(boolean absorbed) {
+        tone(0xFFE88AB0, 0xFF141216, 0xFFC82A3A);
+        hair(0xFFC86A90);
+        colors("V", absorbed ? 0xFF5A3A9A : 0xFF2A2236, "w", 0xFFF2F1EC, "Y", 0xFFE8C030);
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> i >= 3 && i <= 4 ? 'h' : '.');
+        face(HAT, Face.BACK, rowsOf(8, "........", 0, "...hh...", 1, "...hh...", 2, "...hh...", 3, "...hh..."));
+        wrap(BODY, (f, i, j) -> j == 10 ? 'Y' : j > 10 ? 'w' : (f == Face.FRONT && i >= 2 && i <= 5 ? 'S' : 'V'));
+        top(BODY, 'V');
+        limbs("VVVSSSSSSSYY", "wwwwwwwwwwYY");
+    }
+
+    /** Front and back of every skin side by side (docs/reference/dbz_preview.png). */
+    static void preview(File dir, java.util.List<String> names, File out) throws IOException {
+        int scale = 4;
+        int cell = 18;
+        int columns = 10;
+        int rows = (names.size() + columns - 1) / columns;
+        BufferedImage sheet = new BufferedImage(columns * cell * 2 * scale, rows * 34 * scale, BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = sheet.createGraphics();
+        g.setColor(new java.awt.Color(0x2A2E33));
+        g.fillRect(0, 0, sheet.getWidth(), sheet.getHeight());
+        for (int n = 0; n < names.size(); n++) {
+            BufferedImage s = ImageIO.read(new File(dir, names.get(n) + ".png"));
+            int ox = (n % columns) * cell * 2 * scale;
+            int oy = (n / columns) * 34 * scale;
+            for (int view = 0; view < 2; view++) {
+                BufferedImage flat = flat(s, view == 1);
+                g.drawImage(flat, ox + view * cell * scale + scale, oy + scale, 16 * scale, 32 * scale, null);
+            }
+        }
+        g.dispose();
+        out.getParentFile().mkdirs();
+        ImageIO.write(sheet, "png", out);
+        System.out.println("wrote " + out);
+    }
+
+    /** A skin flattened to its front (or back): head, body, arms and legs with their overlays. */
+    static BufferedImage flat(BufferedImage s, boolean back) {
+        BufferedImage img = new BufferedImage(16, 32, BufferedImage.TYPE_INT_ARGB);
+        Face f = back ? Face.BACK : Face.FRONT;
+        // Base layer, then the outer layer over it.
+        Box[][] layers = {{HEAD, BODY, R_ARM, L_ARM, R_LEG, L_LEG}, {HAT, JACKET, R_SLEEVE, L_SLEEVE, R_PANTS, L_PANTS}};
+        int[][] at = {{4, 0}, {4, 8}, {0, 8}, {12, 8}, {4, 20}, {8, 20}};
+        for (Box[] layer : layers) {
+            for (int k = 0; k < layer.length; k++) {
+                int[] r = region(layer[k], f);
+                int x0 = at[k][0];
+                // Seen from behind, left and right swap.
+                if (back && k >= 2) {
+                    x0 = at[k % 2 == 0 ? k + 1 : k - 1][0];
+                }
+                for (int j = 0; j < r[3]; j++) {
+                    for (int i = 0; i < r[2]; i++) {
+                        int argb = s.getRGB(r[0] + i, r[1] + j);
+                        if ((argb >>> 24) != 0) {
+                            img.setRGB(x0 + i, at[k][1] + j, argb);
+                        }
+                    }
+                }
+            }
+        }
+        return img;
+    }
 
     // ---------------------------------------------------------------- items
 

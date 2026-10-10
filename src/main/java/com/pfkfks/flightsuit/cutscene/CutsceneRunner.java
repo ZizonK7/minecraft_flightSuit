@@ -101,6 +101,26 @@ public final class CutsceneRunner {
             return Cutscene.place(anchor, yaw, rel);
         }
 
+        /** Where an actor stands for {@code rel}: a y of exactly 0 is the ground there (looked for near the anchor). */
+        Vec3 stand(Vec3 rel) {
+            Vec3 p = at(rel);
+            if (rel.y != 0.0D) {
+                return p;
+            }
+            int x = net.minecraft.util.Mth.floor(p.x);
+            int z = net.minecraft.util.Mth.floor(p.z);
+            int top = net.minecraft.util.Mth.floor(anchor.y) + 4;
+            for (int y = top; y >= top - 10; y--) {
+                BlockPos here = new BlockPos(x, y, z);
+                if (level.getBlockState(here).getCollisionShape(level, here).isEmpty()
+                        && level.getBlockState(here.above()).getCollisionShape(level, here.above()).isEmpty()
+                        && !level.getBlockState(here.below()).getCollisionShape(level, here.below()).isEmpty()) {
+                    return new Vec3(p.x, y, p.z);
+                }
+            }
+            return p;
+        }
+
         public String id() {
             return scene.id();
         }
@@ -178,12 +198,13 @@ public final class CutsceneRunner {
             if (actor == null || !actor.isAlive()) {
                 actor = DbzFighterEntity.create(run.level, cast.who(), BlockPos.containing(run.anchor), false);
                 actor.setFighting(false);
-                actor.moveTo(run.at(cast.at()).x, run.at(cast.at()).y, run.at(cast.at()).z, run.yaw + cast.yaw(), 0.0F);
+                Vec3 spot = run.stand(cast.at());
+                actor.moveTo(spot.x, spot.y, spot.z, run.yaw + cast.yaw(), 0.0F);
                 run.level.addFreshEntity(actor);
                 run.spawned.add(cast.id());
             }
             actor.setActing(true);
-            actor.place(run.at(cast.at()), run.yaw + cast.yaw());
+            actor.place(run.stand(cast.at()), run.yaw + cast.yaw());
             actor.setInvisible(cast.hidden());
             run.actors.put(cast.id(), actor);
         }
@@ -292,8 +313,8 @@ public final class CutsceneRunner {
                     actor.setAction(act.kind() == Cutscene.Kind.FLY ? DbzAction.FLY : act.kind() == Cutscene.Kind.KNOCKBACK ? DbzAction.HURT
                             : DbzAction.IDLE);
                 }
-                Vec3 to = run.at(act.pos());
-                Vec3 now = run.at(rel);
+                Vec3 to = run.stand(act.pos());
+                Vec3 now = run.stand(rel);
                 float facing = actor.getYRot();
                 Vec3 dir = run.at(act.pos()).subtract(run.at(from));
                 if (act.kind() != Cutscene.Kind.KNOCKBACK && dir.horizontalDistanceSqr() > 1.0E-4D) {
@@ -358,7 +379,7 @@ public final class CutsceneRunner {
             }
             case APPEAR -> {
                 if (actor != null && first) {
-                    Vec3 at = run.at(act.pos());
+                    Vec3 at = run.stand(act.pos());
                     actor.place(at, actor.getYRot());
                     actor.setInvisible(false);
                     level.sendParticles(ParticleTypes.CLOUD, at.x, at.y + 1.0D, at.z, 12, 0.3D, 0.6D, 0.3D, 0.03D);
@@ -588,7 +609,7 @@ public final class CutsceneRunner {
             }
             if (skipped) {
                 Vec3 rel = pos.get(cast.id());
-                actor.place(run.at(rel), actor.getYRot());
+                actor.place(run.stand(rel), actor.getYRot());
             }
             if (actor.getCharacter() != who.get(cast.id())) {
                 actor.setCharacter(who.get(cast.id()));
