@@ -111,6 +111,8 @@ public final class ModEntities {
             () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity>of(com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity::new, MobCategory.MISC)
                     .sized(0.6F, 1.9F)
                     .clientTrackingRange(12)
+                    // M17: cutscene actors are moved every tick - keep the moves smooth.
+                    .updateInterval(2)
                     .build("dbz_fighter"));
 
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.thanos.ThanosForceEntity>> THANOS_FORCE = ENTITY_TYPES.register("thanos_force",
@@ -136,6 +138,15 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .updateInterval(1)
                     .build("veronica_pod"));
+
+    /** M17: the cutscene camera, only ever made on the client (cutscene.CameraEntity). */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.cutscene.CameraEntity>> CUTSCENE_CAMERA = ENTITY_TYPES.register("cutscene_camera",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.cutscene.CameraEntity>of(com.pfkfks.flightsuit.cutscene.CameraEntity::new, MobCategory.MISC)
+                    .sized(0.1F, 0.1F)
+                    .noSave()
+                    .noSummon()
+                    .clientTrackingRange(1)
+                    .build("cutscene_camera"));
 
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.SeatEntity>> SEAT = ENTITY_TYPES.register("seat",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.SeatEntity>of(com.pfkfks.flightsuit.entity.SeatEntity::new, MobCategory.MISC)

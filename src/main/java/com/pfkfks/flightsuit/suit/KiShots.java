@@ -221,7 +221,8 @@ public final class KiShots {
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
             }
             default -> {
-                if (direct != null) {
+                // A ki blast: Trunks may cut it, a boss may dodge it (KiGuard).
+                if (direct != null && !KiGuard.blocks(direct, shot.owner, at.subtract(shot.dir.scale(2.0D)))) {
                     hurt(shot, direct, shot.damage);
                 }
                 level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);

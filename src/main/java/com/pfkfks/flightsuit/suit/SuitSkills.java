@@ -144,6 +144,16 @@ public final class SuitSkills {
         }
         level.sendParticles(ParticleTypes.FLASH, end.x, end.y, end.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         level.sendParticles(ParticleTypes.EXPLOSION, end.x, end.y, end.z, 2, 0.3D, 0.3D, 0.3D, 0.0D);
+        if (width >= 1.5D) {
+            // A big beam (M17): a ball of light four blocks across where it lands.
+            for (int i = 0; i < 48; i++) {
+                double u = level.random.nextDouble() * 2.0D - 1.0D;
+                double angle = level.random.nextDouble() * Math.PI * 2.0D;
+                double r = Math.sqrt(1.0D - u * u) * 2.0D;
+                level.sendParticles(i % 3 == 0 ? core : glow, end.x + Math.cos(angle) * r, end.y + u * 2.0D, end.z + Math.sin(angle) * r,
+                        1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
+        }
         level.playSound(null, end.x, end.y, end.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.8F, 1.4F);
         return end;
     }

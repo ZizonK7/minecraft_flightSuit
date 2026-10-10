@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Code-built models: the box layout, the texture and a preview render of every model that isn't a plain skin.
  *
- * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|weapons|all]
+ * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|weapons|all]
  *
  * Entity and suit models (hulk, hulkbuster, trunks, shenron): boxes are laid out here in model space (pixels, y
  * down, front is -Z, the usual ModelPart conventions), their UVs are packed automatically, every face is
@@ -46,6 +46,10 @@ public class ModelGen {
             emit(m, "client/TrunksSuitModel.java", "textures/models/armor/trunks_mk5.png");
             // M17: the Super Saiyan variant - the same texture with the hair (helmet boxes only) turned gold.
             write(Trunks.golden(m), asset("textures/models/armor/trunks_mk5_ssj.png"));
+        }
+        if (all || what.equals("oozaru")) {
+            Model m = Oozaru.build();
+            emit(m, "client/OozaruModel.java", "textures/entity/dbz/oozaru_vegeta.png");
         }
         if (all || what.equals("shenron")) {
             Model m = Shenron.build();
@@ -846,6 +850,151 @@ public class ModelGen {
     }
 
     // ================================================================ Hulk
+
+    /**
+     * Vegeta as a Great Ape (M17): a huge ape in shreds of his Saiyan armour - a heavy brow over red eyes, a broad
+     * muzzle with fangs, a mane, brown fur all over, a white chest plate with yellow shoulder pads still strapped on,
+     * long arms with tan hands, short bowed legs, and the tail curling out behind (its own part: it sways).
+     */
+    static final class Oozaru {
+        static final int FUR = 0xFF6B4423, FUR_DARK = 0xFF4A2E17, FUR_LIGHT = 0xFF8A5A30, SKIN = 0xFFD9A47A, SKIN_DARK = 0xFFB07A52;
+        static final int EYE = 0xFFE81E1E, EYE_DARK = 0xFF8A0E0E, MOUTH = 0xFF3A1210, FANG = 0xFFF0EBDC;
+        static final int ARMOUR = 0xFFF2F1EC, ARMOUR_SHADE = 0xFFC8C6BE, PAD = 0xFFE8B830, PAD_DARK = 0xFFB08420, SUIT = 0xFF2A3E8A;
+
+        static Model build() {
+            Model m = new Model("oozaru", 128, 128);
+            m.extraJava.add("/** How much bigger than a player the Great Ape is drawn (its hitbox is DbzCharacter.OOZARU_VEGETA's scale). */");
+            m.extraJava.add("public static final float SCALE = 4.0F;\n");
+            Part head = m.part("head", 0, 0, 0).shift(0, 1.0F, -1.5F);
+            m.part("hat", 0, 0, 0);
+            Part body = m.part("body", 0, 0, 0);
+            Part rArm = m.part("right_arm", -5, 2, 0).shift(-2.5F, 0, 0);
+            Part lArm = m.part("left_arm", 5, 2, 0).shift(2.5F, 0, 0);
+            Part rLeg = m.part("right_leg", -1.9F, 12, 0).shift(-1.3F, 0, 0);
+            Part lLeg = m.part("left_leg", 1.9F, 12, 0).shift(1.3F, 0, 0);
+
+            head.box("skull", -4.5F, -8, -4.5F, 9, 8, 9, Oozaru::head)
+                    .box("brow", -4.5F, -7, -5.5F, 9, 2, 1, Oozaru::brow)
+                    .box("muzzle", -3, -3.5F, -7.5F, 6, 4, 3, Oozaru::muzzle)
+                    .box("mane", -5, -9.5F, -3, 10, 4, 8, Oozaru::fur)
+                    .box("ear_right", -5.5F, -6, -1, 1, 3, 2, Oozaru::skin)
+                    .mirrored("ear_left", -5.5F, -6, -1, 1, 3, 2, Oozaru::skin);
+
+            body.box("chest", -7, -2, -4, 14, 9, 8, Oozaru::chest)
+                    .box("belly", -6, 7, -3.5F, 12, 5, 7, Oozaru::belly);
+            Part tail = body.child("tail", 0, 10, 3.5F, 0.5F, 0, 0);
+            tail.box("tail_base", -1.5F, -1.5F, 0, 3, 3, 6, Oozaru::fur)
+                    .box("tail_tip", -1, -6.5F, 5, 2, 6, 2, Oozaru::fur);
+
+            arm(rArm, false);
+            arm(lArm, true);
+            leg(rLeg, false);
+            leg(lLeg, true);
+            return m;
+        }
+
+        static void arm(Part arm, boolean left) {
+            Hulk.box(arm, left, "shoulder", -4.5F, -3, -3.5F, 7, 6, 7, Oozaru::fur);
+            Hulk.box(arm, left, "pad", -5, -4, -4, 8, 3, 8, Oozaru::pad);
+            Hulk.box(arm, left, "upper_arm", -4, 3, -3, 6, 6, 6, Oozaru::fur);
+            Hulk.box(arm, left, "forearm", -4, 9, -3, 6, 6, 6, Oozaru::fur);
+            Hulk.box(arm, left, "hand", -4, 15, -3, 6, 4, 6, Oozaru::hand);
+        }
+
+        static void leg(Part leg, boolean left) {
+            Hulk.box(leg, left, "thigh", -3, 0, -3, 6, 7, 6, Oozaru::fur);
+            Hulk.box(leg, left, "shin", -2.5F, 7, -2.5F, 5, 4, 5, Oozaru::fur);
+            Hulk.box(leg, left, "foot", -3, 11, -4.5F, 6, 1, 8, Oozaru::hand);
+        }
+
+        static int fur(Px p) {
+            // Tufts: darker streaks running down, lit from above.
+            int c = (int) Math.floor(p.x * 1.3 + p.z * 0.7 + 30) % 3 == 0 ? FUR_DARK : FUR;
+            if (p.noise() < 0.12) {
+                c = FUR_LIGHT;
+            }
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.75);
+            } else if (p.side()) {
+                c = shade(c, 1.06 - p.fy * 0.14);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        static int skin(Px p) {
+            return grain(p, p.face == Face.BOTTOM ? SKIN_DARK : SKIN, 0.05);
+        }
+
+        static int head(Px p) {
+            if (p.face == Face.FRONT) {
+                // The bare face under the fur: red eyes glaring under the brow.
+                if (p.y > -4.9 && p.y < -3.6 && Math.abs(p.x) > 1.0 && Math.abs(p.x) < 3.5) {
+                    return Math.abs(p.x) < 2.2 ? EYE_DARK : EYE;
+                }
+                if (p.y > -6 && Math.abs(p.x) < 3.8) {
+                    return skin(p);
+                }
+            }
+            return fur(p);
+        }
+
+        static int brow(Px p) {
+            if (p.face == Face.FRONT || p.face == Face.BOTTOM) {
+                return grain(p, Math.abs(p.x) < 1.5 ? FUR_DARK : FUR, 0.05);
+            }
+            return fur(p);
+        }
+
+        static int muzzle(Px p) {
+            if (p.face == Face.FRONT) {
+                // Nostrils up top, the open mouth and fangs below.
+                if (p.y < -2.5 && Math.abs(Math.abs(p.x) - 1.0) < 0.5) {
+                    return MOUTH;
+                }
+                if (p.y > -1.5) {
+                    if ((p.y < -1.0 || p.y > -0.2) && (Math.abs(p.x) > 1.5 && Math.abs(p.x) < 2.5)) {
+                        return FANG;
+                    }
+                    return MOUTH;
+                }
+            }
+            return skin(p);
+        }
+
+        static int chest(Px p) {
+            // The white chest plate of his armour across the front, his suit's blue at the edges.
+            if (p.face == Face.FRONT) {
+                if (p.y < 4.5) {
+                    int c = Math.abs(p.x) < 0.5 || Math.abs(p.y - 1.5) < 0.4 ? ARMOUR_SHADE : ARMOUR;
+                    return grain(p, c, 0.03);
+                }
+                return fur(p);
+            }
+            if (p.face == Face.BACK && p.y < 2) {
+                return grain(p, ARMOUR_SHADE, 0.03);
+            }
+            if (p.face == Face.TOP) {
+                return grain(p, SUIT, 0.04);
+            }
+            return fur(p);
+        }
+
+        static int belly(Px p) {
+            return p.face == Face.FRONT ? grain(p, FUR_LIGHT, 0.06) : fur(p);
+        }
+
+        static int pad(Px p) {
+            int c = p.face == Face.TOP ? PAD : p.face == Face.BOTTOM ? PAD_DARK : (p.fy > 0.6 ? PAD_DARK : PAD);
+            return grain(p, c, 0.03);
+        }
+
+        static int hand(Px p) {
+            if (p.face == Face.BOTTOM || p.face == Face.FRONT) {
+                return skin(p);
+            }
+            return fur(p);
+        }
+    }
 
     static final class Hulk {
         static final int SKIN = 0xFF5E9E3C, SKIN_DARK = 0xFF3D6C27, SKIN_LIGHT = 0xFF7DBD55, SKIN_DEEP = 0xFF2E5520;

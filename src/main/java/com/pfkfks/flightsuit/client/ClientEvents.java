@@ -218,6 +218,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         CinematicCamera.reset();
+        CutsceneClient.reset();
         SuitFlightClient.reset();
         RemoteLinkClient.reset();
         WeaponInput.reset();

@@ -69,6 +69,10 @@ public final class ModNetwork {
                 StoryGoalS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, EntityFxS2CPacket.class, EntityFxS2CPacket::encode, EntityFxS2CPacket::decode,
                 EntityFxS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, CutsceneS2CPacket.class, CutsceneS2CPacket::encode, CutsceneS2CPacket::decode,
+                CutsceneS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, CutsceneSkipC2SPacket.class, CutsceneSkipC2SPacket::encode, CutsceneSkipC2SPacket::decode,
+                CutsceneSkipC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static void sendToServer(Object packet) {

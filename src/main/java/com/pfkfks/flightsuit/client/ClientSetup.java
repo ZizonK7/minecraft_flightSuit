@@ -36,6 +36,7 @@ public final class ClientSetup {
         event.registerLayerDefinition(HoverCarModel.LAYER, HoverCarModel::create);
         event.registerLayerDefinition(SpaceshipModel.LAYER, SpaceshipModel::create);
         event.registerLayerDefinition(HulkModel.LAYER, HulkModel::createLayer);
+        event.registerLayerDefinition(OozaruModel.LAYER, OozaruModel::createLayer);
         event.registerLayerDefinition(ShenronModel.LAYER, ShenronModel::createLayer);
     }
 
@@ -70,6 +71,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.THANOS_FORCE.get(), ThanosForceRenderer::new);
         event.registerEntityRenderer(ModEntities.SEAT.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(ModEntities.VERONICA_POD.get(), VeronicaPodRenderer::new);
+        event.registerEntityRenderer(ModEntities.CUTSCENE_CAMERA.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(ModEntities.SHENRON.get(), ShenronRenderer::new);
         event.registerEntityRenderer(ModEntities.TOWNSFOLK.get(), TownsfolkRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
@@ -102,5 +104,7 @@ public final class ClientSetup {
         event.registerAboveAll("edith_alert", EdithAlertOverlay.INSTANCE);
         event.registerAboveAll("story_goal", StoryGoalOverlay.INSTANCE);
         event.registerAboveAll("space_travel", SpaceTravelOverlay.INSTANCE);
+        // M17: last, so it's drawn over everything (and the rest is hidden while it shows).
+        event.registerAboveAll("cutscene", CutsceneOverlay.INSTANCE);
     }
 }

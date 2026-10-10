@@ -36,6 +36,8 @@ public class PlanetData extends SavedData {
         public final Map<Planet, Integer> cleared = new EnumMap<>(Planet.class);
         /** Infinity Stones this player has won (thanos.InfinityStone bits) - Thanos comes for them. */
         public int stones;
+        /** M17: cutscenes this player has watched (each plays once; "/planet replay" shows one again). */
+        public final java.util.Set<String> seenCutscenes = new java.util.LinkedHashSet<>();
 
         CompoundTag save() {
             CompoundTag tag = new CompoundTag();
@@ -51,6 +53,9 @@ public class PlanetData extends SavedData {
             tag.put("Cleared", clears);
             tag.putLong("NextBeat", nextBeatDay);
             tag.putInt("Stones", stones);
+            net.minecraft.nbt.ListTag seen = new net.minecraft.nbt.ListTag();
+            seenCutscenes.forEach(id -> seen.add(net.minecraft.nbt.StringTag.valueOf(id)));
+            tag.put("Seen", seen);
             return tag;
         }
 
@@ -72,6 +77,10 @@ public class PlanetData extends SavedData {
             }
             traveller.nextBeatDay = tag.getLong("NextBeat");
             traveller.stones = tag.getInt("Stones");
+            net.minecraft.nbt.ListTag seen = tag.getList("Seen", net.minecraft.nbt.Tag.TAG_STRING);
+            for (int i = 0; i < seen.size(); i++) {
+                traveller.seenCutscenes.add(seen.getString(i));
+            }
             return traveller;
         }
     }

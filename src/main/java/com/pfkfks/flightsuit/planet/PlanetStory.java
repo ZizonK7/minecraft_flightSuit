@@ -56,7 +56,32 @@ public final class PlanetStory {
         event.getDispatcher().register(Commands.literal("planet").executes(ctx -> {
             objective(ctx.getSource().getPlayerOrException());
             return 1;
-        }));
+        }).then(Commands.literal("replay")
+                // M17: watch a cutscene again, on the spot (actors of its own, the story untouched).
+                .then(Commands.argument("id", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                        .suggests((ctx, builder) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
+                                PlanetData.get(ctx.getSource().getServer()).traveller(ctx.getSource().getPlayerOrException().getUUID()).seenCutscenes, builder))
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            String id = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "id");
+                            boolean seen = PlanetData.get(player.server).traveller(player.getUUID()).seenCutscenes.contains(id);
+                            if (!seen && !player.hasPermissions(2)) {
+                                player.sendSystemMessage(Component.translatable("story.flightsuit.replay_unseen", id).withStyle(ChatFormatting.GRAY));
+                                return 0;
+                            }
+                            if (!com.pfkfks.flightsuit.cutscene.CutsceneRunner.replay(player, id)) {
+                                player.sendSystemMessage(Component.translatable("story.flightsuit.replay_none", id).withStyle(ChatFormatting.GRAY));
+                                return 0;
+                            }
+                            return 1;
+                        }))
+                .executes(ctx -> {
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    java.util.Set<String> seen = PlanetData.get(player.server).traveller(player.getUUID()).seenCutscenes;
+                    player.sendSystemMessage(Component.translatable("story.flightsuit.replay_list", seen.isEmpty() ? "-" : String.join(", ", seen))
+                            .withStyle(ChatFormatting.AQUA));
+                    return 1;
+                })));
     }
 
     public static @Nullable DbzStage dbzStage(ServerPlayer player) {
