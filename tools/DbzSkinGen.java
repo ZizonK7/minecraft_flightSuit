@@ -9,7 +9,7 @@ import java.util.Map;
  * Draws the Dragon Ball Earth people (DESIGN.md 4-16, M15) as 64x64 classic player skins: Goku, Bulma, Raditz,
  * Nappa, Vegeta and the Saibamen; plus the scouter, senzu bean and dragon radar icons.
  *
- * Usage: java tools/DbzSkinGen.java <assets/flightsuit/textures dir> [new|preview]
+ * Usage: java tools/DbzSkinGen.java <assets/flightsuit/textures dir> [new|preview|<one id>]
  *   writes entity/dbz/<id>.png and item/{scouter,senzu_bean}.png;
  *   "new" only the M17 cast (M17_NEW), "preview" only docs/reference/dbz_preview.png (front and back of everyone,
  *   the textures dir must be the repo's: the sheet goes to ../../../../../../docs/reference)
@@ -53,6 +53,9 @@ public class DbzSkinGen {
         }
         if (mode.equals("new")) {
             names = java.util.List.of(M17_NEW);
+        } else if (names.contains(mode)) {
+            // Just this one (the rest stay as they are).
+            names = java.util.List.of(mode);
         }
         for (String name : names) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
@@ -78,7 +81,7 @@ public class DbzSkinGen {
             ImageIO.write(skin, "png", out);
             System.out.println("wrote " + out);
         }
-        if (mode.equals("new")) {
+        if (!mode.equals("all")) {
             return;
         }
         ImageIO.write(icon(SCOUTER, Map.of('G', 0xFF3ADB5A, 'g', 0xFF1E8A34, 'V', 0xFFC8CDD8, 'v', 0xFF8C93A0, 'R', 0xFFD03A2A)), "png", new File(item, "scouter.png"));
@@ -190,22 +193,44 @@ public class DbzSkinGen {
         saiyanArmour(0xFF2A3E8A, 0xFFF2F1EC, 0xFFE8B830);
     }
 
-    /** Saibaman: green skin with darker veins, bald knobbly head, big black eyes. */
+    /**
+     * Saibaman (redrawn after the M17 test - the old one was a creeper-like checker all over): smooth light-green
+     * skin; a big bulging head whose crown is lobed like a brain (light lobes, dark grooves - raised in the hat layer
+     * too); a heavy brow over red eyes, a grin of fangs; ribbed chest and spine. The model makes the head bigger and
+     * the limbs thinner (DbzFighterModel).
+     */
     static void saibaman() {
-        tone(0xFF5AAA3A, 0xFF2E5A1E, 0xFF141216);
-        hair(0xFF4A8A2E);
-        colors("G", 0xFF5AAA3A, "g", 0xFF3A7A24, "V", 0xFF2E5A1E);
-        Pattern veins = (f, i, j) -> (i * 3 + j * 5) % 11 == 0 ? 'V' : ((i + j) % 4 == 0 ? 'g' : 'G');
-        wrap(HEAD, veins);
-        top(HEAD, veins);
+        tone(0xFF6CB844, 0xFF2E5520, 0xFFC8262A);
+        hair(0xFF6CB844);
+        colors("G", 0xFF6CB844, "g", 0xFF57A034, "L", 0xFF8CD45C, "V", 0xFF3B6A28, "D", 0xFF2E5520,
+                "R", 0xFFD0282C, "r", 0xFF5A0A0E, "k", 0xFF1A1014);
+        String[] crown = {"LLGVVGLL", "LGVLLVGL", "GVLLLLVG", "VLLGGLLV", "VLLGGLLV", "GVLLLLVG", "LGVLLVGL", "LLGVVGLL"};
+        String[] side = {"VLLVLLGV", "LLVGVLLV", "GVLLLVGL", "LLGVGLLG", "GGLLLGGG", "GGGGGGGG", "GGGGGGGG", "gGGGGGGg"};
+        top(HEAD, (f, i, j) -> crown[j].charAt(i));
         bottom(HEAD, 'g');
-        face(HEAD, Face.FRONT, "GgGGGGgG", "gGVGGVGg", "GGGGGGGG", "GKKGGKKG", "GKKGGKKG", "GGGggGGG", "GVKKKKVG", "GGGGGGGG");
-        wrap(BODY, veins);
+        for (Face f : new Face[]{Face.RIGHT, Face.LEFT, Face.BACK}) {
+            face(HEAD, f, side);
+        }
+        face(HEAD, Face.FRONT, "VLLVVLLV", "LLVLLVLL", "GDDGGDDG", "DRRDDRRD", "GRrGGrRG", "GGGggGGG", "GkWkkWkG", "GGkkkkGG");
+        // The lobes stand out a little: every other light lobe again in the hat layer.
+        top(HAT, (f, i, j) -> crown[j].charAt(i) == 'L' && (i + j) % 2 == 0 ? 'L' : '.');
+        for (Face f : new Face[]{Face.RIGHT, Face.LEFT, Face.BACK}) {
+            paint(HAT, f, (ff, i, j) -> j < 3 && side[j].charAt(i) == 'L' && (i + j) % 2 == 0 ? 'L' : '.');
+        }
+        paint(HAT, Face.FRONT, (ff, i, j) -> j == 0 && (i == 1 || i == 6) ? 'L' : '.');
+        face(BODY, Face.FRONT, "gGGGGGGg", "GGGGGGGG", "GLLGGLLG", "GGgGGgGG", "GgLLLLgG", "GGggggGG", "GgLLLLgG", "GGggggGG",
+                "GgLLLLgG", "GGGggGGG", "GGGGGGGG", "gGGGGGGg");
+        paint(BODY, Face.BACK, (f, i, j) -> i == 3 || i == 4 ? (j % 2 == 0 ? 'L' : 'V') : (i == 0 || i == 7 ? 'g' : 'G'));
+        paint(BODY, Face.RIGHT, (f, i, j) -> j > 9 ? 'g' : 'G');
+        paint(BODY, Face.LEFT, (f, i, j) -> j > 9 ? 'g' : 'G');
         top(BODY, 'G');
-        for (Box arm : new Box[]{R_ARM, L_ARM, R_LEG, L_LEG}) {
-            wrap(arm, veins);
-            top(arm, 'G');
-            bottom(arm, 'g');
+        bottom(BODY, 'g');
+        // Thin arms with a ridge at the elbow and dark claws; legs darkening to the feet; darker edges so the limbs
+        // stand apart from the body.
+        limbs("GGGGgGGGGGgD", "GGGGGGGGGggD");
+        for (Box limb : new Box[]{R_ARM, L_ARM, R_LEG, L_LEG}) {
+            String rows = limb == R_ARM || limb == L_ARM ? "GGGGgGGGGGgD" : "GGGGGGGGGggD";
+            wrap(limb, (f, i, j) -> rows.charAt(j) == 'G' && (i == 0 || i == 3) ? 'g' : rows.charAt(j));
         }
     }
 

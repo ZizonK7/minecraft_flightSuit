@@ -141,12 +141,41 @@ public class DbzFighterModel extends PlayerModel<DbzFighterEntity> {
             rightArm.xRot = -1.2F;
             leftArm.xRot = -1.2F;
         }
+        shape(fighter.getCharacter(), action);
         hat.copyFrom(head);
         leftPants.copyFrom(leftLeg);
         rightPants.copyFrom(rightLeg);
         leftSleeve.copyFrom(leftArm);
         rightSleeve.copyFrom(rightArm);
         jacket.copyFrom(body);
+    }
+
+    /**
+     * Body shapes besides the plain one (the model is shared, so every call sets them): the Saibaman's big bulging
+     * head on a hunched neck and thin arms and legs (after the M17 test).
+     */
+    private void shape(DbzCharacter who, DbzAction action) {
+        boolean saibaman = who == DbzCharacter.SAIBAMAN;
+        float wide = saibaman ? 1.45F : 1.0F;
+        float tall = saibaman ? 1.3F : 1.0F;
+        float thin = saibaman ? 0.72F : 1.0F;
+        for (ModelPart part : new ModelPart[]{head, hat}) {
+            part.xScale = wide;
+            part.zScale = wide;
+            part.yScale = tall;
+        }
+        for (ModelPart part : new ModelPart[]{rightArm, leftArm, rightLeg, leftLeg, rightSleeve, leftSleeve, rightPants, leftPants}) {
+            part.xScale = thin;
+            part.zScale = thin;
+        }
+        // The head pushed forward and low, the arms hanging a little in front (set outright: nothing else resets z).
+        boolean hunched = saibaman && action != DbzAction.FLY && action != DbzAction.DOWN;
+        head.z = hunched ? -1.2F : 0.0F;
+        head.y = hunched ? 0.8F : 0.0F;
+        if (hunched) {
+            rightArm.xRot -= 0.15F;
+            leftArm.xRot -= 0.15F;
+        }
     }
 
     /** Out fast, back slower: 0 at the start, 1 at a third of the way, 0 again at the end. */
