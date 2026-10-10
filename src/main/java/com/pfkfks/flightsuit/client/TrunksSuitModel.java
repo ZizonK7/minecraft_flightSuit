@@ -59,14 +59,16 @@ public final class TrunksSuitModel {
                 .texOffs(112, 33).addBox(-5.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F) // collar_right
                 .texOffs(64, 41).addBox(4.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F), // collar_left
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        chest_piece_body.addOrReplaceChild("sheath", CubeListBuilder.create()
+        PartDefinition sheath = chest_piece_body.addOrReplaceChild("sheath", CubeListBuilder.create()
                 .texOffs(100, 0).addBox(-1.0F, -5.0F, -0.5F, 2.0F, 14.0F, 1.0F) // scabbard
                 .texOffs(94, 47).addBox(-1.5F, 9.0F, -1.0F, 3.0F, 1.0F, 2.0F) // chape
-                .texOffs(104, 47).addBox(-1.5F, -6.0F, -1.0F, 3.0F, 1.0F, 2.0F) // throat
+                .texOffs(104, 47).addBox(-1.5F, -6.0F, -1.0F, 3.0F, 1.0F, 2.0F), // throat
+                PartPose.offsetAndRotation(0.0F, 4.5F, 3.4F, 0.0F, 0.0F, -0.55F));
+        sheath.addOrReplaceChild("hilt", CubeListBuilder.create()
                 .texOffs(78, 41).addBox(-2.5F, -7.0F, -1.5F, 5.0F, 1.0F, 3.0F) // guard
                 .texOffs(74, 41).addBox(-0.5F, -12.0F, -0.5F, 1.0F, 5.0F, 1.0F) // grip
                 .texOffs(114, 47).addBox(-1.0F, -13.0F, -1.0F, 2.0F, 1.0F, 2.0F), // pommel
-                PartPose.offsetAndRotation(0.0F, 4.5F, 3.4F, 0.0F, 0.0F, -0.55F));
+                PartPose.offset(0.0F, 0.0F, 0.0F));
         body.addOrReplaceChild("legs_piece_body", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         body.addOrReplaceChild("feet_piece_body", CubeListBuilder.create(),

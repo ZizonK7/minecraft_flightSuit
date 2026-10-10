@@ -54,12 +54,13 @@ public final class CounterHandler {
     private CounterHandler() {
     }
 
-    public static void handleInput(ServerPlayer player, byte action) {
+    public static void handleInput(ServerPlayer player, byte action, float range) {
         SuitClass suitClass = SuitWeapons.armedClass(player);
         if (suitClass != null && suitClass.blinks()) {
-            // Mark 3: Z aims the shadow step on the client (PhantomAimClient), a click sends STEP - no parry, no shield.
+            // Mark 3: Z aims the shadow step on the client (PhantomAimClient), a click sends STEP with the range it
+            // showed - no parry, no shield.
             if (action == STEP && !SuitUpManager.isSuitingUp(player)) {
-                SuitSkills.startShadowStep(player);
+                SuitSkills.startShadowStep(player, range);
             }
             setShield(player, false);
             return;
@@ -87,9 +88,11 @@ public final class CounterHandler {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        PARRY_UNTIL.put(player.getUUID(), now + SuitTuning.PARRY_WINDOW_TICKS);
+        // Trunks parries with the sword (M17) - for longer as a Super Saiyan.
+        boolean sword = SuitWeapons.armedClass(player) == SuitClass.SWORDSMAN;
+        PARRY_UNTIL.put(player.getUUID(), now + (sword ? SwordArts.parryWindow(player) : SuitTuning.PARRY_WINDOW_TICKS));
         PARRY_READY_AT.put(player.getUUID(), now + SuitTuning.PARRY_COOLDOWN_TICKS);
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, sword ? SuitAnim.SWORD_PARRY : SuitAnim.PARRY, 0));
         player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.6F, 1.6F);
     }
 
@@ -193,8 +196,13 @@ public final class CounterHandler {
         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, clash.x, clash.y, clash.z, 16, 0.3D, 0.3D, 0.3D, 0.3D);
         level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7F, 1.6F);
         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, 0.8F);
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.COUNTER, 0));
-        player.displayClientMessage(Component.translatable("message.flightsuit.parried"), true);
+        boolean sword = SuitWeapons.armedClass(player) == SuitClass.SWORDSMAN;
+        if (sword) {
+            SwordArts.onParried(player);
+            level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_HIT, SoundSource.PLAYERS, 1.0F, 1.6F);
+        }
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, sword ? SuitAnim.SWORD_PARRY : SuitAnim.COUNTER, 0));
+        player.displayClientMessage(Component.translatable(sword ? "message.flightsuit.parried_sword" : "message.flightsuit.parried"), true);
     }
 
     @SubscribeEvent

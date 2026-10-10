@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "name": "tempest_throw",
+  "author": "flightsuit",
+  "description": "Phantom's Tempest: a card flicked straight up into the sky with the right hand, the head following it up.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 10,
+    "stopTick": 14,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -30, "yaw": 0, "roll": 10}},
+      {"tick": 3, "easing": "OUTQUAD", "rightArm": {"pitch": -180, "yaw": 0, "roll": 0}},
+      {"tick": 10, "easing": "INOUTSINE", "rightArm": {"pitch": -170, "yaw": 0, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": 0, "yaw": 0, "roll": -20}},
+      {"tick": 10, "easing": "INOUTSINE", "leftArm": {"pitch": 0, "yaw": 0, "roll": -25}},
+      {"tick": 0, "easing": "INOUTSINE", "head": {"pitch": 0}},
+      {"tick": 4, "easing": "INOUTSINE", "head": {"pitch": -45}},
+      {"tick": 10, "easing": "INOUTSINE", "head": {"pitch": -50}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"pitch": 0}},
+      {"tick": 3, "easing": "INOUTSINE", "torso": {"pitch": -10}},
+      {"tick": 10, "easing": "INOUTSINE", "torso": {"pitch": -8}}
+    ]
+  }
+}

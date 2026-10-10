@@ -1,0 +1,25 @@
+{
+  "version": 3,
+  "name": "sword_h",
+  "author": "flightsuit",
+  "description": "Trunks' cut across: sword arm swept from the right side over to the left at chest height, body turning with it.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 5,
+    "stopTick": 7,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -80, "yaw": 60, "roll": 0}},
+      {"tick": 3, "easing": "OUTQUAD", "rightArm": {"pitch": -85, "yaw": -55, "roll": 0}},
+      {"tick": 5, "easing": "INOUTSINE", "rightArm": {"pitch": -70, "yaw": -45, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": -20, "yaw": 0, "roll": -25}},
+      {"tick": 5, "easing": "INOUTSINE", "leftArm": {"pitch": -10, "yaw": 0, "roll": -30}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"yaw": 25}},
+      {"tick": 3, "easing": "OUTQUAD", "torso": {"yaw": -25}},
+      {"tick": 5, "easing": "INOUTSINE", "torso": {"yaw": -20}}
+    ]
+  }
+}

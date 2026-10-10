@@ -58,7 +58,8 @@ public final class SuitHudOverlay implements IGuiOverlay {
 
         SuitType type = WornSuit.primaryType(player);
         String name = worn.fullSet() ? type.hudName() : type.hudName() + " (PARTIAL)";
-        graphics.fill(x - 3, y - 3, x + 124, y + 64, 0x66000000);
+        Component stolenLine = stolenLine(player);
+        graphics.fill(x - 3, y - 3, x + 124, y + (stolenLine != null ? 75 : 64), 0x66000000);
         graphics.drawString(font, name, x, y, CYAN, true);
 
         // H C L B piece lights, colored by each piece's durability; the weakest piece's % underneath.
@@ -99,6 +100,35 @@ public final class SuitHudOverlay implements IGuiOverlay {
         if (weapons != null) {
             graphics.drawString(font, weapons, x, y + 53, CAUTION, false);
         }
+        if (stolenLine != null) {
+            graphics.drawString(font, stolenLine, x, y + 64, 0xFFD9A6FF, false);
+        }
+    }
+
+    /** Mark 3 (M17): the stolen card on B - its name and cooldown, or the empty card. */
+    private static Component stolenLine(LocalPlayer player) {
+        if (SuitWeapons.armedClass(player) != SuitClass.PHANTOM) {
+            return null;
+        }
+        if (ClientWeapons.stolen.isEmpty()) {
+            return Component.translatable("hud.flightsuit.weapon.stolen_empty");
+        }
+        com.pfkfks.flightsuit.suit.StolenSkill skill = com.pfkfks.flightsuit.suit.StolenSkill.byName(ClientWeapons.stolen);
+        return skill == null ? null : Component.translatable("hud.flightsuit.weapon.stolen",
+                Component.translatable("skill.flightsuit.stolen." + skill.id()), ready(ClientWeapons.stolenReady));
+    }
+
+    /** The ultimate (V): ready / cooldown, or Super Saiyan on / locked out after running dry. */
+    private static Component ultimate(SuitClass suitClass) {
+        if (suitClass == SuitClass.SWORDSMAN) {
+            if (ClientWeapons.superSaiyan) {
+                return Component.translatable("hud.flightsuit.weapon.ssj_on");
+            }
+            float locked = ClientWeapons.secondsLeft(ClientWeapons.ssjLockedUntil);
+            return Component.translatable("hud.flightsuit.weapon.ultimate", locked > 0.0F
+                    ? Component.literal(String.format("%.1fs", locked)) : Component.translatable("hud.flightsuit.weapon.ready"));
+        }
+        return Component.translatable("hud.flightsuit.weapon.ultimate", ready(ClientWeapons.ultReady));
     }
 
     /** The class's weapons at a glance: skill cooldowns, the phantom's card gauge and spade buff, the hero's full-health edge. */
@@ -114,7 +144,7 @@ public final class SuitHudOverlay implements IGuiOverlay {
             case PHANTOM -> {
                 float spade = ClientWeapons.secondsLeft(ClientWeapons.spadeUntil);
                 Component line = Component.translatable("hud.flightsuit.weapon.cards", ClientWeapons.gauge, SuitTuning.JUDGMENT_GAUGE,
-                        ready(ClientWeapons.skill2Ready));
+                        ready(ClientWeapons.skill2Ready)).copy().append(" ").append(ultimate(suitClass));
                 yield spade > 0.0F ? line.copy().append(Component.literal(String.format(" ♠%.0fs", spade))) : line;
             }
             case HERO -> {
@@ -124,8 +154,10 @@ public final class SuitHudOverlay implements IGuiOverlay {
                 yield player.getHealth() >= player.getMaxHealth() - 0.01F
                         ? line.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : line;
             }
-            // Their own skills come later (palm repulsor only for now).
-            case HULKBUSTER, SWORDSMAN -> null;
+            case HULKBUSTER -> Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready),
+                    ready(ClientWeapons.skill2Ready));
+            case SWORDSMAN -> Component.translatable("hud.flightsuit.weapon.swordsman", ready(ClientWeapons.skill1Ready),
+                    ready(ClientWeapons.skill2Ready)).copy().append(" ").append(ultimate(suitClass));
         };
     }
 

@@ -71,9 +71,21 @@ public class SuitArmorItem extends ArmorItem {
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
         if (suitType.ownModel()) {
+            if (suitType.suitClass() == SuitClass.SWORDSMAN && entity != null && entity.level().isClientSide && isGolden(entity)) {
+                // M17 Super Saiyan: the golden-haired texture (tools/ModelGen.java trunks).
+                return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + "_ssj.png";
+            }
             return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + ".png";
         }
         return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + "_" + getType().getName() + ".png";
+    }
+
+    /** A player gone Super Saiyan (EntityFxS2CPacket), or a companion suit that has (SuitCompanionEntity). */
+    private static boolean isGolden(Entity entity) {
+        if (entity instanceof com.pfkfks.flightsuit.entity.SuitCompanionEntity companion) {
+            return companion.isUltimate();
+        }
+        return SwordArts.GOLDEN.contains(entity.getId());
     }
 
     @Override

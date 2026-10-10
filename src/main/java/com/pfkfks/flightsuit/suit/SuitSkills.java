@@ -89,37 +89,63 @@ public final class SuitSkills {
      * reach of the line that {@code hits} allows takes the damage and is thrown back. Blocks aren't broken.
      */
     public static void unibeam(ServerLevel level, LivingEntity shooter, Vec3 from, Vec3 dir, float damage, Predicate<LivingEntity> hits) {
+        beam(level, shooter, from, dir, SuitTuning.UNIBEAM_RANGE, 1.6D, damage, 0.8D, UNIBEAM_GLOW, UNIBEAM_CORE, hits);
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.2F, 1.6F);
+    }
+
+    /**
+     * Any straight beam (the unibeam, and since M17 the Kamehameha, Galick Gun and the rest - StolenSkill): up to the
+     * first solid block, {@code range} at most; everything {@code hits} allows within {@code width} of the line takes
+     * the damage and {@code knockback}. Drawn as a {@code glow} with a {@code core}, bursting where it ends. Returns
+     * where it ended.
+     */
+    public static Vec3 beam(ServerLevel level, LivingEntity shooter, Vec3 from, Vec3 dir, double range, double width, float damage,
+                            double knockback, DustParticleOptions glow, DustParticleOptions core, Predicate<LivingEntity> hits) {
+        return beam(level, shooter, from, dir, range, width, victim -> damage, knockback, glow, core, hits);
+    }
+
+    /** A beam whose damage depends on who it hits (the Special Beam Cannon bites deeper into bosses). */
+    public static Vec3 beam(ServerLevel level, LivingEntity shooter, Vec3 from, Vec3 dir, double range, double width,
+                            java.util.function.ToDoubleFunction<LivingEntity> damage, double knockback, DustParticleOptions glow,
+                            DustParticleOptions core, Predicate<LivingEntity> hits) {
         Vec3 aim = dir.normalize();
-        Vec3 far = from.add(aim.scale(SuitTuning.UNIBEAM_RANGE));
+        Vec3 far = from.add(aim.scale(range));
         BlockHitResult block = level.clip(new ClipContext(from, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter));
         Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
         double length = end.distanceTo(from);
-        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, end).inflate(1.5D),
+        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, end).inflate(width + 1.0D),
                 entity -> entity != shooter && entity.isAlive() && hits.test(entity))) {
             Vec3 centre = victim.getBoundingBox().getCenter();
             double along = centre.subtract(from).dot(aim);
-            if (along < 0.0D || along > length) {
+            if (along < 0.0D || along > length + victim.getBbWidth()) {
                 continue;
             }
             Vec3 closest = from.add(aim.scale(along));
-            if (closest.distanceToSqr(centre) > 1.6D * 1.6D) {
+            double reach = width + victim.getBbWidth() / 2.0D;
+            if (closest.distanceToSqr(centre) > reach * reach) {
+                continue;
+            }
+            if (KiGuard.blocks(victim, shooter, from)) {
                 continue;
             }
             victim.invulnerableTime = 0;
             victim.hurt(shooter instanceof ServerPlayer player ? shooter.damageSources().playerAttack(player)
-                    : shooter.damageSources().mobAttack(shooter), damage);
-            victim.knockback(0.8D, -aim.x, -aim.z);
+                    : shooter.damageSources().mobAttack(shooter), (float) damage.applyAsDouble(victim));
+            if (knockback > 0.0D) {
+                victim.knockback(knockback, -aim.x, -aim.z);
+            }
         }
         int points = (int) (length * 3.0D);
+        double spread = Math.max(0.05D, width * 0.12D);
         for (int i = 0; i <= points; i++) {
             Vec3 at = from.add(aim.scale(i / 3.0D));
-            level.sendParticles(UNIBEAM_GLOW, at.x, at.y, at.z, 2, 0.2D, 0.2D, 0.2D, 0.0D);
-            level.sendParticles(UNIBEAM_CORE, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            level.sendParticles(glow, at.x, at.y, at.z, 2, spread, spread, spread, 0.0D);
+            level.sendParticles(core, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
         level.sendParticles(ParticleTypes.FLASH, end.x, end.y, end.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         level.sendParticles(ParticleTypes.EXPLOSION, end.x, end.y, end.z, 2, 0.3D, 0.3D, 0.3D, 0.0D);
-        level.playSound(null, from.x, from.y, from.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.2F, 1.6F);
         level.playSound(null, end.x, end.y, end.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.8F, 1.4F);
+        return end;
     }
 
     // ---------------------------------------------------------------- cryo nova
@@ -172,59 +198,125 @@ public final class SuitSkills {
 
     // ---------------------------------------------------------------- shadow step
 
-    /** Where a shadow step would land: the spot, and the monster it goes behind (null = just a place). */
-    public record StepTarget(Vec3 spot, @org.jetbrains.annotations.Nullable LivingEntity behind) {
+    /**
+     * Where a shadow step would land: the spot, the monster it goes behind (null = just a place), and whether it's
+     * out in the open air (the phantom stands on a card there for a moment, then floats down).
+     */
+    public record StepTarget(Vec3 spot, @org.jetbrains.annotations.Nullable LivingEntity behind, boolean air) {
+    }
+
+    /** The step's cost for a spot this far off (M17: 100 FE + 7.5 a block - 400 at 40 blocks). */
+    public static int stepCost(double distance) {
+        return (int) Math.round(SuitTuning.SHADOW_STEP_BASE_COST + distance * SuitTuning.SHADOW_STEP_COST_PER_BLOCK);
+    }
+
+    public static double clampStepRange(double range) {
+        return Math.max(SuitTuning.SHADOW_STEP_MIN_RANGE, Math.min(SuitTuning.SHADOW_STEP_RANGE, range));
     }
 
     /**
-     * Where the wearer would blink to (client and server alike - the client shows it while aiming): behind the
-     * monster they look at, else just short of whatever their look hits (SHADOW_STEP_RANGE at most). Null if
-     * there is nowhere to stand there.
+     * Where the wearer would blink to (client and server alike - the client shows it while aiming), looking out to
+     * {@code range} blocks (SHADOW_STEP_RANGE at most; the mouse wheel sets it while aiming). After the M17 rework:
+     * 1. a monster in the look: behind it;
+     * 2. a block: on top of it if there's room to stand there (ledges, roofs), else just short of the face it hit;
+     *    a block's top face: right there;
+     * 3. nothing (the sky): the ground under the end of the look if there's any within SHADOW_STEP_GROUND_SEARCH
+     *    blocks, else out there in the air (a card to stand on, then a slow fall).
+     * Null if there is nowhere to stand there.
      */
-    public static @org.jetbrains.annotations.Nullable StepTarget stepTarget(Level level, Player player) {
+    public static @org.jetbrains.annotations.Nullable StepTarget stepTarget(Level level, Player player, double range) {
+        range = clampStepRange(range);
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        Vec3 far = eye.add(look.scale(SuitTuning.SHADOW_STEP_RANGE));
+        Vec3 far = eye.add(look.scale(range));
         BlockHitResult block = level.clip(new ClipContext(eye, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, eye, end, new AABB(eye, end).inflate(1.0D),
                 entity -> entity instanceof Enemy && entity instanceof LivingEntity && entity.isAlive() && entity.isPickable());
-        LivingEntity behind = hit != null ? (LivingEntity) hit.getEntity() : null;
-        Vec3 to;
-        if (behind != null) {
+        if (hit != null) {
+            LivingEntity behind = (LivingEntity) hit.getEntity();
             Vec3 back = behind.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
             back = back.lengthSqr() < 1.0E-4D ? look.multiply(1.0D, 0.0D, 1.0D) : back;
-            to = behind.position().subtract(back.normalize().scale(behind.getBbWidth() / 2.0D + 1.2D));
-        } else {
-            // Short of whatever it hit, so we land in the open in front of it.
-            to = end.subtract(look.scale(0.6D));
+            Vec3 spot = standable(level, player, behind.position().subtract(back.normalize().scale(behind.getBbWidth() / 2.0D + 1.2D)));
+            return spot == null ? null : new StepTarget(spot, behind, false);
         }
-        Vec3 spot = standable(level, player, to);
-        return spot == null ? null : new StepTarget(spot, behind);
+        if (block.getType() != HitResult.Type.MISS) {
+            BlockPos pos = block.getBlockPos();
+            if (block.getDirection() == net.minecraft.core.Direction.UP) {
+                Vec3 spot = standable(level, player, block.getLocation());
+                return spot == null ? null : new StepTarget(spot, null, false);
+            }
+            // A ledge or a roof: up onto it, if there's room to stand on top.
+            Vec3 top = onTop(level, player, pos, block.getLocation());
+            if (top != null) {
+                return new StepTarget(top, null, false);
+            }
+            Vec3 spot = standable(level, player, end.subtract(look.scale(0.6D)));
+            return spot == null ? null : new StepTarget(spot, null, false);
+        }
+        // The open sky: the ground under the end of the look, or the air itself.
+        BlockPos at = BlockPos.containing(far);
+        for (int dy = 0; dy <= SuitTuning.SHADOW_STEP_GROUND_SEARCH; dy++) {
+            BlockPos feet = at.below(dy);
+            Vec3 spot = new Vec3(far.x, feet.getY(), far.z);
+            if (room(level, player, spot) && !level.getBlockState(feet.below()).getCollisionShape(level, feet.below()).isEmpty()) {
+                return new StepTarget(spot, null, false);
+            }
+            if (!room(level, player, spot)) {
+                break;
+            }
+        }
+        Vec3 air = new Vec3(far.x, far.y - player.getEyeHeight(), far.z);
+        return room(level, player, air) ? new StepTarget(air, null, true) : null;
+    }
+
+    /** The spot on top of the block at {@code pos} (or of the column above it) where {@code who} fits, if any. */
+    private static @org.jetbrains.annotations.Nullable Vec3 onTop(Level level, LivingEntity who, BlockPos pos, Vec3 hitAt) {
+        BlockPos top = pos;
+        // Up to two blocks of wall above the face it hit (a 2-3 block ledge), then the top.
+        for (int i = 0; i < 3 && !level.getBlockState(top.above()).getCollisionShape(level, top.above()).isEmpty(); i++) {
+            top = top.above();
+        }
+        if (!level.getBlockState(top.above()).getCollisionShape(level, top.above()).isEmpty()) {
+            return null;
+        }
+        net.minecraft.world.phys.shapes.VoxelShape shape = level.getBlockState(top).getCollisionShape(level, top);
+        double y = top.getY() + (shape.isEmpty() ? 0.0D : shape.max(net.minecraft.core.Direction.Axis.Y));
+        // Stand where the look hit, pulled in over the block so the feet are on it.
+        double x = Math.max(top.getX() + 0.3D, Math.min(top.getX() + 0.7D, hitAt.x));
+        double z = Math.max(top.getZ() + 0.3D, Math.min(top.getZ() + 0.7D, hitAt.z));
+        Vec3 spot = new Vec3(x, y, z);
+        return room(level, who, spot) ? spot : null;
+    }
+
+    /** {@code who} fits at {@code at} (feet there). */
+    private static boolean room(Level level, LivingEntity who, Vec3 at) {
+        return level.noCollision(who, who.getDimensions(who.getPose()).makeBoundingBox(at));
     }
 
     /**
-     * Mark 3, aimed with Z and confirmed with a click (PhantomAimClient): a swirl of cards opens where they stand
-     * and where they are going, and half a second later they step through.
+     * Mark 3, aimed with Z and confirmed with a click (PhantomAimClient, which also sends the range it showed): a
+     * swirl of cards opens where they stand and where they are going, and half a second later they step through.
      */
-    public static void startShadowStep(ServerPlayer player) {
+    public static void startShadowStep(ServerPlayer player, double range) {
         SuitWeapons.State state = SuitWeapons.state(player);
         long now = player.level().getGameTime();
         if (now < state.stepReady || state.stepTicks > 0) {
             return;
         }
-        StepTarget target = stepTarget(player.level(), player);
+        StepTarget target = stepTarget(player.level(), player, range <= 0.0D ? SuitTuning.SHADOW_STEP_RANGE : range);
         if (target == null) {
             player.displayClientMessage(Component.translatable("message.flightsuit.shadow_step_blocked"), true);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SHADOW_STEP_COST)) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, stepCost(target.spot().distanceTo(player.position())))) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
         state.stepReady = now + SuitTuning.SHADOW_STEP_COOLDOWN_TICKS;
         state.stepFrom = player.position();
         state.stepTo = target.spot();
+        state.stepAir = target.air();
         state.stepYaw = player.getYRot();
         if (target.behind() != null) {
             Vec3 face = target.behind().position().subtract(target.spot());
@@ -260,6 +352,48 @@ public final class SuitSkills {
         player.teleportTo(level, state.stepTo.x, state.stepTo.y, state.stepTo.z, state.stepYaw, player.getXRot());
         player.fallDistance = 0.0F;
         shadowEffects(level, state.stepFrom, state.stepTo);
+        if (state.stepAir) {
+            // Out in the open air: a card to stand on for a moment (tickCardPlatform), then a slow fall.
+            state.cardPlatformUntil = level.getGameTime() + SuitTuning.CARD_PLATFORM_TICKS;
+            state.cardPlatformAt = state.stepTo;
+            player.setNoGravity(true);
+            player.setDeltaMovement(Vec3.ZERO);
+            player.hurtMarked = true;
+        }
+    }
+
+    /** Standing on a card in mid-air after stepping into the sky: held still in a ring of cards, then a slow fall. */
+    static void tickCardPlatform(ServerPlayer player, SuitWeapons.State state) {
+        if (state.cardPlatformUntil <= 0L) {
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        long now = level.getGameTime();
+        if (now >= state.cardPlatformUntil || !player.isAlive() || SuitWeapons.armedClass(player) != SuitClass.PHANTOM) {
+            endCardPlatform(player, state);
+            player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, SuitTuning.CARD_PLATFORM_FALL_TICKS, 0, false, true));
+            return;
+        }
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+        if (now % 2 == 0) {
+            Vec3 at = player.position();
+            for (int i = 0; i < 8; i++) {
+                double angle = i * Math.PI / 4.0D + now * 0.2D;
+                level.sendParticles(ParticleTypes.ENCHANTED_HIT, at.x + Math.cos(angle) * 0.7D, at.y - 0.05D, at.z + Math.sin(angle) * 0.7D,
+                        1, 0.0D, 0.0D, 0.0D, 0.0D);
+            }
+            level.sendParticles(ModParticles.CARD_SWIRL.get(), at.x, at.y - 0.1D, at.z, 0, now * 0.3D, 0.5D, 6.0D, 1.0D);
+        }
+    }
+
+    /** Off the card (also on logging out, so nobody is left floating). */
+    static void endCardPlatform(ServerPlayer player, SuitWeapons.State state) {
+        if (state.cardPlatformUntil > 0L) {
+            state.cardPlatformUntil = 0L;
+            player.setNoGravity(false);
+        }
     }
 
     /**

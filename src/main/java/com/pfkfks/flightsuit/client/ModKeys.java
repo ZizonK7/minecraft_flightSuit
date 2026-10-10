@@ -61,6 +61,24 @@ public final class ModKeys {
             CATEGORY
     );
 
+    /** V: the ultimate (M17) - Mark 3's Tempest, Mark 5's Super Saiyan. */
+    public static final KeyMapping ULTIMATE = new KeyMapping(
+            "key.flightsuit.ultimate",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_V,
+            CATEGORY
+    );
+
+    /** B: Mark 3's stolen skill (M17). */
+    public static final KeyMapping STOLEN_SKILL = new KeyMapping(
+            "key.flightsuit.stolen_skill",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            InputConstants.KEY_B,
+            CATEGORY
+    );
+
     private ModKeys() {
     }
 }

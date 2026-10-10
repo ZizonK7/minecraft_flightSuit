@@ -67,6 +67,8 @@ public final class ModNetwork {
                 SpaceTravelS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, StoryGoalS2CPacket.class, StoryGoalS2CPacket::encode, StoryGoalS2CPacket::decode,
                 StoryGoalS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, EntityFxS2CPacket.class, EntityFxS2CPacket::encode, EntityFxS2CPacket::decode,
+                EntityFxS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {
@@ -75,5 +77,10 @@ public final class ModNetwork {
 
     public static void sendToTrackingAndSelf(ServerPlayer player, Object packet) {
         CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), packet);
+    }
+
+    /** Everyone who can see {@code entity} (and the entity itself, if it's a player). */
+    public static void sendToTracking(net.minecraft.world.entity.Entity entity, Object packet) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), packet);
     }
 }

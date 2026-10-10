@@ -21,10 +21,13 @@ public enum SuitClass {
     HERO(36.0D),
     /**
      * Hulkbuster (DESIGN.md 4-2 헐크버스터형): heavy armour for close fighting that makes its wearer half again as
-     * big (SuitSize). Its own skills come later; for now it fires the palm repulsor like a Mark.
+     * big (SuitSize). No repulsor (M17): all fists - flurry, piston punch, ground slam (HulkbusterArts).
      */
     HULKBUSTER(32.0D),
-    /** Swordsman (Trunks, 검사형): the sword art comes later; for now it fires the palm repulsor like a Mark. */
+    /**
+     * Swordsman (Trunks, 검사형, M17): cuts on the wing - three-step combo, Burning Attack, flash slash, sword parry,
+     * and Super Saiyan on the ultimate key (SwordArts).
+     */
     SWORDSMAN(36.0D);
 
     private final double sensorRange;
@@ -56,5 +59,20 @@ public enum SuitClass {
 
     public boolean hasFreezeBeam() {
         return this == STEALTH;
+    }
+
+    /** Fights with its fists instead of a palm repulsor (Hulkbuster). */
+    public boolean punches() {
+        return this == HULKBUSTER;
+    }
+
+    /** Draws a sword for the primary (Trunks); the hero's Master Sword is HERO's own. */
+    public boolean hasSword() {
+        return this == SWORDSMAN;
+    }
+
+    /** Has something on the ultimate key (V): the phantom's Tempest, Trunks' Super Saiyan. */
+    public boolean hasUltimate() {
+        return this == PHANTOM || this == SWORDSMAN;
     }
 }

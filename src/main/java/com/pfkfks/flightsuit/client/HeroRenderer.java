@@ -53,6 +53,7 @@ public final class HeroRenderer {
     private static final Map<Integer, Long> SWORD_UNTIL = new HashMap<>();
     private static final Map<Integer, Hook> HOOKS = new HashMap<>();
     private static ItemStack sword;
+    private static ItemStack trunksSword;
 
     private static final class Hook {
         Vec3 previous;
@@ -74,6 +75,17 @@ public final class HeroRenderer {
         return sword;
     }
 
+    /** The blade the wearer draws: Trunks' sword for Mark 5 (M17), the Master Sword otherwise. */
+    private static ItemStack sword(Player player) {
+        if (SuitWeapons.armedClass(player) == com.pfkfks.flightsuit.suit.SuitClass.SWORDSMAN) {
+            if (trunksSword == null) {
+                trunksSword = new ItemStack(ModItems.TRUNKS_SWORD.get());
+            }
+            return trunksSword;
+        }
+        return sword();
+    }
+
     public static void showSword(int entityId, int ticks) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
@@ -86,7 +98,7 @@ public final class HeroRenderer {
         if (!player.getMainHandItem().isEmpty()) {
             return false;
         }
-        if (ClientWeapons.firing(player.getId()) == SuitWeapons.FIRE_SWORD) {
+        if (SuitWeapons.drawsSword(ClientWeapons.firing(player.getId()))) {
             return true;
         }
         Long until = SWORD_UNTIL.get(player.getId());
@@ -136,7 +148,7 @@ public final class HeroRenderer {
             poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
             poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
             poseStack.translate((left ? -1.0F : 1.0F) / 16.0F, 0.125F, -0.625F);
-            itemInHandRenderer.renderItem(player, sword(), left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+            itemInHandRenderer.renderItem(player, sword(player), left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
                     : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, left, poseStack, buffers, light);
             poseStack.popPose();
         }
@@ -168,7 +180,7 @@ public final class HeroRenderer {
         poseStack.mulPose(Axis.ZP.rotationDegrees(side * lift * -20.0F));
         poseStack.mulPose(Axis.XP.rotationDegrees(lift * -80.0F));
         poseStack.mulPose(Axis.YP.rotationDegrees(side * -45.0F));
-        minecraft.getEntityRenderDispatcher().getItemInHandRenderer().renderItem(player, sword(),
+        minecraft.getEntityRenderDispatcher().getItemInHandRenderer().renderItem(player, sword(player),
                 right ? ItemDisplayContext.FIRST_PERSON_RIGHT_HAND : ItemDisplayContext.FIRST_PERSON_LEFT_HAND, !right,
                 poseStack, event.getMultiBufferSource(), event.getPackedLight());
         poseStack.popPose();

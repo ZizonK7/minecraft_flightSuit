@@ -97,6 +97,16 @@ public final class WeaponInput {
                 ModNetwork.sendToServer(new WeaponC2SPacket(SuitWeapons.SKILL_2));
             }
         }
+        while (ModKeys.ULTIMATE.consumeClick()) {
+            if (wearsSuitChest(player)) {
+                ModNetwork.sendToServer(new WeaponC2SPacket(SuitWeapons.ULTIMATE));
+            }
+        }
+        while (ModKeys.STOLEN_SKILL.consumeClick()) {
+            if (wearsSuitChest(player)) {
+                ModNetwork.sendToServer(new WeaponC2SPacket(SuitWeapons.STOLEN_SKILL));
+            }
+        }
     }
 
     public static void reset() {

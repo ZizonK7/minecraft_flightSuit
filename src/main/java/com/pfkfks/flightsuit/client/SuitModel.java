@@ -20,6 +20,9 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
 
     private final EquipmentSlot slot;
     private final ModelPart[][] pieces = new ModelPart[LIMBS.length][PIECES.length];
+    /** Trunks: the sword's hilt on his back (null for suits without one), hidden while the sword is in his hand. */
+    private final ModelPart hilt;
+    private boolean swordDrawn;
 
     public SuitModel(ModelPart root, float[][] shifts, EquipmentSlot slot) {
         super(root, shifts);
@@ -30,6 +33,20 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
                 pieces[i][s] = limbs[i].getChild(PIECES[s] + "_" + LIMBS[i]);
             }
         }
+        hilt = hiltOf(pieces[1][1]);
+    }
+
+    private static ModelPart hiltOf(ModelPart chest) {
+        try {
+            return chest.getChild("sheath").getChild("hilt");
+        } catch (java.util.NoSuchElementException missing) {
+            return null;
+        }
+    }
+
+    /** Set just before rendering for the wearer at hand (SuitArmorModels.forWearer). */
+    public void setSwordDrawn(boolean drawn) {
+        swordDrawn = drawn;
     }
 
     private void showPieces(EquipmentSlot only) {
@@ -44,6 +61,9 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
     public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay,
                                float red, float green, float blue, float alpha) {
         showPieces(slot);
+        if (hilt != null) {
+            hilt.visible = !swordDrawn;
+        }
         super.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
     }
 

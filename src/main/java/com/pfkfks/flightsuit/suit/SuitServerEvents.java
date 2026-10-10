@@ -110,6 +110,14 @@ public final class SuitServerEvents {
         } else if (!canFly && granted) {
             revokeFlight(player, data);
         }
+        if (canFly && data.getBoolean(GRANTED_FLIGHT_TAG)) {
+            // M17: the Hulkbuster flies at 70% of a Mark 1; a Super Saiyan half again as fast.
+            float speed = flyingSpeed(player, worn);
+            if (Math.abs(abilities.getFlyingSpeed() - speed) > 1.0E-4F) {
+                abilities.setFlyingSpeed(speed);
+                player.onUpdateAbilities();
+            }
+        }
 
         // Creative players already have mayfly (so nothing was granted) but still fly "in the suit";
         // tryDrain is free for them, so this only ever revokes flight we granted.
@@ -119,6 +127,18 @@ public final class SuitServerEvents {
                 revokeFlight(player, data);
             }
         }
+    }
+
+    private static float flyingSpeed(ServerPlayer player, WornSuit worn) {
+        float speed = SuitTuning.SUIT_FLYING_SPEED;
+        if (worn.fullSet() && WornSuit.primaryType(player).suitClass() == SuitClass.HULKBUSTER) {
+            speed *= SuitTuning.HULKBUSTER_FLIGHT_FACTOR;
+        }
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        if (state != null && state.superSaiyan) {
+            speed *= SuitTuning.SSJ_MULTIPLIER;
+        }
+        return speed;
     }
 
     /** Mid-air suit-up brake: grant suit flight right away and switch it on, without waiting for the next tick. */
@@ -231,6 +251,7 @@ public final class SuitServerEvents {
             // Back into the body before the player is saved, so they log in where they left it.
             RemoteLink.end(player, RemoteLink.End.LOGOUT);
             CardDuel.forget(player);
+            SuitWeapons.endUltimates(player);
             SuitUpManager.finishNow(player);
             forget(player.getUUID());
         }

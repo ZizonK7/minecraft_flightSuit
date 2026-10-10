@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "name": "sword_thrust",
+  "author": "flightsuit",
+  "description": "Trunks' thrust: sword arm drawn back at the hip, then driven straight forward with a lunge.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 5,
+    "stopTick": 8,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -30, "yaw": 20, "roll": 0}},
+      {"tick": 2, "easing": "OUTQUAD", "rightArm": {"pitch": -90, "yaw": 0, "roll": 0}},
+      {"tick": 5, "easing": "INOUTSINE", "rightArm": {"pitch": -85, "yaw": 0, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": -40, "yaw": -20, "roll": 0}},
+      {"tick": 2, "easing": "INOUTSINE", "leftArm": {"pitch": 20, "yaw": 0, "roll": -20}},
+      {"tick": 5, "easing": "INOUTSINE", "leftArm": {"pitch": 15, "yaw": 0, "roll": -20}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"yaw": 20}},
+      {"tick": 2, "easing": "OUTQUAD", "torso": {"yaw": -10, "pitch": 10}},
+      {"tick": 5, "easing": "INOUTSINE", "torso": {"yaw": -5, "pitch": 8}},
+      {"tick": 0, "easing": "INOUTSINE", "rightLeg": {"pitch": 0}},
+      {"tick": 2, "easing": "INOUTSINE", "rightLeg": {"pitch": -35}},
+      {"tick": 5, "easing": "INOUTSINE", "rightLeg": {"pitch": -30}},
+      {"tick": 0, "easing": "INOUTSINE", "leftLeg": {"pitch": 0}},
+      {"tick": 2, "easing": "INOUTSINE", "leftLeg": {"pitch": 25}},
+      {"tick": 5, "easing": "INOUTSINE", "leftLeg": {"pitch": 20}}
+    ]
+  }
+}

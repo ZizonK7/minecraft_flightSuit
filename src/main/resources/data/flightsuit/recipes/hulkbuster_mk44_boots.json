@@ -9,10 +9,10 @@
       "item": "minecraft:iron_block"
     },
     {
-      "item": "minecraft:gold_ingot"
+      "item": "minecraft:gold_block"
     },
     {
-      "item": "minecraft:redstone_block"
+      "item": "minecraft:netherite_ingot"
     }
   ],
   "result": {

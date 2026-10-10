@@ -66,6 +66,11 @@ public class DbzFighterEntity extends PathfinderMob {
     private int barrier;
     /** Goku gathering the Spirit Bomb: he stands, hands up, and does nothing else (DbzSaga). */
     private int channeling;
+    /** M17: the last skill it used that the phantom could steal, and when (PhantomArts). */
+    private @Nullable com.pfkfks.flightsuit.suit.StolenSkill lastSkill;
+    private long lastSkillAt;
+    /** M17: skills already stolen from this boss in this fight (once each). */
+    private final java.util.Set<com.pfkfks.flightsuit.suit.StolenSkill> stolenFrom = java.util.EnumSet.noneOf(com.pfkfks.flightsuit.suit.StolenSkill.class);
 
     public DbzFighterEntity(EntityType<? extends DbzFighterEntity> type, Level level) {
         super(type, level);
@@ -339,6 +344,7 @@ public class DbzFighterEntity extends PathfinderMob {
                         foe.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 60, 0));
                     }
                     server.sendParticles(ParticleTypes.FLASH, getX(), getY() + 1.6D, getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    usedSkill(com.pfkfks.flightsuit.suit.StolenSkill.SOLAR_FLARE);
                     say(server, me.line("flare"));
                 }
             }
@@ -379,6 +385,7 @@ public class DbzFighterEntity extends PathfinderMob {
                     kiBlast(server, target, 4.0F, 1);
                     target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
                     target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 1));
+                    usedSkill(com.pfkfks.flightsuit.suit.StolenSkill.CANDY_BEAM);
                     say(server, me.line("candy"));
                     specialCooldown = 300;
                 } else if (blastCooldown <= 0 && distance < 6.0D) {
@@ -429,6 +436,14 @@ public class DbzFighterEntity extends PathfinderMob {
         Vec3 from = getEyePosition();
         Vec3 dir = target.getEyePosition().subtract(from).normalize();
         Vec3 to = from.add(dir.scale(30.0D));
+        // M17: the Kamehameha and the Galick Gun are the same moves the phantom can steal (StolenSkill).
+        com.pfkfks.flightsuit.suit.StolenSkill shared = me == DbzCharacter.GOKU || me == DbzCharacter.CELL
+                ? com.pfkfks.flightsuit.suit.StolenSkill.KAMEHAMEHA : me == DbzCharacter.VEGETA ? com.pfkfks.flightsuit.suit.StolenSkill.GALICK_GUN : null;
+        if (shared != null) {
+            shared.cast(server, this, from, dir, target, me == DbzCharacter.VEGETA ? 18.0F : me == DbzCharacter.CELL ? 22.0F : 14.0F, this::isEnemy);
+            usedSkill(shared);
+            return;
+        }
         float damage = switch (me) {
             case VEGETA -> 18.0F;
             case RECOOME, TRUNKS -> 15.0F;
@@ -478,6 +493,33 @@ public class DbzFighterEntity extends PathfinderMob {
         return transformed;
     }
 
+    // ---------------------------------------------------------------- the phantom's steal (M17)
+
+    /** Records a skill it just used (the phantom can steal it for STEAL_MEMORY_TICKS). */
+    public void usedSkill(com.pfkfks.flightsuit.suit.StolenSkill skill) {
+        lastSkill = skill;
+        lastSkillAt = level().getGameTime();
+    }
+
+    /** What the phantom could steal from it now: what it used lately, or what its kind always does (Saibamen, Cell Jr.). */
+    public @Nullable com.pfkfks.flightsuit.suit.StolenSkill recentSkill(long now) {
+        if (lastSkill != null && now - lastSkillAt <= com.pfkfks.flightsuit.suit.SuitTuning.STEAL_MEMORY_TICKS) {
+            return lastSkill;
+        }
+        DbzCharacter me = getCharacter();
+        return me == DbzCharacter.SAIBAMAN || me == DbzCharacter.CELL_JR ? com.pfkfks.flightsuit.suit.StolenSkill.SELF_DESTRUCT : null;
+    }
+
+    /** A boss gives up each skill once a fight; anyone else, any number of times. */
+    public boolean allowSteal(com.pfkfks.flightsuit.suit.StolenSkill skill) {
+        return getCharacter().role() != DbzCharacter.Role.BOSS || stolenFrom.add(skill);
+    }
+
+    /** A player's beam coming at it: bosses sometimes guard or dodge (filled in with the fight motions). */
+    public boolean dodgesBeam(LivingEntity shooter) {
+        return false;
+    }
+
     /** Goku: hands up, gathering the Spirit Bomb for {@code ticks} (DbzSaga lets it fly). */
     public void channel(int ticks) {
         channeling = ticks;
@@ -519,8 +561,13 @@ public class DbzFighterEntity extends PathfinderMob {
                 Vec3 at = from.add(step.scale(i / (double) points));
                 server.sendParticles(getCharacter() == DbzCharacter.GOKU ? ParticleTypes.END_ROD : ParticleTypes.FLAME, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
             }
-            victim.hurt(damageSources().mobAttack(this), damage);
+            if (!com.pfkfks.flightsuit.suit.KiGuard.blocks(victim, this, from)) {
+                victim.hurt(damageSources().mobAttack(this), damage);
+            }
             server.sendParticles(ParticleTypes.EXPLOSION, to.x, to.y - 0.5D, to.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        }
+        if (getCharacter() == DbzCharacter.FRIEZA) {
+            usedSkill(com.pfkfks.flightsuit.suit.StolenSkill.DEATH_BEAM);
         }
         playSound(SoundEvents.FIRECHARGE_USE, 1.0F, 1.5F);
     }

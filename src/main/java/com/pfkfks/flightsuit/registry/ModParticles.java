@@ -18,6 +18,16 @@ public final class ModParticles {
     public static final RegistryObject<SimpleParticleType> CARD_SWIRL =
             PARTICLE_TYPES.register("card_swirl", () -> new SimpleParticleType(true));
 
+    /**
+     * A phantom card flying straight (client/CardFlightParticle, M17): the Tempest's rain, the steal's cards out to
+     * the target. Sent with count 0: x/y/z = its velocity per tick; it lives CARD_FLIGHT_LIFE ticks.
+     */
+    public static final RegistryObject<SimpleParticleType> CARD_FLIGHT =
+            PARTICLE_TYPES.register("card_flight", () -> new SimpleParticleType(true));
+
+    /** How long a flying card lives: senders scale its velocity to the distance it should cover. */
+    public static final int CARD_FLIGHT_LIFE = 9;
+
     private ModParticles() {
     }
 }

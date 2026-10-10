@@ -44,6 +44,8 @@ public class ModelGen {
         if (all || what.equals("trunks")) {
             Model m = Trunks.build();
             emit(m, "client/TrunksSuitModel.java", "textures/models/armor/trunks_mk5.png");
+            // M17: the Super Saiyan variant - the same texture with the hair (helmet boxes only) turned gold.
+            write(Trunks.golden(m), asset("textures/models/armor/trunks_mk5_ssj.png"));
         }
         if (all || what.equals("shenron")) {
             Model m = Shenron.build();
@@ -1383,6 +1385,37 @@ public class ModelGen {
         static final int SHEATH = 0xFF26272E, SHEATH_LIGHT = 0xFF3D3F4A, BRASS = 0xFFB48A3C, BRASS_DARK = 0xFF7C5A22;
         static final int WRAP = 0xFF8E3B22, WRAP_DARK = 0xFF5A2213, BOOT = 0xFFE3A62A, BOOT_DARK = 0xFFB07A14, SOLE = 0xFFE9E9E4;
 
+        /** The helmet piece: its boxes are where the hair is (golden()). */
+        static Part helmet;
+
+        /**
+         * Super Saiyan: the texture with every lavender texel inside the helmet's boxes (skin hair, crown, curtains,
+         * locks) turned gold, keeping its light and shade.
+         */
+        static BufferedImage golden(Model m) {
+            BufferedImage out = new BufferedImage(m.tex.getWidth(), m.tex.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            out.getGraphics().drawImage(m.tex, 0, 0, null);
+            for (Box b : helmet.boxes) {
+                for (int y = b.v; y < b.v + b.uvH() && y < out.getHeight(); y++) {
+                    for (int x = b.u; x < b.u + b.uvW() && x < out.getWidth(); x++) {
+                        int argb = out.getRGB(x, y);
+                        if ((argb >>> 24) == 0) {
+                            continue;
+                        }
+                        float[] hsb = java.awt.Color.RGBtoHSB((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, null);
+                        float hue = hsb[0] * 360.0F;
+                        if (hue < 235.0F || hue > 315.0F || hsb[1] < 0.08F || hsb[1] > 0.6F || hsb[2] < 0.3F) {
+                            continue;
+                        }
+                        float bright = Math.min(1.0F, hsb[2] * 1.08F + 0.04F);
+                        int rgb = java.awt.Color.HSBtoRGB(47.0F / 360.0F, 0.62F + (1.0F - bright) * 0.3F, bright);
+                        out.setRGB(x, y, (argb & 0xFF000000) | (rgb & 0x00FFFFFF));
+                    }
+                }
+            }
+            return out;
+        }
+
         static Model build() throws IOException {
             Model m = new Model("trunks_mk5", 128, 64);
             m.skin = ImageIO.read(reference("trunks_mk5_skin_source.png"));
@@ -1392,8 +1425,8 @@ public class ModelGen {
 
             // Helmet: the skin's head and hair layer, then Trunks' hair as volume - crown, curtains down the
             // sides, the back, and two locks over the forehead.
-            piece(limbs, "head", 0)
-                    .skin("head", 0, 0, -4, -8, -4, 8, 8, 8, 0.75F)
+            helmet = piece(limbs, "head", 0);
+            helmet.skin("head", 0, 0, -4, -8, -4, 8, 8, 8, 0.75F)
                     .skin("hat", 32, 0, -4, -8, -4, 8, 8, 8, 1.0F)
                     .box("crown", -4.5F, -10, -4.5F, 9, 1, 9, Trunks::hair)
                     .box("hair_right", -5.5F, -9, -4, 1, 7, 8, Trunks::hair)
@@ -1413,7 +1446,9 @@ public class ModelGen {
             Part sword = chest.child("sheath", 0, 4.5F, 3.4F, 0, 0, -0.55F);
             sword.box("scabbard", -1, -5, -0.5F, 2, 14, 1, Trunks::scabbard)
                     .box("chape", -1.5F, 9, -1, 3, 1, 2, Trunks::brass)
-                    .box("throat", -1.5F, -6, -1, 3, 1, 2, Trunks::brass)
+                    .box("throat", -1.5F, -6, -1, 3, 1, 2, Trunks::brass);
+            // The hilt is its own part (M17): it leaves his back while the sword is in his hand (SuitModel).
+            sword.child("hilt", 0, 0, 0)
                     .box("guard", -2.5F, -7, -1.5F, 5, 1, 3, Trunks::brass)
                     .box("grip", -0.5F, -12, -0.5F, 1, 5, 1, Trunks::grip)
                     .box("pommel", -1, -13, -1, 2, 1, 2, Trunks::brass);

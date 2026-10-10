@@ -69,6 +69,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.DBZ_FIGHTER.get(), DbzFighterRenderer::new);
         event.registerEntityRenderer(ModEntities.THANOS_FORCE.get(), ThanosForceRenderer::new);
         event.registerEntityRenderer(ModEntities.SEAT.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+        event.registerEntityRenderer(ModEntities.VERONICA_POD.get(), VeronicaPodRenderer::new);
         event.registerEntityRenderer(ModEntities.SHENRON.get(), ShenronRenderer::new);
         event.registerEntityRenderer(ModEntities.TOWNSFOLK.get(), TownsfolkRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
@@ -82,11 +83,14 @@ public final class ClientSetup {
         event.register(ModKeys.SUIT_WHEEL);
         event.register(ModKeys.SKILL_1);
         event.register(ModKeys.SKILL_2);
+        event.register(ModKeys.ULTIMATE);
+        event.register(ModKeys.STOLEN_SKILL);
     }
 
     @SubscribeEvent
     public static void registerParticles(net.minecraftforge.client.event.RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.CARD_SWIRL.get(), CardSwirlParticle.Provider::new);
+        event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.CARD_FLIGHT.get(), CardFlightParticle.Provider::new);
     }
 
     @SubscribeEvent

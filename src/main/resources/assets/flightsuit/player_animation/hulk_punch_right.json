@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "name": "hulk_punch_right",
+  "author": "flightsuit",
+  "description": "Hulkbuster punch with the right fist: pulled back, then driven straight out with the torso twisting behind it.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 7,
+    "stopTick": 10,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -40, "yaw": 25, "roll": 0}},
+      {"tick": 2, "easing": "OUTQUAD", "rightArm": {"pitch": -90, "yaw": -5, "roll": 0}},
+      {"tick": 5, "easing": "INOUTSINE", "rightArm": {"pitch": -88, "yaw": -5, "roll": 0}},
+      {"tick": 7, "easing": "INOUTSINE", "rightArm": {"pitch": -50, "yaw": 15, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": -60, "yaw": -10, "roll": 0}},
+      {"tick": 2, "easing": "INOUTSINE", "leftArm": {"pitch": -30, "yaw": -20, "roll": 0}},
+      {"tick": 7, "easing": "INOUTSINE", "leftArm": {"pitch": -50, "yaw": -10, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"yaw": 10}},
+      {"tick": 2, "easing": "OUTQUAD", "torso": {"yaw": -20}},
+      {"tick": 7, "easing": "INOUTSINE", "torso": {"yaw": -5}},
+      {"tick": 0, "easing": "INOUTSINE", "body": {"yaw": 5}},
+      {"tick": 2, "easing": "OUTQUAD", "body": {"yaw": -15}},
+      {"tick": 7, "easing": "INOUTSINE", "body": {"yaw": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "rightLeg": {"pitch": 10}},
+      {"tick": 7, "easing": "INOUTSINE", "rightLeg": {"pitch": 10}},
+      {"tick": 0, "easing": "INOUTSINE", "leftLeg": {"pitch": -10}},
+      {"tick": 7, "easing": "INOUTSINE", "leftLeg": {"pitch": -10}}
+    ]
+  }
+}

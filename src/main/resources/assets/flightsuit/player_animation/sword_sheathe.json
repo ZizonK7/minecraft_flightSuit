@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "name": "sword_sheathe",
+  "author": "flightsuit",
+  "description": "Trunks after the flash slash: a flick of the sword to the side, then the arm reaching back over the shoulder to put it away.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 12,
+    "stopTick": 16,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -60, "yaw": -40, "roll": 0}},
+      {"tick": 3, "easing": "OUTQUAD", "rightArm": {"pitch": -40, "yaw": 50, "roll": 20}},
+      {"tick": 8, "easing": "INOUTSINE", "rightArm": {"pitch": -170, "yaw": 10, "roll": -20}},
+      {"tick": 12, "easing": "INOUTSINE", "rightArm": {"pitch": -160, "yaw": 10, "roll": -20}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": 0, "yaw": 0, "roll": -15}},
+      {"tick": 12, "easing": "INOUTSINE", "leftArm": {"pitch": 0, "yaw": 0, "roll": -15}},
+      {"tick": 0, "easing": "INOUTSINE", "head": {"pitch": 0}},
+      {"tick": 8, "easing": "INOUTSINE", "head": {"pitch": 10}},
+      {"tick": 12, "easing": "INOUTSINE", "head": {"pitch": 10}}
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.client;
 
 import com.pfkfks.flightsuit.network.EdithStatusS2CPacket;
+import com.pfkfks.flightsuit.network.EntityFxS2CPacket;
 import com.pfkfks.flightsuit.network.ShieldStateS2CPacket;
 import com.pfkfks.flightsuit.network.SuitAnimS2CPacket;
 import com.pfkfks.flightsuit.network.SuitRosterS2CPacket;
@@ -30,6 +31,9 @@ public final class ClientPacketHandler {
         SuitAnimator.playOneShot(player, anim);
         if (anim == SuitAnim.SPIN_ATTACK) {
             HeroRenderer.showSword(player.getId(), 14);
+        } else if (anim == SuitAnim.SWORD_SHEATHE || anim == SuitAnim.SWORD_PARRY || anim == SuitAnim.BURNING_ATTACK) {
+            // Trunks: the sword stays out a moment after the flash slash or a parry.
+            HeroRenderer.showSword(player.getId(), anim == SuitAnim.BURNING_ATTACK ? 0 : com.pfkfks.flightsuit.suit.SuitTuning.SWORD_SHEATHE_TICKS);
         }
         if (player == minecraft.player) {
             // Ground / station rig: watch the pieces (and the arms) from the front. Fall / boarding: from behind,
@@ -60,5 +64,20 @@ public final class ClientPacketHandler {
 
     public static void handleEdithStatus(EdithStatusS2CPacket packet) {
         edithStatus = packet;
+    }
+
+    /** Golden hair on or off (Super Saiyan), candy-small or back (the stolen candy beam). */
+    public static void handleEntityFx(EntityFxS2CPacket packet) {
+        java.util.Set<Integer> set = packet.effect == EntityFxS2CPacket.GOLDEN ? com.pfkfks.flightsuit.suit.SwordArts.GOLDEN
+                : com.pfkfks.flightsuit.suit.CandyShrink.CLIENT;
+        if (packet.on) {
+            set.add(packet.entityId);
+        } else {
+            set.remove(packet.entityId);
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (packet.effect == EntityFxS2CPacket.CANDY && minecraft.level != null && minecraft.level.getEntity(packet.entityId) != null) {
+            minecraft.level.getEntity(packet.entityId).refreshDimensions();
+        }
     }
 }

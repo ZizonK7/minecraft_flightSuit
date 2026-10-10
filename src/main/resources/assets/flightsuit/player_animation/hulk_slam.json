@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "name": "hulk_slam",
+  "author": "flightsuit",
+  "description": "Hulkbuster ground slam: both fists raised high over the head, then brought down together as the body crouches.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 12,
+    "stopTick": 16,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -170, "yaw": 0, "roll": -10}},
+      {"tick": 6, "easing": "INOUTSINE", "rightArm": {"pitch": -175, "yaw": 0, "roll": -10}},
+      {"tick": 9, "easing": "INQUAD", "rightArm": {"pitch": -40, "yaw": 0, "roll": 10}},
+      {"tick": 12, "easing": "INOUTSINE", "rightArm": {"pitch": -35, "yaw": 0, "roll": 10}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": -170, "yaw": 0, "roll": 10}},
+      {"tick": 6, "easing": "INOUTSINE", "leftArm": {"pitch": -175, "yaw": 0, "roll": 10}},
+      {"tick": 9, "easing": "INQUAD", "leftArm": {"pitch": -40, "yaw": 0, "roll": -10}},
+      {"tick": 12, "easing": "INOUTSINE", "leftArm": {"pitch": -35, "yaw": 0, "roll": -10}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"pitch": -10}},
+      {"tick": 6, "easing": "INOUTSINE", "torso": {"pitch": -12}},
+      {"tick": 9, "easing": "INQUAD", "torso": {"pitch": 35}},
+      {"tick": 12, "easing": "INOUTSINE", "torso": {"pitch": 30}},
+      {"tick": 0, "easing": "INOUTSINE", "rightLeg": {"pitch": 0}},
+      {"tick": 9, "easing": "INOUTSINE", "rightLeg": {"pitch": -30}},
+      {"tick": 12, "easing": "INOUTSINE", "rightLeg": {"pitch": -30}},
+      {"tick": 0, "easing": "INOUTSINE", "leftLeg": {"pitch": 0}},
+      {"tick": 9, "easing": "INOUTSINE", "leftLeg": {"pitch": 20}},
+      {"tick": 12, "easing": "INOUTSINE", "leftLeg": {"pitch": 20}}
+    ]
+  }
+}

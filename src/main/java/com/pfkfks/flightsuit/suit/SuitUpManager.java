@@ -480,6 +480,9 @@ public final class SuitUpManager {
             startFall(player, parts);
             return;
         }
+        if (isHulkbuster(parts) && startPod(player, parts)) {
+            return;
+        }
         RandomSource random = player.getRandom();
         List<Step> steps = new ArrayList<>();
         for (int i = 0; i < ORDER.length; i++) {
@@ -501,6 +504,75 @@ public final class SuitUpManager {
             steps.add(new Step(ORDER[i], stack, LAUNCH_TICK[i], flightTicks, offset));
         }
         startGround(player, steps, SuitAnim.SUIT_UP_GROUND);
+    }
+
+    // ---------------------------------------------------------------- Veronica (M17)
+
+    /** The pod's fall from the sky, and the door opening before the pieces fly out. */
+    private static final int POD_FALL_TICKS = 20;
+    private static final int POD_OPEN_TICKS = 8;
+    private static final int POD_PIECE_FLIGHT_TICKS = 8;
+    private static final double POD_DROP = 40.0D;
+
+    private static boolean isHulkbuster(Map<EquipmentSlot, ItemStack> parts) {
+        for (ItemStack stack : parts.values()) {
+            if (stack.getItem() instanceof SuitArmorItem armor && armor.getSuitType().suitClass() == SuitClass.HULKBUSTER) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The Hulkbuster comes by Veronica: a pod falls from the sky (up to POD_DROP blocks, less under a roof) two
+     * blocks beside the wearer, opens, and the pieces fly the short way out of it onto them. False if there's no
+     * ground there to land on (then the pieces come the usual way).
+     */
+    private static boolean startPod(ServerPlayer player, Map<EquipmentSlot, ItemStack> parts) {
+        ServerLevel level = player.serverLevel();
+        Vec3 right = Vec3.directionFromRotation(0.0F, player.getYRot() + 90.0F);
+        Vec3 land = podGround(level, player.position().add(right.scale(-2.5D)));
+        if (land == null) {
+            land = podGround(level, player.position().add(right.scale(2.5D)));
+        }
+        if (land == null) {
+            return false;
+        }
+        // As high as the open sky above goes.
+        double drop = 4.0D;
+        net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(land);
+        while (drop < POD_DROP && level.getBlockState(pos.above((int) drop + 3)).isAir()) {
+            drop += 1.0D;
+        }
+        Vec3 toPlayer = player.position().subtract(land);
+        float yaw = (float) (Math.atan2(toPlayer.z, toPlayer.x) * (180.0D / Math.PI)) - 90.0F;
+        level.addFreshEntity(com.pfkfks.flightsuit.entity.VeronicaPodEntity.drop(level, land, drop, POD_FALL_TICKS, yaw));
+        Vec3 hatch = com.pfkfks.flightsuit.entity.VeronicaPodEntity.hatch(land, yaw);
+        List<Step> steps = new ArrayList<>();
+        int n = 0;
+        for (EquipmentSlot slot : ORDER) {
+            ItemStack stack = parts.get(slot);
+            if (stack != null) {
+                steps.add(new Step(slot, stack, POD_FALL_TICKS + POD_OPEN_TICKS + n++ * 3, POD_PIECE_FLIGHT_TICKS,
+                        hatch.subtract(player.position())));
+            }
+        }
+        startGround(player, steps, SuitAnim.SUIT_UP_GROUND);
+        player.displayClientMessage(Component.translatable("message.flightsuit.veronica"), true);
+        return true;
+    }
+
+    /** Ground to set the pod down on near {@code near}: open space at least 3 high over something solid. */
+    private static @org.jetbrains.annotations.Nullable Vec3 podGround(ServerLevel level, Vec3 near) {
+        net.minecraft.core.BlockPos start = net.minecraft.core.BlockPos.containing(near).above(3);
+        for (int i = 0; i < 9; i++) {
+            net.minecraft.core.BlockPos feet = start.below(i);
+            if (level.getBlockState(feet).isAir() && level.getBlockState(feet.above()).isAir() && level.getBlockState(feet.above(2)).isAir()
+                    && level.getBlockState(feet.below()).isFaceSturdy(level, feet.below(), net.minecraft.core.Direction.UP)) {
+                return new Vec3(feet.getX() + 0.5D, feet.getY(), feet.getZ() + 0.5D);
+            }
+        }
+        return null;
     }
 
     private static boolean isFalling(ServerPlayer player) {

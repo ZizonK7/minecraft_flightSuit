@@ -34,12 +34,18 @@ public final class SuitFlightClient {
             return;
         }
         Vec3 look = player.getLookAngle();
+        // M17: the Hulkbuster boosts at 70% of a Mark 1, a Super Saiyan half again as fast.
+        double factor = worn.fullSet() && WornSuit.primaryType(player).suitClass() == com.pfkfks.flightsuit.suit.SuitClass.HULKBUSTER
+                ? SuitTuning.HULKBUSTER_FLIGHT_FACTOR : 1.0D;
+        if (ClientWeapons.superSaiyan) {
+            factor *= SuitTuning.SSJ_MULTIPLIER;
+        }
         Vec3 velocity = player.getDeltaMovement().add(
-                look.x * SuitTuning.BOOST_ACCEL_HORIZONTAL,
-                look.y * SuitTuning.BOOST_ACCEL_VERTICAL,
-                look.z * SuitTuning.BOOST_ACCEL_HORIZONTAL);
-        if (velocity.length() > SuitTuning.BOOST_MAX_SPEED) {
-            velocity = velocity.normalize().scale(SuitTuning.BOOST_MAX_SPEED);
+                look.x * SuitTuning.BOOST_ACCEL_HORIZONTAL * factor,
+                look.y * SuitTuning.BOOST_ACCEL_VERTICAL * factor,
+                look.z * SuitTuning.BOOST_ACCEL_HORIZONTAL * factor);
+        if (velocity.length() > SuitTuning.BOOST_MAX_SPEED * factor) {
+            velocity = velocity.normalize().scale(SuitTuning.BOOST_MAX_SPEED * factor);
         }
         player.setDeltaMovement(velocity);
     }

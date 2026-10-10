@@ -50,7 +50,9 @@ import java.util.UUID;
  *   beam (slows, then freezes the target stock-still - Stasis), Mark 3 card stream (PhantomCards);
  * - skill 1 (X): Mark 1 micro-missile salvo from the shoulders; Mark 3 Judgment Draw;
  * - skill 2 (C): Mark 1 unibeam, Mark 2 cryo nova (SuitSkills); Mark 3 card duel (CardDuel);
- * - Mark 4 swings the Master Sword instead, with a spin attack and a clawshot (HeroArts).
+ * - Mark 4 swings the Master Sword instead, with a spin attack and a clawshot (HeroArts);
+ * - M17: Mark 44 punches (HulkbusterArts), Mark 5 cuts (SwordArts), Mark 3 steals skills (PhantomArts); the
+ *   ultimate key (V) fires the phantom's Tempest or turns Trunks Super Saiyan, B uses the phantom's stolen skill.
  * The client only says when the trigger goes down and up and which skill key was pressed; energy, cooldowns,
  * aiming and damage all live here.
  */
@@ -60,6 +62,12 @@ public final class SuitWeapons {
     public static final byte PRIMARY_STOP = 1;
     public static final byte SKILL_1 = 2;
     public static final byte SKILL_2 = 3;
+    /** M17: the ultimate key (V). */
+    public static final byte ULTIMATE = 4;
+    /** M17: the phantom's stolen skill (B). */
+    public static final byte STOLEN_SKILL = 5;
+    /** M17: the phantom stealing (Z held, PhantomAimClient). */
+    public static final byte STEAL = 6;
 
     /** What a player's primary is firing (synced for the beam visual and the aimed arm). */
     public static final byte FIRE_NONE = 0;
@@ -67,6 +75,10 @@ public final class SuitWeapons {
     public static final byte FIRE_CRYO = 2;
     public static final byte FIRE_CARDS = 3;
     public static final byte FIRE_SWORD = 4;
+    /** M17: the Hulkbuster's flurry of punches. */
+    public static final byte FIRE_PUNCH = 5;
+    /** M17: Trunks' three-step combo. */
+    public static final byte FIRE_SLASH = 6;
 
     /** Per-player weapon state (package-private: PhantomCards and CardDuel keep their gauge and cooldown here). */
     static final class State {
@@ -101,7 +113,42 @@ public final class SuitWeapons {
         int stepTicks;
         Vec3 stepFrom = Vec3.ZERO;
         Vec3 stepTo = Vec3.ZERO;
+        boolean stepAir;
         float stepYaw;
+        /** Mark 3 stepping into the open air: standing on a card until this tick, then a slow fall. */
+        long cardPlatformUntil;
+        Vec3 cardPlatformAt = Vec3.ZERO;
+        // M17 ultimate (V): its cooldown.
+        long ultReady;
+        // M17 Mark 44 (HulkbusterArts).
+        int punches;
+        /** Punched foes still flying back, until when a wall counts. */
+        final Map<LivingEntity, Long> wallWatch = new java.util.WeakHashMap<>();
+        LivingEntity pistonTarget;
+        int pistonHits;
+        int pistonTicks;
+        byte slamPhase;
+        int slamTicks;
+        // M17 Mark 5 (SwordArts).
+        int comboStep;
+        long lastCut;
+        final java.util.Set<LivingEntity> comboHit = new java.util.HashSet<>();
+        boolean parryBonus;
+        int burningWindup;
+        int flashTicks;
+        Vec3 flashDir = Vec3.ZERO;
+        Vec3 flashFrom = Vec3.ZERO;
+        Vec3 flashLast = Vec3.ZERO;
+        final java.util.Set<LivingEntity> flashHit = new java.util.HashSet<>();
+        boolean superSaiyan;
+        long ssjLockedUntil;
+        // M17 Mark 3 (PhantomArts): stealing, and the stolen skill's cooldown and charge.
+        long stealReady;
+        int stealTicks;
+        LivingEntity stealTarget;
+        long stolenReady;
+        StolenSkill chargingSkill;
+        int skillCharge;
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -111,6 +158,16 @@ public final class SuitWeapons {
 
     static State state(ServerPlayer player) {
         return STATES.computeIfAbsent(player.getUUID(), id -> new State());
+    }
+
+    /** The player's weapon state if they have one yet (null otherwise - never creates it). */
+    static State existing(ServerPlayer player) {
+        return STATES.get(player.getUUID());
+    }
+
+    static void cooldownMessage(ServerPlayer player, long ticksLeft) {
+        player.displayClientMessage(Component.translatable("message.flightsuit.skill_cooldown",
+                String.format("%.1f", Math.max(0L, ticksLeft) / 20.0F)), true);
     }
 
     /** The class of the suit whose chestplate (arms, reactor) the player wears, or null. */
@@ -129,6 +186,16 @@ public final class SuitWeapons {
     /** Beams (repulsor, cryo) hum while they fire; cards and the sword make their own sounds. */
     public static boolean isBeam(byte kind) {
         return kind == FIRE_REPULSOR || kind == FIRE_CRYO;
+    }
+
+    /** Firing that holds the right arm out aimed (beams, cards) - not the sword or the fists. */
+    public static boolean aimsArm(byte kind) {
+        return kind == FIRE_REPULSOR || kind == FIRE_CRYO || kind == FIRE_CARDS;
+    }
+
+    /** A blade in the hand while it fires (the Master Sword, Trunks' sword). */
+    public static boolean drawsSword(byte kind) {
+        return kind == FIRE_SWORD || kind == FIRE_SLASH;
     }
 
     // ---------------------------------------------------------------- input
@@ -152,6 +219,10 @@ public final class SuitWeapons {
                     PhantomCards.judgmentDraw(player, state);
                 } else if (suitClass == SuitClass.HERO) {
                     HeroArts.spinAttack(player, state);
+                } else if (suitClass == SuitClass.HULKBUSTER) {
+                    HulkbusterArts.pistonPunch(player, state);
+                } else if (suitClass == SuitClass.SWORDSMAN) {
+                    SwordArts.burningAttack(player, state);
                 } else {
                     player.displayClientMessage(Component.translatable("message.flightsuit.no_skill"), true);
                 }
@@ -165,8 +236,33 @@ public final class SuitWeapons {
                     CardDuel.challenge(player, state);
                 } else if (suitClass == SuitClass.HERO) {
                     HeroArts.clawshot(player, state);
+                } else if (suitClass == SuitClass.HULKBUSTER) {
+                    HulkbusterArts.groundSlam(player, state);
+                } else if (suitClass == SuitClass.SWORDSMAN) {
+                    SwordArts.flashSlash(player, state);
                 } else {
                     player.displayClientMessage(Component.translatable("message.flightsuit.no_skill"), true);
+                }
+            }
+            case ULTIMATE -> {
+                if (suitClass == SuitClass.PHANTOM) {
+                    PhantomArts.tempest(player, state);
+                } else if (suitClass == SuitClass.SWORDSMAN) {
+                    SwordArts.toggleSuperSaiyan(player, state);
+                } else {
+                    player.displayClientMessage(Component.translatable("message.flightsuit.no_ultimate"), true);
+                }
+            }
+            case STOLEN_SKILL -> {
+                if (suitClass == SuitClass.PHANTOM) {
+                    PhantomArts.useStolen(player, state);
+                } else {
+                    player.displayClientMessage(Component.translatable("message.flightsuit.no_stolen"), true);
+                }
+            }
+            case STEAL -> {
+                if (suitClass == SuitClass.PHANTOM) {
+                    PhantomArts.steal(player, state);
                 }
             }
             default -> {
@@ -186,6 +282,8 @@ public final class SuitWeapons {
             case STEALTH -> FIRE_CRYO;
             case PHANTOM -> FIRE_CARDS;
             case HERO -> FIRE_SWORD;
+            case HULKBUSTER -> FIRE_PUNCH;
+            case SWORDSMAN -> FIRE_SLASH;
             default -> FIRE_REPULSOR;
         };
         state.firingTicks = 0;
@@ -228,6 +326,10 @@ public final class SuitWeapons {
                     PhantomCards.tickStream(player, state);
                 } else if (state.firing == FIRE_SWORD) {
                     HeroArts.tickSword(player, state);
+                } else if (state.firing == FIRE_PUNCH) {
+                    HulkbusterArts.tickFlurry(player, state);
+                } else if (state.firing == FIRE_SLASH) {
+                    SwordArts.tickCombo(player, state);
                 } else {
                     tickBeam(player, state, state.firing == FIRE_CRYO);
                 }
@@ -235,12 +337,16 @@ public final class SuitWeapons {
         }
         tickSalvo(player, state, suitClass);
         SuitSkills.tickShadowStep(player, state);
+        SuitSkills.tickCardPlatform(player, state);
         if (suitClass == SuitClass.STANDARD) {
             SuitSkills.tickUnibeam(player, state);
         } else {
             state.unibeamCharge = 0;
         }
         HeroArts.tick(player, state, suitClass);
+        HulkbusterArts.tick(player, state, suitClass);
+        SwordArts.tick(player, state, suitClass);
+        PhantomArts.tick(player, state, suitClass);
         CardDuel.tick(player);
     }
 
@@ -373,8 +479,15 @@ public final class SuitWeapons {
     // ---------------------------------------------------------------- status
 
     static void sendStatus(ServerPlayer player, State state) {
+        StolenSkill stolen = PhantomArts.stolen(player);
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready, state.gauge, state.spadeUntil));
+                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready, state.gauge, state.spadeUntil, state.ultReady,
+                        state.superSaiyan, state.ssjLockedUntil, stolen == null ? "" : stolen.name(), state.stolenReady));
+    }
+
+    /** The HUD status straight after joining (the stolen card is kept across sessions). */
+    public static void sendStatusNow(ServerPlayer player) {
+        sendStatus(player, state(player));
     }
 
     @SubscribeEvent
@@ -384,7 +497,27 @@ public final class SuitWeapons {
             if (state != null && state.firing != FIRE_NONE) {
                 ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> watcher), new BeamStateS2CPacket(target.getId(), state.firing));
             }
+            if (state != null && state.superSaiyan) {
+                ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> watcher),
+                        new com.pfkfks.flightsuit.network.EntityFxS2CPacket(target.getId(), com.pfkfks.flightsuit.network.EntityFxS2CPacket.GOLDEN, true));
+            }
         }
+    }
+
+    @SubscribeEvent
+    public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            sendStatusNow(player);
+            // Never left floating by a card platform cut short (players have no gravity switch of their own).
+            if (player.isNoGravity()) {
+                player.setNoGravity(false);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onClone(PlayerEvent.Clone event) {
+        PhantomArts.onClone(event);
     }
 
     // ---------------------------------------------------------------- damage hooks
@@ -393,6 +526,7 @@ public final class SuitWeapons {
     @SubscribeEvent
     public static void onAttack(LivingAttackEvent event) {
         HeroArts.hylianShield(event);
+        SwordArts.onAttack(event);
         if (event.getSource().getDirectEntity() instanceof MissileEntity missile && missile.getOwner() instanceof ServerPlayer owner
                 && isFriendly(owner, event.getEntity())) {
             event.setCanceled(true);
@@ -402,6 +536,7 @@ public final class SuitWeapons {
     /** Carte Noir: a phantom's own hits sometimes send a black card after the target. */
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
+        HulkbusterArts.onHurt(event);
         if (event.getSource().getEntity() instanceof ServerPlayer player && !(event.getSource().getDirectEntity() instanceof CardEntity)
                 && armedClass(player) == SuitClass.PHANTOM && !isFriendly(player, event.getEntity())) {
             PhantomCards.carteNoir(player, state(player), event.getEntity());
@@ -410,5 +545,16 @@ public final class SuitWeapons {
 
     public static void forget(UUID playerId) {
         STATES.remove(playerId);
+    }
+
+    /** Dropping a Super Saiyan state that's still on (logging out): the speed boost goes with it. */
+    public static void endUltimates(ServerPlayer player) {
+        State state = STATES.get(player.getUUID());
+        if (state != null && state.superSaiyan) {
+            SwordArts.setSuperSaiyan(player, state, false);
+        }
+        if (state != null) {
+            SuitSkills.endCardPlatform(player, state);
+        }
     }
 }

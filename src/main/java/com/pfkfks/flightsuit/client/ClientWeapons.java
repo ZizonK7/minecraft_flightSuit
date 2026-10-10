@@ -42,11 +42,19 @@ import java.util.Map;
 public final class ClientWeapons {
     /** Firing players by entity id (ids, not entities: see SuitAnimator on why entity-keyed maps break). */
     private static final Map<Integer, Byte> FIRING = new HashMap<>();
+    /** What each player fired last (to tell when Trunks stops cutting). */
+    private static final Map<Integer, Byte> FIRING_BEFORE = new HashMap<>();
 
     public static long skill1Ready;
     public static long skill2Ready;
     public static int gauge;
     public static long spadeUntil;
+    /** M17: the ultimate's cooldown, Super Saiyan on/off and its lockout, the stolen skill ("" = none) and its cooldown. */
+    public static long ultReady;
+    public static boolean superSaiyan;
+    public static long ssjLockedUntil;
+    public static String stolen = "";
+    public static long stolenReady;
 
     private ClientWeapons() {
     }
@@ -59,8 +67,13 @@ public final class ClientWeapons {
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level != null && minecraft.level.getEntity(packet.entityId) instanceof net.minecraft.client.player.AbstractClientPlayer player) {
-            SuitAnimator.setAiming(player, packet.kind != SuitWeapons.FIRE_NONE && packet.kind != SuitWeapons.FIRE_SWORD);
+            SuitAnimator.setAiming(player, SuitWeapons.aimsArm(packet.kind));
+            if (packet.kind == SuitWeapons.FIRE_NONE && FIRING_BEFORE.getOrDefault(packet.entityId, SuitWeapons.FIRE_NONE) == SuitWeapons.FIRE_SLASH) {
+                // Trunks: the sword goes back on his back a moment after the last cut.
+                HeroRenderer.showSword(packet.entityId, com.pfkfks.flightsuit.suit.SuitTuning.SWORD_SHEATHE_TICKS);
+            }
         }
+        FIRING_BEFORE.put(packet.entityId, packet.kind);
     }
 
     public static void handleStatus(WeaponStatusS2CPacket packet) {
@@ -68,6 +81,11 @@ public final class ClientWeapons {
         skill2Ready = packet.skill2Ready;
         gauge = packet.gauge;
         spadeUntil = packet.spadeUntil;
+        ultReady = packet.ultReady;
+        superSaiyan = packet.superSaiyan;
+        ssjLockedUntil = packet.ssjLockedUntil;
+        stolen = packet.stolen;
+        stolenReady = packet.stolenReady;
     }
 
     /** What a player's primary is firing right now (FIRE_NONE if nothing). */
@@ -87,6 +105,14 @@ public final class ClientWeapons {
         skill2Ready = 0L;
         gauge = 0;
         spadeUntil = 0L;
+        ultReady = 0L;
+        superSaiyan = false;
+        ssjLockedUntil = 0L;
+        stolen = "";
+        stolenReady = 0L;
+        FIRING_BEFORE.clear();
+        com.pfkfks.flightsuit.suit.SwordArts.GOLDEN.clear();
+        com.pfkfks.flightsuit.suit.CandyShrink.CLIENT.clear();
         HeroRenderer.reset();
     }
 

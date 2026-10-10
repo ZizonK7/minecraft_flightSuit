@@ -162,7 +162,11 @@ public final class SuitArmorModels {
         boolean player = wearer instanceof net.minecraft.world.entity.player.Player;
         forSlot(slot);
         if (CUSTOM.containsKey(suitId)) {
-            return (player ? CUSTOM_BAKED : CUSTOM_OTHER).get(suitId).get(slot);
+            SuitModel model = (player ? CUSTOM_BAKED : CUSTOM_OTHER).get(suitId).get(slot);
+            // Trunks: the hilt leaves his back while the sword is in his hand.
+            model.setSwordDrawn(wearer instanceof net.minecraft.world.entity.player.Player p ? HeroRenderer.isSwordOut(p)
+                    : wearer.getMainHandItem().is(com.pfkfks.flightsuit.registry.ModItems.TRUNKS_SWORD.get()));
+            return model;
         }
         return player ? BAKED.get(slot) : BAKED_OTHER.get(slot);
     }

@@ -67,6 +67,8 @@ public class SuitCompanionEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> OPENING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     /** Streaking in from far away - drives the laid-out flight pose on clients. */
     private static final EntityDataAccessor<Boolean> ARRIVING = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    /** M17: a Trunks companion gone Super Saiyan (golden hair, aura, harder cuts, the battery running down). */
+    private static final EntityDataAccessor<Boolean> ULTIMATE = SynchedEntityData.defineId(SuitCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     /** Keeps the chunk under an arriving suit ticking, wherever its flight takes it (refreshed while it flies). */
     private static final TicketType<ChunkPos> FLIGHT_TICKET =
             TicketType.create("flightsuit_suit_flight", Comparator.comparingLong(ChunkPos::toLong), 40);
@@ -145,6 +147,7 @@ public class SuitCompanionEntity extends PathfinderMob {
         this.entityData.define(FLYING, true);
         this.entityData.define(OPENING, false);
         this.entityData.define(ARRIVING, false);
+        this.entityData.define(ULTIMATE, false);
     }
 
     @Override
@@ -196,7 +199,27 @@ public class SuitCompanionEntity extends PathfinderMob {
      * out of combat - flying in when sent for, flying home. Decided by the chest piece.
      */
     public boolean isGrounded() {
-        return getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem armor && !armor.getSuitType().suitClass().canFly();
+        if (!(getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem armor)) {
+            return false;
+        }
+        SuitClass suitClass = armor.getSuitType().suitClass();
+        // M17: the Hulkbuster lands to fight - it walks up and punches.
+        return !suitClass.canFly() || suitClass == SuitClass.HULKBUSTER && getTarget() != null && getTarget().isAlive();
+    }
+
+    /** Super Saiyan (Trunks companions, M17). */
+    public boolean isUltimate() {
+        return entityData.get(ULTIMATE);
+    }
+
+    public void setUltimate(boolean on) {
+        if (on == isUltimate()) {
+            return;
+        }
+        entityData.set(ULTIMATE, on);
+        if (on && level() instanceof ServerLevel server) {
+            com.pfkfks.flightsuit.suit.SwordArts.transformBurst(server, this);
+        }
     }
 
     public boolean isReeling() {
@@ -512,6 +535,14 @@ public class SuitCompanionEntity extends PathfinderMob {
         if (tickCount % 20 == 0) {
             syncSword();
         }
+        if (isUltimate()) {
+            // Super Saiyan eats the battery; out of fight or out of power, it drops.
+            if (suitClass() != SuitClass.SWORDSMAN || getTarget() == null || !drain(com.pfkfks.flightsuit.suit.SuitTuning.SSJ_DRAIN)) {
+                entityData.set(ULTIMATE, false);
+            } else if (tickCount % 2 == 0 && level() instanceof ServerLevel server) {
+                com.pfkfks.flightsuit.suit.SwordArts.aura(server, this);
+            }
+        }
         tickPower();
         entityData.set(FLYING, isPowered() && isNoGravity());
         if (held) {
@@ -567,13 +598,19 @@ public class SuitCompanionEntity extends PathfinderMob {
         setXRot(pitch);
     }
 
-    /** Mark 4 companions carry the Master Sword in hand (for show; the slash itself is the AI's doing). */
+    /**
+     * Mark 4 companions carry the Master Sword in hand (for show; the slash itself is the AI's doing); Mark 5 draws
+     * Trunks' sword while it fights (it's on his back otherwise).
+     */
     private void syncSword() {
-        boolean wants = suitClass() == SuitClass.HERO;
+        SuitClass suitClass = suitClass();
+        net.minecraft.world.item.Item wants = suitClass == SuitClass.HERO ? ModItems.MASTER_SWORD.get()
+                : suitClass == SuitClass.SWORDSMAN && getTarget() != null ? ModItems.TRUNKS_SWORD.get() : null;
         ItemStack hand = getMainHandItem();
-        if (wants && hand.isEmpty()) {
-            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.MASTER_SWORD.get()));
-        } else if (!wants && hand.is(ModItems.MASTER_SWORD.get())) {
+        if (wants != null && hand.isEmpty()) {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(wants));
+        } else if (!hand.isEmpty() && !hand.is(wants == null ? net.minecraft.world.item.Items.AIR : wants)
+                && (hand.is(ModItems.MASTER_SWORD.get()) || hand.is(ModItems.TRUNKS_SWORD.get()))) {
             setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
     }

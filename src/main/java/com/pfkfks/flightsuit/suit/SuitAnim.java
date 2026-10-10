@@ -11,7 +11,18 @@ public enum SuitAnim {
     STATION_RIG("station_rig"),
     STATION_UNRIG("station_unrig"),
     MISSILE_LAUNCH("missile_launch"),
-    SPIN_ATTACK("spin_attack");
+    SPIN_ATTACK("spin_attack"),
+    // M17 (sent by ordinal: add at the end).
+    HULK_PUNCH_LEFT("hulk_punch_left"),
+    HULK_PUNCH_RIGHT("hulk_punch_right"),
+    HULK_SLAM("hulk_slam"),
+    SWORD_H("sword_h"),
+    SWORD_V("sword_v"),
+    SWORD_THRUST("sword_thrust"),
+    BURNING_ATTACK("burning_attack"),
+    SWORD_SHEATHE("sword_sheathe"),
+    SWORD_PARRY("sword_parry"),
+    TEMPEST_THROW("tempest_throw");
 
     private final String animationName;
 

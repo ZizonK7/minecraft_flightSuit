@@ -15,7 +15,7 @@ import java.util.List;
  * Reads the guide (guide/GuideBookItem) in the vanilla book screen. Each page is a translation
  * ("guide.flightsuit.page.N") whose arguments are the keys as bound right now, so rebinding a key rewrites the book:
  * %1$s suit (G), %2$s attack order (H), %3$s wheel (R), %4$s counter (Z), %5$s skill 1 (X), %6$s skill 2 (C),
- * %7$s jump, %8$s sprint, %9$s use, %10$s sneak.
+ * %7$s jump, %8$s sprint, %9$s use, %10$s sneak, %11$s ultimate (V, M17), %12$s stolen skill (B, M17).
  */
 public final class GuideBook {
     public static final int PAGES = 17;
@@ -28,7 +28,7 @@ public final class GuideBook {
         Options options = Minecraft.getInstance().options;
         return new Object[]{key(ModKeys.SUIT_TOGGLE), key(ModKeys.COMMAND_ATTACK), key(ModKeys.SUIT_WHEEL), key(ModKeys.COUNTER),
                 key(ModKeys.SKILL_1), key(ModKeys.SKILL_2), key(options.keyJump), key(options.keySprint), key(options.keyUse),
-                key(options.keyShift)};
+                key(options.keyShift), key(ModKeys.ULTIMATE), key(ModKeys.STOLEN_SKILL)};
     }
 
     public static void open() {
