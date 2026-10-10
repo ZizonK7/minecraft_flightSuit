@@ -40,6 +40,7 @@
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면. 전용 모델 슈트는 `SuitModel`(슬롯별 조각, `SuitArmorModels.CUSTOM`에 등록) + 생성 블록 클래스(`HulkbusterModel`, `TrunksSuitModel`), 헐크 `HulkModel/HulkRenderer`, 신룡 `ShenronModel/ShenronRenderer`, M17: 드래곤볼 인물 `DbzFighterModel/DbzFighterRenderer`(동작별 코드 포즈), 거대원숭이 `OozaruModel/OozaruRenderer`, 베로니카 포드, 팬텀 조준 `PhantomAimClient`(짧게 = 조준, 길게 = 훔치기, 휠 = 거리) |
 | `town/` | 성채·히어로 시티·서쪽 도시·나메크 마을의 마을 사람 TownsfolkEntity(저장 안 함, 마을 번호 0~2 성채·3 히어로 시티·4 서쪽 도시·5 나메크, 역할 TownRole(`group()`), 일과 TownLife(행성 마을은 `planetTowns`), 배치 TownPlan), 거래 TownTrades(`money(town)` = 오수전/달러/제니), 부탁 TownRequests |
 | `guide/` | 안내서 GuideBookItem(처음 접속 때 지급, 화면은 `client/GuideBook`), ItemTips(`tip.flightsuit.*` → Shift 툴팁 `client/ItemTipsClient` + JEI 정보), JeiFlightSuit(@JeiPlugin, JEI는 선택 의존성) |
+| `fx/` | 기 기술 그림 KiFx (M17 테스트 뒤): 서버가 광선·기 모으기·기탄·폭발·빛기둥·오라·태양권을 `KiFxS2CPacket`으로 보내고 `client/KiFxClient`가 그림 (도형은 `client/KiDraw`, 가산 합성 렌더 타입 하나) |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
 
 자주 쓰는 연결점:
@@ -54,16 +55,19 @@
 - 주인에게 알림: 채팅 + `EdithAlert.send(...)` (안경/슈트 헬멧이 있으면 HUD 경고창).
 - 새 아이템을 만들면 `tip.flightsuit.<id>` 번역(줄은 `
 `, 키 인자는 GuideBook.keys() 순서 %1$s=G … %10$s=웅크리기)을 ko/en에 넣을 것 → Shift 툴팁·JEI 정보 페이지가 저절로 생김. 안내서 쪽수는 `GuideBook.PAGES`.
+- **기·에너지 기술의 모습은 파티클로 그리지 말고 `fx/KiFx`로** (사용자 피드백 "다 파티클만 날리고"). 광선은 `SuitSkills.beam`(끝 폭발까지 그려 줌), 날아가는 기탄은 `KiShots.fire`, 기 모으기 `KiFx.charge`(광선이 나가면 저절로 꺼짐), 오라는 드래곤볼 인물이면 `setAura`(동기화), 그 밖은 `KiFx.aura`. 확인은 `/flightsuit dbz fx <이름>`.
+- 컷신 카메라(`client/CutsceneClient`)는 대본 위치에서 막히면 앞으로 당기거나 대상 주위로 돌려 피함. 대본의 카메라 위치는 대략이면 됨. 컷신 동안 플레이어와 시야를 막는 생물은 그리지 않음.
 - 파티클: `registry/ModParticles` (카드 소용돌이 `card_swirl`은 count 0으로 보내 속도 칸에 궤도 값을 실음).
 - JEI: `build.gradle`의 BlameJared 저장소 필터에 `mezz.jei`와 `net.mezzdev.config` 둘 다 있어야 함 (버전 `gradle.properties`의 `jei_version`).
 - 테스트 중 치트(`/time set` 등)로 막힌 상황은 코드로 막지 말고 월드를 넘기는 명령을 알려 줄 것 (사용자 결정).
 
 ## 진행 상태 (2026-10-10)
 
-- **M17 구현 완료, 인게임 테스트 전** (`docs/WORK_ORDER_M17.md` 묶음 A~D, 진행 기록은 그 7장, 결과·Claude 판단은 DESIGN.md 5장 "M17"). 클라우드라 컴파일을 못 했으니 **사용자의 첫 `./gradlew build` 오류부터 고칠 것**. 테스트 순서는 `docs/TEST_PLAN.md`. 사용자가 테스트를 마치면 main 병합(사용자가 함).
+- **M17과 그 테스트 피드백(기 기술 그림 `fx/KiFx`, 컷신 카메라 가림 방지, 번역 누락): 사용자 인게임 테스트 통과, main에 반영** (결과·Claude 판단은 DESIGN.md 5장 "M17").
+- **다음 작업: 재배맨 모델** (사용자: "너무 못생겼어"). 남은 확인은 `docs/TEST_PLAN.md`.
 - 다음 후보: Mark 1·2·4·50 궁극기(섬멸 모드), 성채끼리의 전쟁, 행성 지형 개편, 인물별 입체 부품 모델링(꼬리·더듬이·프리저 체형).
 - M1~M16과 2026-10-10 1~4차 피드백 반영분: 사용자 인게임 테스트 통과.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit dbz stage <단계>|cutscene <id>|stop`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/planet replay [id]`, `/spaceship ...`, `/shenron <소원>`, `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit dbz stage <단계>|cutscene <id>|fx <이펙트>|stop`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/planet replay [id]`, `/spaceship ...`, `/shenron <소원>`, `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).

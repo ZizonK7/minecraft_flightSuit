@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.planet.dbz;
 
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
+import com.pfkfks.flightsuit.fx.KiFx;
 import com.pfkfks.flightsuit.planet.PlanetStory;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.suit.KiGuard;
@@ -75,8 +76,9 @@ public class DbzFighterEntity extends PathfinderMob {
     private static final EntityDataAccessor<Integer> ACTION_START = SynchedEntityData.defineId(DbzFighterEntity.class, EntityDataSerializers.INT);
     /** M17: in a cutscene - no AI, untouchable, moved by the script. */
     private static final EntityDataAccessor<Boolean> ACTING = SynchedEntityData.defineId(DbzFighterEntity.class, EntityDataSerializers.BOOLEAN);
+    /** After the M17 test: the aura's colour (0 = none), drawn by the clients (KiFxClient). */
+    private static final EntityDataAccessor<Integer> AURA = SynchedEntityData.defineId(DbzFighterEntity.class, EntityDataSerializers.INT);
 
-    private static final DustParticleOptions GOLD = new DustParticleOptions(new Vector3f(1.0F, 0.85F, 0.2F), 2.0F);
     /** Ticks a blow freezes both sides for. */
     private static final int HIT_STOP = 3;
     /** Between the blows of a combo; a breather after the third. */
@@ -120,12 +122,11 @@ public class DbzFighterEntity extends PathfinderMob {
     private record Milestone(float share, Runnable action) {
     }
 
-    /** Aura colours round a powered-up fighter (synced; drawn by the server as particles). */
+    /** Aura colours round a powered-up fighter (synced; drawn by the clients). */
     public static final int AURA_NONE = 0;
     public static final int AURA_GOLD = 1;
     public static final int AURA_RED = 2;
     public static final int AURA_WHITE = 3;
-    private int aura;
     private int auraUntil;
     /** The story has hung its moments on it (DbzSaga.arm) - once. */
     private boolean armed;
@@ -200,6 +201,7 @@ public class DbzFighterEntity extends PathfinderMob {
         entityData.define(ACTION, (byte) 0);
         entityData.define(ACTION_START, 0);
         entityData.define(ACTING, false);
+        entityData.define(AURA, 0);
     }
 
     @Override
@@ -307,6 +309,9 @@ public class DbzFighterEntity extends PathfinderMob {
             setNoAi(true);
             setTarget(null);
             getNavigation().stop();
+            if (charging > 0 && level() instanceof ServerLevel server) {
+                KiFx.stopCharge(server, this);
+            }
             charging = 0;
             endClash();
             bossBar.setVisible(false);
@@ -353,8 +358,18 @@ public class DbzFighterEntity extends PathfinderMob {
 
     /** An aura round it (AURA_*) for {@code ticks} (0 = for good). */
     public void setAura(int colour, int ticks) {
-        aura = colour;
+        entityData.set(AURA, switch (colour) {
+            case AURA_GOLD -> KiFx.GOLD;
+            case AURA_RED -> KiFx.RED;
+            case AURA_WHITE -> KiFx.WHITE;
+            default -> 0;
+        });
         auraUntil = ticks > 0 ? tickCount + ticks : 0;
+    }
+
+    /** The aura's colour now (0 = none) - the client draws it. */
+    public int getAuraColour() {
+        return entityData.get(AURA);
     }
 
     /** After a scene: flies along with {@code player} (follows within 20 blocks, flies when farther, gone past 96). */
@@ -392,12 +407,9 @@ public class DbzFighterEntity extends PathfinderMob {
                 damageTaken = 1.0F;
                 buffUntil = 0;
             }
-            if (aura != AURA_NONE && level() instanceof ServerLevel server) {
-                if (auraUntil > 0 && tickCount >= auraUntil) {
-                    aura = AURA_NONE;
-                } else if (tickCount % 2 == 0) {
-                    drawAura(server);
-                }
+            if (auraUntil > 0 && tickCount >= auraUntil) {
+                entityData.set(AURA, 0);
+                auraUntil = 0;
             }
             if (escortOf != null) {
                 tickEscort();
@@ -443,8 +455,9 @@ public class DbzFighterEntity extends PathfinderMob {
         }
         if (barrier > 0) {
             barrier--;
-            if (barrier % 4 == 0) {
-                server.sendParticles(ParticleTypes.ENCHANT, getX(), getY() + 1.0D, getZ(), 6, 0.8D, 1.0D, 0.8D, 0.2D);
+            if (barrier % 10 == 0) {
+                // A shell of light round him while it's up.
+                KiFx.burst(server, getBoundingBox().getCenter(), 0x9AE6FF, getBbHeight() * 0.8F, 12, KiFx.ORB);
             }
         }
         sagaTransform(server);
@@ -495,6 +508,20 @@ public class DbzFighterEntity extends PathfinderMob {
     void startCharge(int ticks) {
         charging = ticks;
         setAction(DbzAction.CHARGE);
+        if (level() instanceof ServerLevel server) {
+            DbzCharacter me = getCharacter();
+            StolenSkill shared = DbzMoves.beamOf(me);
+            server.playSound(null, blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 1.0F,
+                    shared == StolenSkill.SPECIAL_BEAM_CANNON ? 0.6F : 1.0F);
+            if (shared != null) {
+                shared.chargeBall(server, this, ticks);
+            } else if (me == DbzCharacter.FRIEZA || me == DbzCharacter.FRIEZA_FINAL) {
+                // The Supernova: a ball of fire over his raised finger.
+                KiFx.charge(server, this, 0xFF7038, 3.0F, ticks, KiFx.AT_OVERHEAD);
+            } else {
+                KiFx.charge(server, this, me == DbzCharacter.TRUNKS ? KiFx.BURNING : KiFx.ERASER, 1.0F, ticks, KiFx.AT_HANDS);
+            }
+        }
     }
 
     public boolean isCharging() {
@@ -510,11 +537,6 @@ public class DbzFighterEntity extends PathfinderMob {
         DbzCharacter me = getCharacter();
         StolenSkill shared = DbzMoves.beamOf(me);
         Vec3 hands = com.pfkfks.flightsuit.suit.SwordArts.hands(this);
-        if (shared != null) {
-            shared.chargeEffect(server, this, Math.max(0, DbzMoves.chargeTicks(me) - charging));
-        } else {
-            server.sendParticles(ParticleTypes.WITCH, hands.x, hands.y, hands.z, 6, 0.4D, 0.4D, 0.4D, 0.05D);
-        }
         if (target != null) {
             getLookControl().setLookAt(target, 30.0F, 30.0F);
         }
@@ -524,6 +546,7 @@ public class DbzFighterEntity extends PathfinderMob {
         specialCooldown = DbzMoves.beamCooldown(me);
         setAction(DbzAction.FIRE);
         if (target == null || !target.isAlive()) {
+            KiFx.stopCharge(server, this);
             return;
         }
         Vec3 from = me == DbzCharacter.PICCOLO ? getEyePosition() : hands;
@@ -534,9 +557,11 @@ public class DbzFighterEntity extends PathfinderMob {
             usedSkill(shared);
             return;
         }
-        // Recoome's Eraser Gun, Frieza's Supernova: a purple beam of their own.
+        // Recoome's Eraser Gun, Frieza's Supernova, Trunks' Burning Attack: a beam of their own.
+        Vector3f colour = me == DbzCharacter.TRUNKS ? new Vector3f(1.0F, 0.82F, 0.25F)
+                : me == DbzCharacter.FRIEZA || me == DbzCharacter.FRIEZA_FINAL ? new Vector3f(1.0F, 0.44F, 0.22F) : new Vector3f(0.75F, 0.3F, 0.9F);
         com.pfkfks.flightsuit.suit.SuitSkills.beam(server, this, from, dir, 30.0D, 1.8D, damage, 1.0D,
-                new DustParticleOptions(new Vector3f(0.75F, 0.3F, 0.9F), 2.8F), new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.3F),
+                new DustParticleOptions(colour, 2.8F), new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.3F),
                 this::isEnemy);
         playSound(SoundEvents.GENERIC_EXPLODE, 1.5F, 0.6F);
     }
@@ -569,7 +594,7 @@ public class DbzFighterEntity extends PathfinderMob {
     /** Power rising: the transform pose, a pillar of gold, the ground cracking, and the screen shaking for those near. */
     public static void transformBurst(ServerLevel server, DbzFighterEntity who) {
         who.setAction(DbzAction.TRANSFORM);
-        com.pfkfks.flightsuit.suit.SwordArts.transformBurst(server, who);
+        com.pfkfks.flightsuit.suit.SwordArts.transformBurst(server, who, transformColour(who.getCharacter()));
         BlockState ground = server.getBlockState(who.blockPosition().below());
         if (ground.isAir()) {
             ground = Blocks.STONE.defaultBlockState();
@@ -581,9 +606,21 @@ public class DbzFighterEntity extends PathfinderMob {
                         who.getY() + 0.1D, who.getZ() + Math.sin(angle) * r * 0.9D, 1, 0.1D, 0.1D, 0.1D, 0.1D);
             }
         }
-        server.sendParticles(ParticleTypes.EXPLOSION_EMITTER, who.getX(), who.getY() + 1.0D, who.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        KiFx.burst(server, who.position(), transformColour(who.getCharacter()), 6.0F, 20, KiFx.RING);
         server.playSound(null, who.blockPosition(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.2F, 1.3F);
         com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(server, who.position(), 48.0D, 20);
+    }
+
+    /** The light a transformation gives off: gold for a Super Saiyan, the villains' own colours otherwise. */
+    private static int transformColour(DbzCharacter who) {
+        return switch (who) {
+            case GOKU_SSJ, GOHAN_TEEN_SSJ2, TRUNKS -> KiFx.GOLD;
+            case FRIEZA, FRIEZA_FINAL, ZARBON -> KiFx.GALICK;
+            case CELL, CELL_SEMI, CELL_IMPERFECT -> 0x8CFF70;
+            case MAJIN_BUU, SUPER_BUU, SUPER_BUU_ABSORBED, KID_BUU -> KiFx.CANDY;
+            case OOZARU_VEGETA -> KiFx.RED;
+            default -> KiFx.WHITE;
+        };
     }
 
     public boolean isTransformed() {
@@ -596,27 +633,22 @@ public class DbzFighterEntity extends PathfinderMob {
         getNavigation().stop();
         setTarget(null);
         setAction(DbzAction.HANDS_UP);
+        if (level() instanceof ServerLevel server) {
+            KiFx.charge(server, this, KiFx.SPIRIT, 7.0F, ticks, KiFx.AT_OVERHEAD);
+        }
     }
 
     public boolean isChanneling() {
         return channeling > 0;
     }
 
-    /** The Spirit Bomb growing over his head, light drawn in from all around. */
+    /** The Spirit Bomb growing over his head, light drawn in from all around (the clients draw it - KiFx). */
     private void channelTick(ServerLevel server) {
         channeling--;
         getNavigation().stop();
         setXRot(-60.0F);
         if (getAction() != DbzAction.HANDS_UP) {
             setAction(DbzAction.HANDS_UP);
-        }
-        float grown = 1.0F - channeling / 600.0F;
-        double size = 0.5D + grown * 3.0D;
-        server.sendParticles(ParticleTypes.END_ROD, getX(), getY() + 4.0D + size, getZ(), 6, size * 0.5D, size * 0.5D, size * 0.5D, 0.0D);
-        if (tickCount % 4 == 0) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            server.sendParticles(ParticleTypes.GLOW, getX() + Math.cos(angle) * 12.0D, getY() + 2.0D, getZ() + Math.sin(angle) * 12.0D,
-                    0, -Math.cos(angle), 0.3D, -Math.sin(angle), 0.6D);
         }
         if (channeling == 0) {
             setAction(DbzAction.FIRE);
@@ -670,13 +702,15 @@ public class DbzFighterEntity extends PathfinderMob {
     /** A fading shape where it just was. */
     private void afterimage(ServerLevel server) {
         server.sendParticles(ParticleTypes.CLOUD, getX(), getY() + getBbHeight() / 2.0D, getZ(), 10, 0.3D, getBbHeight() / 3.0D, 0.3D, 0.02D);
-        server.sendParticles(ParticleTypes.END_ROD, getX(), getY() + getBbHeight() / 2.0D, getZ(), 4, 0.2D, getBbHeight() / 3.0D, 0.2D, 0.0D);
+        KiFx.burst(server, getBoundingBox().getCenter(), KiFx.WHITE, 1.2F, 6, KiFx.SPARK);
     }
 
     /** Nappa: a blast wave from where he stands (no blocks broken). */
     void blastWave(ServerLevel server, double radius, float damage) {
         setAction(DbzAction.TRANSFORM);
-        server.sendParticles(ParticleTypes.EXPLOSION_EMITTER, getX(), getY() + 0.5D, getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        int colour = getCharacter().name().contains("BUU") ? KiFx.CANDY : 0xFFE0A0;
+        KiFx.burst(server, getBoundingBox().getCenter(), colour, (float) radius * 0.6F, 14, KiFx.BLAST);
+        KiFx.burst(server, position(), colour, (float) radius * 1.3F, 16, KiFx.RING);
         for (LivingEntity hit : server.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(radius), this::isEnemy)) {
             hit.hurt(damageSources().mobAttack(this), damage * damageDealt);
             Vec3 push = hit.position().subtract(position()).multiply(1.0D, 0.0D, 1.0D);
@@ -799,6 +833,7 @@ public class DbzFighterEntity extends PathfinderMob {
         }
         Vec3 at = target.getBoundingBox().getCenter();
         server.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 8, 0.2D, 0.2D, 0.2D, 0.4D);
+        KiFx.burst(server, at, KiFx.WHITE, step == 2 ? 1.3F : 0.8F, 5, KiFx.SPARK);
         server.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.HOSTILE, 1.0F, step == 2 ? 0.7F : 0.9F);
     }
 
@@ -856,7 +891,7 @@ public class DbzFighterEntity extends PathfinderMob {
         if (age >= 6 && age % 3 == 0) {
             setAction((age / 3) % 2 == 0 ? DbzAction.PUNCH_L : DbzAction.KICK);
             other.setAction((age / 3) % 2 == 0 ? DbzAction.GUARD : DbzAction.PUNCH_R);
-            server.sendParticles(ParticleTypes.FLASH, base.x, base.y + getBbHeight() / 2.0D, base.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            KiFx.burst(server, base.add(0.0D, getBbHeight() / 2.0D, 0.0D), KiFx.WHITE, 1.6F, 6, KiFx.SPARK);
             server.sendParticles(ParticleTypes.CRIT, base.x, base.y + getBbHeight() / 2.0D, base.z, 10, 0.3D, 0.3D, 0.3D, 0.4D);
             server.playSound(null, base.x, base.y, base.z, SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.HOSTILE, 1.2F, 0.8F + random.nextFloat() * 0.4F);
         }
@@ -1086,21 +1121,6 @@ public class DbzFighterEntity extends PathfinderMob {
         setYHeadRot(yaw);
         yBodyRot = yaw;
         yRotO = yaw;
-    }
-
-    /** Gold particles round it (a Super Saiyan, a powered-up ally) - DbzMoves and the cutscenes call it. */
-    void goldAura(ServerLevel server) {
-        server.sendParticles(GOLD, getX(), getY() + getBbHeight() / 2.0D, getZ(), 3, getBbWidth() * 0.7D, getBbHeight() * 0.45D,
-                getBbWidth() * 0.7D, 0.0D);
-    }
-
-    private static final DustParticleOptions RED = new DustParticleOptions(new Vector3f(1.0F, 0.2F, 0.15F), 2.0F);
-    private static final DustParticleOptions WHITE = new DustParticleOptions(new Vector3f(0.95F, 0.95F, 1.0F), 1.6F);
-
-    private void drawAura(ServerLevel server) {
-        DustParticleOptions dust = aura == AURA_RED ? RED : aura == AURA_WHITE ? WHITE : GOLD;
-        server.sendParticles(dust, getX(), getY() + getBbHeight() / 2.0D, getZ(), 3, getBbWidth() * 0.7D, getBbHeight() * 0.45D,
-                getBbWidth() * 0.7D, 0.0D);
     }
 
     /** Escorting: walks after its player when close, flies after them when they're far, leaves when they're gone. */

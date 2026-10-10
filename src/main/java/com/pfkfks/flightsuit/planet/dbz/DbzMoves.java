@@ -115,11 +115,7 @@ final class DbzMoves {
                     me.kiBlast(server, target, who == DbzCharacter.GOKU ? 6.0F : 9.0F, 1);
                     me.blastCooldown(70);
                 }
-                if (who == DbzCharacter.GOKU_SSJ || who == DbzCharacter.GOHAN_TEEN_SSJ2) {
-                    if (me.tickCount % 2 == 0) {
-                        me.goldAura(server);
-                    }
-                }
+                // A Super Saiyan's golden aura: the clients draw it by themselves (KiFxClient).
             }
             case GOHAN_KID -> {
                 if (me.blastReady() && sees && distance > 3.0D && distance < 20.0D) {

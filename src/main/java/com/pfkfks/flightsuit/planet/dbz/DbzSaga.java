@@ -12,7 +12,6 @@ import com.pfkfks.flightsuit.suit.SuitType;
 import com.pfkfks.flightsuit.war.WarData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerBossEvent;
@@ -968,10 +967,10 @@ public final class DbzSaga {
             }
             int energy = energy(level, fight.center);
             float damage = 200.0F + 60.0F * energy;
-            for (int k = 0; k < 20; k++) {
-                level.sendParticles(ParticleTypes.END_ROD, kidBuu.getX(), kidBuu.getY() + 20.0D - k, kidBuu.getZ(), 20, 1.6D, 1.6D, 1.6D, 0.0D);
-            }
-            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, kidBuu.getX(), kidBuu.getY() + 1.0D, kidBuu.getZ(), 3, 1.0D, 1.0D, 1.0D, 0.0D);
+            // The ball over Goku's head comes down on Buu (the clients fly it down and blow it up where it lands).
+            com.pfkfks.flightsuit.fx.KiFx.stopCharge(level, goku);
+            com.pfkfks.flightsuit.fx.KiFx.shot(level, com.pfkfks.flightsuit.fx.KiFx.SHOT_SPIRIT, com.pfkfks.flightsuit.fx.KiFx.SPIRIT, 6.0F,
+                    kidBuu.position().add(0.0D, 22.0D, 0.0D), new net.minecraft.world.phys.Vec3(0.0D, -1.0D, 0.0D), 1.8D, 21.5D);
             level.playSound(null, kidBuu.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 4.0F, 0.5F);
             kidBuu.invulnerableTime = 0;
             kidBuu.hurt(goku.damageSources().mobAttack(goku), damage);

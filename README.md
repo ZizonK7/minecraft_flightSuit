@@ -3,8 +3,7 @@
 라이언·춘식이 같은 캐릭터를 아이언맨 슈트로 디자인해서, 슈트를 입고 날아다니며 마을을 지키고 키우는 마인크래프트 Forge 모드입니다.
 
 - 기획과 의도, 로드맵은 [DESIGN.md](DESIGN.md)에 정리되어 있습니다.
-- M1~M16과 그 뒤 1~4차 피드백 반영분은 2026-10-10 인게임 테스트를 통과했습니다.
-- **M17** (슈트 3벌 기술·궁극기 키 `V`·팬텀 기술 훔치기, 컷신 엔진과 드래곤볼 1~4장 재구성, 서쪽 도시·나메크 마을)은 구현을 마치고 **인게임 테스트 전**입니다. 따라 할 테스트 목록은 [docs/TEST_PLAN.md](docs/TEST_PLAN.md), 설계는 [docs/WORK_ORDER_M17.md](docs/WORK_ORDER_M17.md).
+- M1~M17 (M17: 슈트 3벌 기술·궁극기 키 `V`·팬텀 기술 훔치기, 컷신 엔진과 드래곤볼 1~4장 재구성, 서쪽 도시·나메크 마을)과 그 뒤 피드백 반영분은 2026-10-10 인게임 테스트를 통과했습니다. M17 테스트 피드백으로 **기 기술을 파티클 대신 직접 그린 빛으로** 바꾸고 컷신 카메라가 가려지지 않게 했습니다 (아래 "기 기술의 모습"). 남은 확인은 [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
 - 게임 안에서는 **플라이트 슈트 안내서**(처음 접속하면 받음)와 아이템 **Shift 툴팁**으로 조작법을 볼 수 있고, JEI가 있으면 R/U로 조합법이 나옵니다.
 - 개인 프로젝트입니다.
 
@@ -335,6 +334,8 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각, Mark 3는 Mark 1 
 
 **컷신** (M17): 명장면 25개가 대본으로 연기됩니다. 화면 위아래 검은 띠와 자막, 카메라가 장면을 따라 움직이고, 그동안 나는 무적이고 주변 싸움은 멈춥니다. **점프 키로 건너뛰기** (건너뛰어도 끝 상태는 같음). 한 번 본 장면은 다시 나오지 않고, `/planet replay`로 본 목록, `/planet replay <id>`로 내 앞에서 다시 볼 수 있습니다 (이야기에 영향 없음). 인물·형태 40가지 (새로: 피콜로, 소년·청년 오반, 크리링, 야무치, 천진반, 야지로베, 미스터 사탄, 초사이어인 손오공, 거대원숭이 베지터, 최종 형태 프리저, 인조인간 16호, 불완전체·반완전체 셀, 악의 부우, 흡수 부우).
 
+**기 기술의 모습** (M17 테스트 뒤): 에네르기파·갤릭포·마관광살포·기원참·태양권·원기옥·변신·오라를 파티클 대신 **직접 그린 빛**으로 보여 줍니다 (서버가 무엇을 어디에 그릴지만 보내고, 클라이언트가 그림). 광선 = 하얀 심 + 색 몸통 + 바깥 빛 원통에 흐르는 물결, 손끝과 맞은 곳의 빛 구체 (마관광살포는 보라 나선, 데스 빔은 가는 광선). 기 모으기 = 손(마관광살포는 이마)에서 커지는 구체와 빨려 드는 빛줄기. 기탄 = 꼬리 달린 구체, 기원참 = 톱니 테두리 회전 원반. 폭발 = 섬광 + 부풀었다 사라지는 구체 + 땅으로 퍼지는 고리. 변신 = 빛기둥 (초사이어인은 금색). 오라 = 몸을 감싸는 불꽃 혀와 불티 (초사이어인 2는 번개). 원기옥 = 머리 위에서 커지는 구체, 다 모이면 하늘에서 내리꽂힘. 태양권 = 근처 사람 화면이 하얘짐. 광선·기탄을 같이 쓰는 슈트 기술(Mark 1 유니빔, 트랭크스 버닝 어택, 팬텀이 훔친 기술, 초사이어인 오라)도 같은 그림입니다. 컷신 카메라는 벽·지형에 가리면 앞으로 당기거나 트인 각도로 돌아가고, 컷신 동안 플레이어와 시야를 막는 생물은 그리지 않습니다.
+
 - "다음 날"은 해 뜰 때(게임 시간 0) 날짜가 바뀌는 기준입니다. 치트로 넘길 때는 `/time set`이 아니라 `/time add 24000`을 쓰세요 (`set`은 날짜를 되돌림).
 
 ### 타노스 사가
@@ -362,7 +363,7 @@ Mark 2는 Mark 1 파츠 + 검은색 염료 + 자수정 조각, Mark 3는 Mark 1 
 - `/flightsuit fort tp <wei|shu|wu>`: 그 성채 앞으로 순간이동 (처음이면 그때 지어짐). `/flightsuit fort rebuild <나라>`: 다음에 가까이 가면 같은 자리에 새 설계로 다시 지음. `/flightsuit fort trust <나라> <-100~100>`: 관계 설정. `/flightsuit fort done <나라> <횟수>`: 의뢰 성공 횟수 설정. `/flightsuit fort request <나라> <defend|reinforce|invade>`: 그 나라가 지금 의뢰를 보냄 (오늘 해질녘 기준)
 - `/flightsuit hero tp`: 히어로 시티 앞으로 순간이동 (처음이면 그때 지어짐). `/flightsuit hero rebuild`: 다음에 가까이 가면 같은 자리에 새 설계로 다시 지음. `/flightsuit hero trust <-100~100>`: 히어로 시티와의 관계 설정. `/flightsuit hero request <defend|reinforce>`: 캡틴이 지금 의뢰를 보냄 (오늘 해질녘 기준)
 - `/flightsuit thief now`: 서 있는 마을에 오늘 밤 배트맨 일당이 옴 (시간이 밤으로 바뀜). `/flightsuit thief spawn <batman|catwoman|robin>`: 숨은 도둑 하나를 눈앞에. `/flightsuit thief when`: 다음 방문 날
-- `/flightsuit dbz stage <단계>`: 드래곤볼 이야기 단계를 바로 바꿈 ("다음 날" 기다림도 풀림). 단계: `arrived, met_bulma, met_goku, raditz_beaten, nappa_beaten, saiyans_beaten, namek_open, met_dende, zarbon_beaten, ginyu_beaten, frieza_beaten, met_trunks, androids_beaten, cell_beaten, buu_beaten, kid_buu_beaten`. `/flightsuit dbz cutscene <id>`: 컷신을 내 앞에서 바로 봄 (본 적 없어도). `/flightsuit dbz stop`: 지금 행성의 이야기 전투를 끝냄 (보상 없음)
+- `/flightsuit dbz stage <단계>`: 드래곤볼 이야기 단계를 바로 바꿈 ("다음 날" 기다림도 풀림). 단계: `arrived, met_bulma, met_goku, raditz_beaten, nappa_beaten, saiyans_beaten, namek_open, met_dende, zarbon_beaten, ginyu_beaten, frieza_beaten, met_trunks, androids_beaten, cell_beaten, buu_beaten, kid_buu_beaten`. `/flightsuit dbz cutscene <id>`: 컷신을 내 앞에서 바로 봄 (본 적 없어도). `/flightsuit dbz stop`: 지금 행성의 이야기 전투를 끝냄 (보상 없음). `/flightsuit dbz fx <이펙트>`: 기 기술 그림 하나를 내 앞에 보여 줌 (피해 없음, 탭 자동완성)
 - `/flightsuit dragonballs give`: 드래곤볼 7개를 바로 받기. `/flightsuit dragonballs reset`: 드래곤볼을 다시 흩기 (돌 상태도 풀림)
 - `/flightsuit thanos now`: 타노스가 지금 내 마을로 옴. `/flightsuit thanos stones`: 인피니티 스톤 6개 받기
 - `/flightsuit raid general <guan_yu|zhang_fei|xiahou_dun|gan_ning|liu_bei|cao_cao|sun_quan>`: 눈앞에 적 장수를 부릅니다. 크리에이티브 탭의 삼국지 병사·장수 생성 알도 있습니다.
@@ -433,6 +434,7 @@ src/main/java/com/pfkfks/flightsuit/
   war/       삼국지: 나라·장수(Kingdom, General), 병사·장수 엔티티(역할 RAID/GARRISON/ALLY, 누가 누구와 싸우는지는 WarTargets), 습격(RaidManager), 성채(FortressBuilder·FortressManager), 외교·의뢰(Diplomacy, Request, Standing), 성채 전투(Battle), 원정(Army), 저장(WarData), 화공, 명령어, AI(war/ai)
   hero/      히어로 시티: 히어로 종류(HeroType), 히어로·요원 엔티티(CityHeroEntity), 도시 구조물(HeroCityBuilder), 위치·건설·관계·아이언맨 작업실·의뢰·악당 습격·함락(HeroCity), 저장(HeroData), 명령어(HeroCommands)
   planet/dbz/ 드래곤볼: 인물(DbzCharacter, DbzFighterEntity: NPC·동료·보스·부하, 동작 DbzAction, 기술표 DbzMoves), 볼거리(DbzLandmarks, 서쪽 도시 WestCity), 열린 세계(DbzEarth), 1~4장 장면·컷신 연결·원기옥(DbzSaga), 컷신 대본(DbzCutscenes), 테스트 명령(DbzCommands), 드래곤볼·신룡(DragonBalls, ShenronEntity), 스카우터, 선두콩
+  fx/        기 기술 그림(KiFx: 광선·기 모으기·기탄·폭발·빛기둥·오라·태양권을 근처 클라이언트에 보냄. 그리는 쪽은 client/KiFxClient·KiDraw)
   cutscene/  컷신 엔진(M17): 대본과 빌더(Cutscene), 등록(Cutscenes), 서버 재생·건너뛰기(CutsceneRunner), 카메라(CameraEntity). 클라이언트 쪽은 client/CutsceneClient·CutsceneOverlay
   planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock), 우주선(SpaceshipEntity), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
   thanos/    타노스 사가: 인피니티 스톤(InfinityStone, InfinityStoneItem), 타노스 군단(ThanosForce, ThanosForceEntity: 치타우리·블랙 오더·타노스·레드 스컬), 타이탄 볼거리(TitanSites), 스톤 사냥·전조(ThanosSaga), 최종전(ThanosRaid)

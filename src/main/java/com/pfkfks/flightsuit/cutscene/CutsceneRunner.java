@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.cutscene;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.fx.KiFx;
 import com.pfkfks.flightsuit.network.CutsceneS2CPacket;
 import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.planet.PlanetData;
@@ -10,7 +11,6 @@ import com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -31,7 +31,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,15 +59,9 @@ public final class CutsceneRunner {
     /** Everyone this close to a scene watches it. */
     public static final double VIEW_RANGE = 96.0D;
 
-    private static final DustParticleOptions[] BEAM_GLOW = {
-            dust(0.35F, 0.7F, 1.0F, 2.8F), dust(0.7F, 0.3F, 1.0F, 2.8F), dust(1.0F, 0.95F, 0.55F, 1.6F), dust(1.0F, 0.55F, 0.8F, 1.4F),
-            dust(1.0F, 1.0F, 1.0F, 2.4F), dust(0.9F, 0.4F, 0.95F, 0.8F), dust(1.0F, 0.6F, 0.85F, 3.2F)};
-    private static final DustParticleOptions WHITE = dust(1.0F, 1.0F, 1.0F, 1.3F);
-    private static final DustParticleOptions GOLD = dust(1.0F, 0.85F, 0.2F, 2.5F);
-
-    private static DustParticleOptions dust(float r, float g, float b, float size) {
-        return new DustParticleOptions(new Vector3f(r, g, b), size);
-    }
+    /** The scripts' beam colours (Cutscene.BEAM_*), drawn by the clients (KiFx), and how wide each is. */
+    private static final int[] BEAM_COLOUR = {KiFx.KAME, KiFx.GALICK, KiFx.SBC, KiFx.CANDY, KiFx.WHITE, KiFx.DEATH, KiFx.MOUTH};
+    private static final float[] BEAM_WIDTH = {1.5F, 1.5F, 0.6F, 0.6F, 2.4F, 0.3F, 2.2F};
 
     /** A scene being played. */
     public static final class Running {
@@ -324,6 +317,9 @@ public final class CutsceneRunner {
                 if (act.kind() == Cutscene.Kind.FLY && run.age % 2 == 0) {
                     level.sendParticles(ParticleTypes.CLOUD, now.x, now.y + 0.2D, now.z, 1, 0.1D, 0.1D, 0.1D, 0.0D);
                 }
+                if (act.kind() == Cutscene.Kind.KNOCKBACK && first) {
+                    KiFx.burst(level, actor.getBoundingBox().getCenter(), KiFx.WHITE, 1.4F, 6, KiFx.SPARK);
+                }
                 if (act.kind() == Cutscene.Kind.KNOCKBACK && t >= 1.0F && to.y <= now.y + 0.01D) {
                     level.sendParticles(ParticleTypes.CLOUD, to.x, to.y + 0.2D, to.z, 8, 0.4D, 0.1D, 0.4D, 0.05D);
                 }
@@ -369,8 +365,8 @@ public final class CutsceneRunner {
                 if (actor != null && first) {
                     Vec3 c = actor.getBoundingBox().getCenter();
                     if (act.value() == 1) {
-                        level.sendParticles(ParticleTypes.FLASH, c.x, c.y, c.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-                        level.sendParticles(ParticleTypes.END_ROD, c.x, c.y, c.z, 30, 0.4D, 0.6D, 0.4D, 0.15D);
+                        KiFx.burst(level, c, KiFx.WHITE, 2.5F, 12, KiFx.FLASH);
+                        KiFx.burst(level, c, KiFx.WHITE, 2.0F, 14, KiFx.SPARK);
                     } else {
                         level.sendParticles(ParticleTypes.POOF, c.x, c.y, c.z, 20, 0.3D, 0.6D, 0.3D, 0.03D);
                     }
@@ -383,7 +379,7 @@ public final class CutsceneRunner {
                     actor.place(at, actor.getYRot());
                     actor.setInvisible(false);
                     level.sendParticles(ParticleTypes.CLOUD, at.x, at.y + 1.0D, at.z, 12, 0.3D, 0.6D, 0.3D, 0.03D);
-                    level.sendParticles(ParticleTypes.END_ROD, at.x, at.y + 1.0D, at.z, 8, 0.2D, 0.6D, 0.2D, 0.02D);
+                    KiFx.burst(level, at.add(0.0D, 1.0D, 0.0D), KiFx.WHITE, 1.4F, 8, KiFx.SPARK);
                 }
             }
             case SAY -> {
@@ -412,44 +408,27 @@ public final class CutsceneRunner {
         }
     }
 
-    /** A beam drawn from the actor's hands (its eyes for a Great Ape) to its target, bursting there on the last tick. */
+    /**
+     * A beam from the actor's hands (its eyes for a Great Ape, the forehead for the Special Beam Cannon) to its target,
+     * bursting there on the last tick. The clients draw it, following both as they move (KiFx).
+     */
     private static void beam(Running run, DbzFighterEntity actor, Cutscene.Act act) {
         ServerLevel level = run.level;
-        Vec3 from = actor.getCharacter() == DbzCharacter.OOZARU_VEGETA || act.value() == Cutscene.BEAM_SBC || act.value() == Cutscene.BEAM_DEATH
-                ? actor.getEyePosition() : com.pfkfks.flightsuit.suit.SwordArts.hands(actor);
+        int kind = Math.max(0, Math.min(BEAM_COLOUR.length - 1, act.value()));
+        byte at = actor.getCharacter() == DbzCharacter.OOZARU_VEGETA || kind == Cutscene.BEAM_DEATH ? KiFx.AT_EYES
+                : kind == Cutscene.BEAM_SBC ? KiFx.AT_FOREHEAD : KiFx.AT_HANDS;
         DbzFighterEntity other = act.target() != null ? run.actors.get(act.target()) : null;
         Vec3 to = other != null ? other.getBoundingBox().getCenter() : run.at(act.pos());
         if (run.age == act.at()) {
+            Vec3 from = actor.getEyePosition();
             actor.setAction(DbzAction.FIRE);
             level.playSound(null, from.x, from.y, from.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 1.5F,
                     act.value() == Cutscene.BEAM_GALICK ? 0.9F : 1.4F);
-        }
-        DustParticleOptions glow = BEAM_GLOW[Math.max(0, Math.min(BEAM_GLOW.length - 1, act.value()))];
-        Vec3 dir = to.subtract(from);
-        double length = dir.length();
-        int points = (int) (length * 3.0D);
-        double spread = act.value() == Cutscene.BEAM_DEATH ? 0.03D : 0.22D;
-        for (int i = 0; i <= points; i++) {
-            Vec3 p = from.add(dir.scale(i / (double) Math.max(1, points)));
-            level.sendParticles(glow, p.x, p.y, p.z, 1, spread, spread, spread, 0.0D);
-            if (i % 2 == 0) {
-                level.sendParticles(WHITE, p.x, p.y, p.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            }
-        }
-        if (act.value() == Cutscene.BEAM_SBC && length > 0.1D) {
-            Vec3 unit = dir.scale(1.0D / length);
-            Vec3 side = unit.cross(new Vec3(0, 1, 0));
-            side = side.lengthSqr() < 1.0E-4D ? new Vec3(1, 0, 0) : side.normalize();
-            Vec3 up = side.cross(unit).normalize();
-            for (double d = 0.0D; d < length; d += 0.35D) {
-                double angle = d * 2.2D + run.age * 0.6D;
-                Vec3 p = from.add(unit.scale(d)).add(side.scale(Math.cos(angle) * 0.7D)).add(up.scale(Math.sin(angle) * 0.7D));
-                level.sendParticles(BEAM_GLOW[Cutscene.BEAM_GALICK], p.x, p.y, p.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            }
+            byte style = kind == Cutscene.BEAM_SBC ? KiFx.BEAM_SPIRAL : kind == Cutscene.BEAM_DEATH ? KiFx.BEAM_THIN : KiFx.BEAM_PLAIN;
+            KiFx.beam(level, from, to, BEAM_COLOUR[kind], BEAM_WIDTH[kind], Math.max(4, act.ticks() + 2), style, actor, at, other);
         }
         if (run.age == act.end()) {
-            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, to.x, to.y, to.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            level.sendParticles(glow, to.x, to.y, to.z, 40, 1.5D, 1.5D, 1.5D, 0.0D);
+            KiFx.burst(level, to, BEAM_COLOUR[kind], kind == Cutscene.BEAM_DEATH ? 1.2F : 3.5F, 24, KiFx.BLAST);
             level.playSound(null, to.x, to.y, to.z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 2.0F, 0.8F);
         }
     }
@@ -458,16 +437,16 @@ public final class CutsceneRunner {
     public static void burst(ServerLevel level, Vec3 at, int kind) {
         switch (kind) {
             case Cutscene.BURST_EXPLOSION -> {
-                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+                KiFx.burst(level, at, 0xFFC870, 2.6F, 20, KiFx.BLAST);
+                level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, 8, 0.8D, 0.6D, 0.8D, 0.02D);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 2.0F, 0.9F);
             }
             case Cutscene.BURST_BIG_EXPLOSION -> {
-                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 6, 2.0D, 2.0D, 2.0D, 0.0D);
-                level.sendParticles(ParticleTypes.FLASH, at.x, at.y, at.z, 2, 0.5D, 0.5D, 0.5D, 0.0D);
-                level.sendParticles(WHITE, at.x, at.y, at.z, 60, 3.0D, 3.0D, 3.0D, 0.0D);
+                KiFx.burst(level, at, 0xFFE8B0, 7.0F, 34, KiFx.BLAST);
+                level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, 30, 3.0D, 2.0D, 3.0D, 0.04D);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 4.0F, 0.5F);
             }
-            case Cutscene.BURST_FLASH -> level.sendParticles(ParticleTypes.FLASH, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            case Cutscene.BURST_FLASH -> KiFx.burst(level, at, KiFx.WHITE, 3.0F, 12, KiFx.FLASH);
             case Cutscene.BURST_CRACK -> {
                 BlockState ground = level.getBlockState(BlockPos.containing(at).below());
                 if (ground.isAir()) {
@@ -480,20 +459,14 @@ public final class CutsceneRunner {
                                 at.y + 0.1D, at.z + Math.sin(angle) * r, 2, 0.1D, 0.1D, 0.1D, 0.1D);
                     }
                 }
+                KiFx.burst(level, at, 0xFFE0A0, 6.0F, 18, KiFx.RING);
             }
-            case Cutscene.BURST_GOLD_PILLAR -> {
-                for (int i = 0; i < 40; i++) {
-                    level.sendParticles(GOLD, at.x, at.y + i * 0.6D, at.z, 3, 0.35D, 0.2D, 0.35D, 0.0D);
-                    level.sendParticles(ParticleTypes.END_ROD, at.x, at.y + i * 0.6D, at.z, 1, 0.2D, 0.2D, 0.2D, 0.0D);
-                }
-            }
+            case Cutscene.BURST_GOLD_PILLAR -> KiFx.pillar(level, null, at, KiFx.GOLD, 26.0F, 36);
             case Cutscene.BURST_SMOKE -> level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, at.x, at.y, at.z, 20, 1.0D, 0.5D, 1.0D, 0.02D);
             case Cutscene.BURST_MOON -> {
                 // The false moon: a pale ball of light high up.
-                for (int i = 0; i < 80; i++) {
-                    level.sendParticles(dust(1.0F, 1.0F, 0.85F, 3.0F), at.x, at.y, at.z, 1, 1.5D, 1.5D, 1.5D, 0.0D);
-                }
-                level.sendParticles(ParticleTypes.FLASH, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+                KiFx.burst(level, at, KiFx.MOON, 2.6F, 140, KiFx.ORB);
+                KiFx.burst(level, at, KiFx.WHITE, 3.0F, 12, KiFx.FLASH);
             }
             case Cutscene.BURST_LIGHTNING -> {
                 net.minecraft.world.entity.LightningBolt bolt = net.minecraft.world.entity.EntityType.LIGHTNING_BOLT.create(level);
@@ -503,12 +476,7 @@ public final class CutsceneRunner {
                     level.addFreshEntity(bolt);
                 }
             }
-            case Cutscene.BURST_SPIRIT_BOMB -> {
-                for (int i = 0; i < 120; i++) {
-                    level.sendParticles(dust(0.6F, 0.85F, 1.0F, 3.5F), at.x, at.y, at.z, 1, 3.0D, 3.0D, 3.0D, 0.0D);
-                }
-                level.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 60, 3.0D, 3.0D, 3.0D, 0.02D);
-            }
+            case Cutscene.BURST_SPIRIT_BOMB -> KiFx.burst(level, at, KiFx.SPIRIT, 3.2F, 26, KiFx.ORB);
             case Cutscene.BURST_LAVA -> {
                 level.sendParticles(ParticleTypes.LAVA, at.x, at.y, at.z, 20, 2.0D, 0.3D, 2.0D, 0.0D);
                 level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, 20, 2.0D, 0.5D, 2.0D, 0.02D);

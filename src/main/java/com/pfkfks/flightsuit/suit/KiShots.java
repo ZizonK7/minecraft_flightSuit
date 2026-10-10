@@ -1,7 +1,7 @@
 package com.pfkfks.flightsuit.suit;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
-import net.minecraft.core.particles.DustParticleOptions;
+import com.pfkfks.flightsuit.fx.KiFx;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,7 +18,6 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,8 +27,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * Energy shots that fly (M17), simulated here as moving points drawn with particles rather than spawned as
- * entities (like the hero's sword beams): Trunks' Burning Attack, Krillin's Destructo Disc, the phantom's stolen
+ * Energy shots that fly (M17), simulated here as moving points rather than spawned as entities (like the hero's
+ * sword beams) - since the M17 test drawn by the clients, who fly the same shot themselves (fx.KiFx): Trunks' Burning Attack, Krillin's Destructo Disc, the phantom's stolen
  * fireballs, and the Dragon Ball fighters' ki blasts. Shared by suit wearers, companions and fighters alike;
  * whoever fires one says who it may hit. Nothing breaks blocks.
  */
@@ -48,10 +47,6 @@ public final class KiShots {
         KI_DARK
     }
 
-    private static final DustParticleOptions YELLOW = new DustParticleOptions(new Vector3f(1.0F, 0.85F, 0.25F), 2.0F);
-    private static final DustParticleOptions YELLOW_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 0.8F), 1.2F);
-    private static final DustParticleOptions KI_BLUE = new DustParticleOptions(new Vector3f(0.6F, 0.85F, 1.0F), 1.3F);
-    private static final DustParticleOptions KI_PURPLE = new DustParticleOptions(new Vector3f(0.75F, 0.35F, 1.0F), 1.3F);
 
     private static final class Shot {
         final ServerLevel level;
@@ -64,6 +59,8 @@ public final class KiShots {
         final double radius;
         final Predicate<LivingEntity> hits;
         final Set<LivingEntity> cut = new HashSet<>();
+        /** Its number with the clients drawing it. */
+        int fx;
         Vec3 pos;
         double travelled;
         int age;
@@ -97,13 +94,34 @@ public final class KiShots {
         if (dir.lengthSqr() < 1.0E-6D) {
             return;
         }
-        SHOTS.add(new Shot(level, owner, style, from, dir, speed, range, damage, radius, hits));
+        Shot shot = new Shot(level, owner, style, from, dir, speed, range, damage, radius, hits);
+        shot.fx = KiFx.shot(level, (byte) style.ordinal(), colour(style), size(style, radius), from, dir, speed, range);
+        SHOTS.add(shot);
         switch (style) {
             case BURNING -> level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.6F);
             case DISC -> level.playSound(null, from.x, from.y, from.z, SoundEvents.TRIDENT_RIPTIDE_1, SoundSource.PLAYERS, 1.0F, 1.6F);
             case FIRE -> level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 0.8F, 1.2F);
             default -> level.playSound(null, from.x, from.y, from.z, SoundEvents.FIRECHARGE_USE, SoundSource.HOSTILE, 0.8F, 1.6F);
         }
+    }
+
+    private static int colour(Style style) {
+        return switch (style) {
+            case BURNING, DISC -> KiFx.BURNING;
+            case FIRE -> KiFx.FIRE;
+            case KI_DARK -> KiFx.KI_DARK;
+            default -> KiFx.KI;
+        };
+    }
+
+    /** How big it's drawn, across. */
+    private static float size(Style style, double radius) {
+        return switch (style) {
+            case BURNING -> 1.5F;
+            case DISC -> (float) (radius * 1.3D);
+            case FIRE -> 0.5F;
+            default -> 0.6F;
+        };
     }
 
     @SubscribeEvent
@@ -115,6 +133,7 @@ public final class KiShots {
         while (it.hasNext()) {
             Shot shot = it.next();
             if (!shot.owner.isAlive() && shot.style != Style.DISC || shot.owner.level() != shot.level || step(shot)) {
+                KiFx.shotEnd(shot.level, shot.fx, shot.pos);
                 it.remove();
             }
         }
@@ -133,7 +152,6 @@ public final class KiShots {
         Vec3 to = from.add(shot.dir.scale(shot.speed));
         BlockHitResult block = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shot.owner));
         Vec3 end = block.getType() == HitResult.Type.MISS ? to : block.getLocation();
-        draw(shot, from, end);
         // What it meets on the way.
         double reach = shot.style == Style.DISC ? shot.radius : 0.6D;
         LivingEntity first = null;
@@ -164,6 +182,7 @@ public final class KiShots {
         }
         if (first != null) {
             Vec3 at = from.add(unit.scale(firstAlong));
+            shot.pos = at;
             impact(shot, at, first);
             return true;
         }
@@ -202,13 +221,11 @@ public final class KiShots {
                         victim.knockback(1.2D, -push.x, -push.z);
                     }
                 }
-                level.sendParticles(ParticleTypes.FLASH, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-                level.sendParticles(YELLOW, at.x, at.y, at.z, 40, shot.radius / 2.0D, shot.radius / 2.0D, shot.radius / 2.0D, 0.0D);
+                KiFx.burst(level, at, KiFx.BURNING, (float) Math.max(2.0D, shot.radius), 20, KiFx.BLAST);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.5F, 0.9F);
             }
             case DISC -> {
-                level.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 12, 0.3D, 0.3D, 0.3D, 0.3D);
+                KiFx.burst(level, at, KiFx.BURNING, 1.2F, 8, KiFx.SPARK);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.PLAYERS, 1.0F, 1.4F);
             }
             case FIRE -> {
@@ -216,7 +233,7 @@ public final class KiShots {
                     hurt(shot, direct, shot.damage);
                     direct.setSecondsOnFire(3);
                 }
-                level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 12, 0.2D, 0.2D, 0.2D, 0.05D);
+                KiFx.burst(level, at, KiFx.FIRE, 1.0F, 10, KiFx.BLAST);
                 level.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 6, 0.2D, 0.2D, 0.2D, 0.02D);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
             }
@@ -225,45 +242,9 @@ public final class KiShots {
                 if (direct != null && !KiGuard.blocks(direct, shot.owner, at.subtract(shot.dir.scale(2.0D)))) {
                     hurt(shot, direct, shot.damage);
                 }
-                level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-                level.sendParticles(shot.style == Style.KI_DARK ? KI_PURPLE : KI_BLUE, at.x, at.y, at.z, 10, 0.3D, 0.3D, 0.3D, 0.0D);
+                KiFx.burst(level, at, shot.style == Style.KI_DARK ? KiFx.KI_DARK : KiFx.KI, 1.1F, 12, KiFx.BLAST);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 0.5F, 1.6F);
             }
-        }
-    }
-
-    /** The shot along this tick's stretch, with its tail. */
-    private static void draw(Shot shot, Vec3 from, Vec3 to) {
-        ServerLevel level = shot.level;
-        int points = Math.max(2, (int) (to.distanceTo(from) * 3.0D));
-        for (int i = 0; i <= points; i++) {
-            Vec3 at = from.lerp(to, i / (double) points);
-            switch (shot.style) {
-                case BURNING -> {
-                    level.sendParticles(YELLOW, at.x, at.y, at.z, 3, 0.25D, 0.25D, 0.25D, 0.0D);
-                    level.sendParticles(YELLOW_CORE, at.x, at.y, at.z, 1, 0.05D, 0.05D, 0.05D, 0.0D);
-                }
-                case DISC -> {
-                    if (i == points) {
-                        // A flat ring, turning.
-                        Vec3 side = shot.dir.cross(new Vec3(0.0D, 1.0D, 0.0D));
-                        side = side.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : side.normalize();
-                        Vec3 fwd = shot.dir.multiply(1.0D, 0.0D, 1.0D);
-                        fwd = fwd.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : fwd.normalize();
-                        for (int k = 0; k < 12; k++) {
-                            double angle = k * Math.PI / 6.0D + shot.age * 0.8D;
-                            Vec3 rim = at.add(side.scale(Math.cos(angle) * shot.radius * 0.6D)).add(fwd.scale(Math.sin(angle) * shot.radius * 0.6D));
-                            level.sendParticles(YELLOW, rim.x, rim.y, rim.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-                        }
-                    }
-                }
-                case FIRE -> level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 1, 0.05D, 0.05D, 0.05D, 0.0D);
-                case KI_DARK -> level.sendParticles(KI_PURPLE, at.x, at.y, at.z, 1, 0.05D, 0.05D, 0.05D, 0.0D);
-                default -> level.sendParticles(KI_BLUE, at.x, at.y, at.z, 1, 0.05D, 0.05D, 0.05D, 0.0D);
-            }
-        }
-        if (shot.style == Style.BURNING || shot.style == Style.KI || shot.style == Style.KI_DARK) {
-            level.sendParticles(ParticleTypes.END_ROD, to.x, to.y, to.z, 1, 0.05D, 0.05D, 0.05D, 0.0D);
         }
     }
 }

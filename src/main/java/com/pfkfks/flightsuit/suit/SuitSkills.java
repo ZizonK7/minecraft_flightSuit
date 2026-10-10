@@ -101,13 +101,17 @@ public final class SuitSkills {
      */
     public static Vec3 beam(ServerLevel level, LivingEntity shooter, Vec3 from, Vec3 dir, double range, double width, float damage,
                             double knockback, DustParticleOptions glow, DustParticleOptions core, Predicate<LivingEntity> hits) {
-        return beam(level, shooter, from, dir, range, width, victim -> damage, knockback, glow, core, hits);
+        return beam(level, shooter, from, dir, range, width, victim -> damage, knockback, glow, core, hits,
+                width < 0.7D ? com.pfkfks.flightsuit.fx.KiFx.BEAM_THIN : com.pfkfks.flightsuit.fx.KiFx.BEAM_PLAIN);
     }
 
-    /** A beam whose damage depends on who it hits (the Special Beam Cannon bites deeper into bosses). */
+    /**
+     * A beam whose damage depends on who it hits (the Special Beam Cannon bites deeper into bosses). Since the M17
+     * test it's drawn by the clients (fx.KiFx) in the {@code glow} colour, {@code style} being the look of it.
+     */
     public static Vec3 beam(ServerLevel level, LivingEntity shooter, Vec3 from, Vec3 dir, double range, double width,
                             java.util.function.ToDoubleFunction<LivingEntity> damage, double knockback, DustParticleOptions glow,
-                            DustParticleOptions core, Predicate<LivingEntity> hits) {
+                            DustParticleOptions core, Predicate<LivingEntity> hits, byte style) {
         Vec3 aim = dir.normalize();
         Vec3 far = from.add(aim.scale(range));
         BlockHitResult block = level.clip(new ClipContext(from, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter));
@@ -135,25 +139,10 @@ public final class SuitSkills {
                 victim.knockback(knockback, -aim.x, -aim.z);
             }
         }
-        int points = (int) (length * 3.0D);
-        double spread = Math.max(0.05D, width * 0.12D);
-        for (int i = 0; i <= points; i++) {
-            Vec3 at = from.add(aim.scale(i / 3.0D));
-            level.sendParticles(glow, at.x, at.y, at.z, 2, spread, spread, spread, 0.0D);
-            level.sendParticles(core, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        }
-        level.sendParticles(ParticleTypes.FLASH, end.x, end.y, end.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.EXPLOSION, end.x, end.y, end.z, 2, 0.3D, 0.3D, 0.3D, 0.0D);
-        if (width >= 1.5D) {
-            // A big beam (M17): a ball of light four blocks across where it lands.
-            for (int i = 0; i < 48; i++) {
-                double u = level.random.nextDouble() * 2.0D - 1.0D;
-                double angle = level.random.nextDouble() * Math.PI * 2.0D;
-                double r = Math.sqrt(1.0D - u * u) * 2.0D;
-                level.sendParticles(i % 3 == 0 ? core : glow, end.x + Math.cos(angle) * r, end.y + u * 2.0D, end.z + Math.sin(angle) * r,
-                        1, 0.0D, 0.0D, 0.0D, 0.0D);
-            }
-        }
+        // The gathered ball (if any) goes into the beam; the beam and the burst where it ends are drawn by the clients.
+        com.pfkfks.flightsuit.fx.KiFx.stopCharge(level, shooter);
+        com.pfkfks.flightsuit.fx.KiFx.beam(level, from, end, com.pfkfks.flightsuit.fx.KiFx.fromRgb(glow.getColor()),
+                (float) Math.max(0.25D, width * 0.75D), style);
         level.playSound(null, end.x, end.y, end.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.8F, 1.4F);
         return end;
     }

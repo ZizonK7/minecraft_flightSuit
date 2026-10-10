@@ -73,6 +73,8 @@ public final class ModNetwork {
                 CutsceneS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, CutsceneSkipC2SPacket.class, CutsceneSkipC2SPacket::encode, CutsceneSkipC2SPacket::decode,
                 CutsceneSkipC2SPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, KiFxS2CPacket.class, KiFxS2CPacket::encode, KiFxS2CPacket::decode,
+                KiFxS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {

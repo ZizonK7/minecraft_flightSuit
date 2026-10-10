@@ -445,10 +445,13 @@ public final class SwordArts {
 
     /** The moment of turning: a pillar of light, wind blown out, a roar. */
     public static void transformBurst(ServerLevel level, Entity who) {
-        for (int i = 0; i < 24; i++) {
-            level.sendParticles(ParticleTypes.END_ROD, who.getX(), who.getY() + i * 0.5D, who.getZ(), 2, 0.25D, 0.1D, 0.25D, 0.0D);
-        }
-        level.sendParticles(GOLD, who.getX(), who.getY() + 1.0D, who.getZ(), 40, 0.6D, 1.0D, 0.6D, 0.0D);
+        transformBurst(level, who, com.pfkfks.flightsuit.fx.KiFx.GOLD);
+    }
+
+    /** A pillar of light in {@code colour} (drawn by the clients, KiFx) and dust blown out along the ground. */
+    public static void transformBurst(ServerLevel level, Entity who, int colour) {
+        com.pfkfks.flightsuit.fx.KiFx.pillar(level, who, who.position(), colour, 26.0F, 34);
+        com.pfkfks.flightsuit.fx.KiFx.burst(level, who.getBoundingBox().getCenter(), colour, 2.0F, 10, com.pfkfks.flightsuit.fx.KiFx.FLASH);
         for (int i = 0; i < 20; i++) {
             double angle = i * Math.PI / 10.0D;
             level.sendParticles(ParticleTypes.CLOUD, who.getX() + Math.cos(angle) * 0.8D, who.getY() + 0.2D, who.getZ() + Math.sin(angle) * 0.8D,
@@ -458,10 +461,12 @@ public final class SwordArts {
         level.playSound(null, who.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.4F, 1.6F);
     }
 
-    /** The golden aura round the body, every other tick. */
+    /**
+     * Every other tick while golden: a spark now and then (the aura itself the clients draw round whoever's golden -
+     * KiFxClient - so it's there in third person and for everyone else).
+     */
     public static void aura(ServerLevel level, Entity who) {
         double h = who.getBbHeight();
-        level.sendParticles(GOLD, who.getX(), who.getY() + h * 0.5D, who.getZ(), 3, who.getBbWidth() * 0.7D, h * 0.45D, who.getBbWidth() * 0.7D, 0.0D);
         if (who.tickCount % 4 == 0) {
             level.sendParticles(ParticleTypes.END_ROD, who.getX(), who.getY() + h * 0.85D, who.getZ(), 1, 0.4D, 0.2D, 0.4D, 0.02D);
         }

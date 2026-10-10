@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.suit;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.fx.KiFx;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -83,10 +84,8 @@ public enum StolenSkill {
     private static final DustParticleOptions GALICK_GLOW = new DustParticleOptions(new Vector3f(0.7F, 0.3F, 1.0F), 2.8F);
     private static final DustParticleOptions DEATH_GLOW = new DustParticleOptions(new Vector3f(0.9F, 0.4F, 0.95F), 0.7F);
     private static final DustParticleOptions SBC_GLOW = new DustParticleOptions(new Vector3f(1.0F, 0.95F, 0.55F), 1.3F);
-    private static final DustParticleOptions SBC_SPIRAL = new DustParticleOptions(new Vector3f(0.55F, 0.25F, 0.85F), 1.0F);
     private static final DustParticleOptions CANDY_GLOW = new DustParticleOptions(new Vector3f(1.0F, 0.55F, 0.8F), 1.0F);
     private static final DustParticleOptions WHITE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.3F);
-    private static final DustParticleOptions RED_AURA = new DustParticleOptions(new Vector3f(1.0F, 0.2F, 0.15F), 1.4F);
     private static final String KAIOKEN_UNTIL = "flightsuit_kaioken_until";
     private static final UUID KAIOKEN_SPEED_ID = UUID.fromString("9b1e0f6a-3c55-4d1e-8a7b-2e6f40c1d9a3");
 
@@ -159,22 +158,27 @@ public enum StolenSkill {
 
     // ---------------------------------------------------------------- charging
 
-    /** While it charges: light gathering at the hands (a sound at the start). */
+    /**
+     * While it charges (called every tick, {@code charged} counting up from 0): at the start, a sound and a ball of
+     * light the clients grow at the hands - at the forehead for the Special Beam Cannon (KiFx).
+     */
     public void chargeEffect(ServerLevel level, LivingEntity caster, int charged) {
-        Vec3 hands = SwordArts.hands(caster);
-        DustParticleOptions glow = this == GALICK_GUN ? GALICK_GLOW : this == SPECIAL_BEAM_CANNON ? SBC_GLOW : KAME_GLOW;
-        if (charged == 0) {
-            level.playSound(null, caster.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F,
-                    this == SPECIAL_BEAM_CANNON ? 0.6F : 1.0F);
+        if (charged != 0) {
+            return;
         }
-        double size = 0.1D + 0.4D * charged / Math.max(1, chargeTicks);
+        level.playSound(null, caster.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F,
+                this == SPECIAL_BEAM_CANNON ? 0.6F : 1.0F);
+        chargeBall(level, caster, Math.max(1, chargeTicks));
+    }
+
+    /** The ball of light gathering for {@code ticks} before this skill's beam (fighters charge for their own time). */
+    public void chargeBall(ServerLevel level, LivingEntity caster, int ticks) {
         if (this == SPECIAL_BEAM_CANNON) {
             // Two fingers to the forehead: the light gathers there.
-            hands = caster.getEyePosition().add(caster.getLookAngle().scale(0.4D));
-            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, hands.x, hands.y, hands.z, 2, 0.2D, 0.2D, 0.2D, 0.05D);
+            KiFx.charge(level, caster, KiFx.SBC, 0.5F, ticks, KiFx.AT_FOREHEAD);
+        } else {
+            KiFx.charge(level, caster, this == GALICK_GUN ? KiFx.GALICK : KiFx.KAME, 1.1F, ticks, KiFx.AT_HANDS);
         }
-        level.sendParticles(glow, hands.x, hands.y, hands.z, 4, size, size, size, 0.0D);
-        level.sendParticles(WHITE, hands.x, hands.y, hands.z, 1, size * 0.3D, size * 0.3D, size * 0.3D, 0.0D);
     }
 
     // ---------------------------------------------------------------- casting
@@ -202,9 +206,8 @@ public enum StolenSkill {
                 level.playSound(null, from.x, from.y, from.z, SoundEvents.SHULKER_SHOOT, SoundSource.PLAYERS, 1.0F, 1.8F);
             }
             case SPECIAL_BEAM_CANNON -> {
-                Vec3 end = SuitSkills.beam(level, caster, from, look, 32.0D, 1.0D,
-                        victim -> Stasis.isBoss(victim) ? damage * 1.5F : damage, 1.0D, SBC_GLOW, WHITE, hits);
-                spiral(level, from, end);
+                SuitSkills.beam(level, caster, from, look, 32.0D, 1.0D,
+                        victim -> Stasis.isBoss(victim) ? damage * 1.5F : damage, 1.0D, SBC_GLOW, WHITE, hits, KiFx.BEAM_SPIRAL);
                 level.playSound(null, from.x, from.y, from.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.2F, 1.8F);
             }
             case SOLAR_FLARE -> solarFlare(level, caster, hits);
@@ -233,24 +236,6 @@ public enum StolenSkill {
         return true;
     }
 
-    /** The Special Beam Cannon's spiral, wound round the beam. */
-    private static void spiral(ServerLevel level, Vec3 from, Vec3 to) {
-        Vec3 dir = to.subtract(from);
-        double length = dir.length();
-        if (length < 0.1D) {
-            return;
-        }
-        dir = dir.scale(1.0D / length);
-        Vec3 side = dir.cross(new Vec3(0.0D, 1.0D, 0.0D));
-        side = side.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : side.normalize();
-        Vec3 up = side.cross(dir).normalize();
-        for (double d = 0.0D; d < length; d += 0.25D) {
-            double angle = d * 2.2D;
-            Vec3 at = from.add(dir.scale(d)).add(side.scale(Math.cos(angle) * 0.7D)).add(up.scale(Math.sin(angle) * 0.7D));
-            level.sendParticles(SBC_SPIRAL, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        }
-    }
-
     private static void solarFlare(ServerLevel level, LivingEntity caster, Predicate<LivingEntity> hits) {
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, caster.getBoundingBox().inflate(10.0D),
                 entity -> entity != caster && entity.isAlive() && entity.distanceTo(caster) <= 10.0D && hits.test(entity))) {
@@ -261,9 +246,8 @@ public enum StolenSkill {
                 mob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 2));
             }
         }
-        Vec3 head = caster.getEyePosition();
-        level.sendParticles(ParticleTypes.FLASH, head.x, head.y + 0.3D, head.z, 3, 0.2D, 0.2D, 0.2D, 0.0D);
-        level.sendParticles(ParticleTypes.END_ROD, head.x, head.y, head.z, 40, 0.3D, 0.3D, 0.3D, 0.5D);
+        // A burst of white from the head; everyone near but the caster sees nothing but white for a moment.
+        KiFx.flare(level, caster, caster.getEyePosition().add(0.0D, 0.2D, 0.0D), 10.0F);
         level.playSound(null, caster.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 2.0F, 1.8F);
     }
 
@@ -274,7 +258,9 @@ public enum StolenSkill {
             speed.removeModifier(KAIOKEN_SPEED_ID);
             speed.addTransientModifier(new AttributeModifier(KAIOKEN_SPEED_ID, "Kaioken", 0.5D, AttributeModifier.Operation.MULTIPLY_TOTAL));
         }
-        level.sendParticles(RED_AURA, caster.getX(), caster.getY() + 1.0D, caster.getZ(), 40, 0.6D, 1.0D, 0.6D, 0.0D);
+        // A red flare-up, then the red aura for as long as it lasts.
+        KiFx.pillar(level, caster, caster.position(), KiFx.RED, 6.0F, 16);
+        KiFx.aura(level, caster, KiFx.RED, 160);
         level.playSound(null, caster.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.2F, 0.6F);
         level.playSound(null, caster.blockPosition(), SoundEvents.BLAZE_AMBIENT, SoundSource.PLAYERS, 1.0F, 0.6F);
     }
@@ -302,8 +288,8 @@ public enum StolenSkill {
         Vec3 face = target.position().subtract(spot);
         float yaw = (float) (Mth.atan2(face.z, face.x) * (180.0D / Math.PI)) - 90.0F;
         teleport(level, caster, spot, yaw);
-        level.sendParticles(ParticleTypes.END_ROD, from.x, from.y + 1.0D, from.z, 12, 0.3D, 0.6D, 0.3D, 0.05D);
-        level.sendParticles(ParticleTypes.END_ROD, spot.x, spot.y + 1.0D, spot.z, 12, 0.3D, 0.6D, 0.3D, 0.05D);
+        KiFx.burst(level, from.add(0.0D, 1.0D, 0.0D), KiFx.WHITE, 1.4F, 8, KiFx.SPARK);
+        KiFx.burst(level, spot.add(0.0D, 1.0D, 0.0D), KiFx.WHITE, 1.4F, 8, KiFx.SPARK);
         level.playSound(null, from.x, from.y, from.z, SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 1.4F);
         level.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 1.4F);
         return true;
@@ -331,8 +317,7 @@ public enum StolenSkill {
             }
         }
         caster.setHealth(Math.max(1.0F, caster.getHealth() - 6.0F));
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, caster.getX(), caster.getY() + 0.5D, caster.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
-        level.sendParticles(ParticleTypes.FLASH, caster.getX(), caster.getY() + 1.0D, caster.getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        KiFx.burst(level, caster.position().add(0.0D, 1.0D, 0.0D), 0xFFE6A0, 5.0F, 22, KiFx.BLAST);
         level.playSound(null, caster.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 2.0F, 0.8F);
     }
 
@@ -480,10 +465,6 @@ public enum StolenSkill {
                 level.playSound(null, entity.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 0.8F);
             }
             return;
-        }
-        if (entity.tickCount % 2 == 0) {
-            level.sendParticles(RED_AURA, entity.getX(), entity.getY() + entity.getBbHeight() / 2.0D, entity.getZ(), 3,
-                    entity.getBbWidth() * 0.7D, entity.getBbHeight() * 0.45D, entity.getBbWidth() * 0.7D, 0.0D);
         }
     }
 
