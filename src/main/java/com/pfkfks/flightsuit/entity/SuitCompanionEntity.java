@@ -10,6 +10,7 @@ import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.registry.ModItems;
 import com.pfkfks.flightsuit.suit.RemoteLink;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
+import com.pfkfks.flightsuit.suit.SuitClass;
 import com.pfkfks.flightsuit.suit.SuitEnergy;
 import com.pfkfks.flightsuit.suit.SuitUpManager;
 import com.pfkfks.flightsuit.suit.WornSuit;
@@ -200,6 +201,51 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     public boolean isReeling() {
         return clawPos != null;
+    }
+
+    /** The class of the suit (by its chest piece), or null. */
+    public SuitClass suitClass() {
+        return com.pfkfks.flightsuit.suit.SuitWeapons.armedClass(this);
+    }
+
+    /**
+     * Who its area skills (cryo nova, spin, unibeam, card fan) may hit: its target, and monsters that aren't on
+     * the owner's side or kneeling - never the owner, their suits, their body.
+     */
+    public boolean isFoe(LivingEntity entity) {
+        if (entity == this || !entity.isAlive() || entity == getOwner() || entity instanceof SuitCompanionEntity
+                || entity instanceof RemoteBodyEntity) {
+            return false;
+        }
+        if (entity == getTarget()) {
+            return true;
+        }
+        return entity instanceof net.minecraft.world.entity.monster.Enemy && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
+                && !(entity instanceof com.pfkfks.flightsuit.war.RaidMember member && member.isPlayerSide());
+    }
+
+    private int blinkCooldown;
+
+    /**
+     * Mark 3 (no thrusters): shadow-steps near {@code near} - somewhere it can stand - with the smoke and cards.
+     * @return false while cooling down, out of power, or with nowhere to stand there
+     */
+    public boolean blinkTo(Vec3 near) {
+        if (blinkCooldown > 0 || !(level() instanceof ServerLevel server)) {
+            return false;
+        }
+        Vec3 spot = com.pfkfks.flightsuit.suit.SuitSkills.standable(server, this, near);
+        if (spot == null || !drain(com.pfkfks.flightsuit.suit.SuitTuning.SHADOW_STEP_COST)) {
+            return false;
+        }
+        Vec3 from = position();
+        getNavigation().stop();
+        moveTo(spot.x, spot.y, spot.z, getYRot(), getXRot());
+        setDeltaMovement(Vec3.ZERO);
+        fallDistance = 0.0F;
+        com.pfkfks.flightsuit.suit.SuitSkills.shadowEffects(server, from, spot);
+        blinkCooldown = com.pfkfks.flightsuit.suit.SuitTuning.SHADOW_STEP_COOLDOWN_TICKS;
+        return true;
     }
 
     /**
@@ -460,6 +506,9 @@ public class SuitCompanionEntity extends PathfinderMob {
         if (clawCooldown > 0) {
             clawCooldown--;
         }
+        if (blinkCooldown > 0) {
+            blinkCooldown--;
+        }
         if (tickCount % 20 == 0) {
             syncSword();
         }
@@ -520,7 +569,7 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     /** Mark 4 companions carry the Master Sword in hand (for show; the slash itself is the AI's doing). */
     private void syncSword() {
-        boolean wants = isGrounded();
+        boolean wants = suitClass() == SuitClass.HERO;
         ItemStack hand = getMainHandItem();
         if (wants && hand.isEmpty()) {
             setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.MASTER_SWORD.get()));

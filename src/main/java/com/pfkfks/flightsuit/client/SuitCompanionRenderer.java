@@ -4,6 +4,7 @@ import com.pfkfks.flightsuit.FlightSuitMod;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
+import com.pfkfks.flightsuit.suit.SuitSize;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -39,6 +40,13 @@ public class SuitCompanionRenderer extends HumanoidMobRenderer<SuitCompanionEnti
             poseStack.mulPose(Axis.XP.rotationDegrees(blend * (-90.0F - suit.getViewXRot(partialTick))));
             poseStack.translate(0.0D, -0.9D, 0.0D);
         }
+    }
+
+    /** A Hulkbuster companion stands half again as big, like its wearer would (SuitSize). */
+    @Override
+    protected void scale(SuitCompanionEntity suit, PoseStack poseStack, float partialTick) {
+        float size = SuitSize.drawn(suit);
+        poseStack.scale(size, size, size);
     }
 
     @Override

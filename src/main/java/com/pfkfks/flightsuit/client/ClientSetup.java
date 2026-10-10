@@ -35,6 +35,8 @@ public final class ClientSetup {
         SuitArmorModels.registerLayers(event);
         event.registerLayerDefinition(HoverCarModel.LAYER, HoverCarModel::create);
         event.registerLayerDefinition(SpaceshipModel.LAYER, SpaceshipModel::create);
+        event.registerLayerDefinition(HulkModel.LAYER, HulkModel::createLayer);
+        event.registerLayerDefinition(ShenronModel.LAYER, ShenronModel::createLayer);
     }
 
     @SubscribeEvent
@@ -67,6 +69,8 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.DBZ_FIGHTER.get(), DbzFighterRenderer::new);
         event.registerEntityRenderer(ModEntities.THANOS_FORCE.get(), ThanosForceRenderer::new);
         event.registerEntityRenderer(ModEntities.SEAT.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
+        event.registerEntityRenderer(ModEntities.SHENRON.get(), ShenronRenderer::new);
+        event.registerEntityRenderer(ModEntities.TOWNSFOLK.get(), TownsfolkRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 
@@ -81,12 +85,18 @@ public final class ClientSetup {
     }
 
     @SubscribeEvent
+    public static void registerParticles(net.minecraftforge.client.event.RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.CARD_SWIRL.get(), CardSwirlParticle.Provider::new);
+    }
+
+    @SubscribeEvent
     public static void registerOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("helmet_targets", HelmetTargetOverlay.INSTANCE);
         event.registerAboveAll("suit_hud", SuitHudOverlay.INSTANCE);
         event.registerAboveAll("hover_car_hud", HoverCarHudOverlay.INSTANCE);
         event.registerAboveAll("remote_link", RemoteLinkOverlay.INSTANCE);
         event.registerAboveAll("edith_alert", EdithAlertOverlay.INSTANCE);
+        event.registerAboveAll("story_goal", StoryGoalOverlay.INSTANCE);
         event.registerAboveAll("space_travel", SpaceTravelOverlay.INSTANCE);
     }
 }

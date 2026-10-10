@@ -1,26 +1,28 @@
 package com.pfkfks.flightsuit.war;
 
+import com.pfkfks.flightsuit.registry.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Named generals (DESIGN.md 4-11 장수 표). Each leads the last wave of a raid by their kingdom and has their
- * own skills. The weapon is mostly for looks: its attack bonus is subtracted again so damage stays as tuned.
+ * own skills. Each carries their own weapon (display items, after the M13 test: 청룡언월도, 장팔사모, ...) - it's
+ * for looks and adds no damage of its own (the weapon bonus is 0; it was the vanilla weapons' bonus before).
  */
 public enum General {
-    GUAN_YU("guan_yu", Kingdom.SHU, 160.0D, 11.0D, 0.30D, 0.20F, Items.NETHERITE_AXE, 9.0D, Skill.WHIRLWIND, Skill.DUEL),
-    ZHANG_FEI("zhang_fei", Kingdom.SHU, 150.0D, 11.0D, 0.30D, 0.10F, Items.TRIDENT, 8.0D, Skill.ROAR, Skill.CHARGE),
-    XIAHOU_DUN("xiahou_dun", Kingdom.WEI, 150.0D, 10.0D, 0.30D, 0.15F, Items.DIAMOND_SWORD, 6.0D, Skill.CHARGE, Skill.ENRAGE),
-    GAN_NING("gan_ning", Kingdom.WU, 120.0D, 9.0D, 0.36D, 0.0F, Items.IRON_SWORD, 5.0D, Skill.AMBUSH, Skill.WHIRLWIND),
+    GUAN_YU("guan_yu", Kingdom.SHU, 160.0D, 11.0D, 0.30D, 0.20F, () -> ModItems.GREEN_DRAGON_BLADE.get(), 0.0D, Skill.WHIRLWIND, Skill.DUEL),
+    ZHANG_FEI("zhang_fei", Kingdom.SHU, 150.0D, 11.0D, 0.30D, 0.10F, () -> ModItems.SERPENT_SPEAR.get(), 0.0D, Skill.ROAR, Skill.CHARGE),
+    XIAHOU_DUN("xiahou_dun", Kingdom.WEI, 150.0D, 10.0D, 0.30D, 0.15F, () -> ModItems.XIAHOU_BROADSWORD.get(), 0.0D, Skill.CHARGE, Skill.ENRAGE),
+    GAN_NING("gan_ning", Kingdom.WU, 120.0D, 9.0D, 0.36D, 0.0F, () -> ModItems.BELLED_SABRE.get(), 0.0D, Skill.AMBUSH, Skill.WHIRLWIND),
     // The rulers (M12): they stay in their fortress, rally the men around them, and are who you talk to.
-    LIU_BEI("liu_bei", Kingdom.SHU, 120.0D, 7.0D, 0.28D, 0.15F, Items.GOLDEN_SWORD, 3.0D, Skill.RALLY),
-    CAO_CAO("cao_cao", Kingdom.WEI, 130.0D, 8.0D, 0.28D, 0.15F, Items.DIAMOND_SWORD, 6.0D, Skill.RALLY),
-    SUN_QUAN("sun_quan", Kingdom.WU, 120.0D, 7.0D, 0.28D, 0.15F, Items.GOLDEN_SWORD, 3.0D, Skill.RALLY);
+    LIU_BEI("liu_bei", Kingdom.SHU, 120.0D, 7.0D, 0.28D, 0.15F, () -> ModItems.TWIN_SWORDS.get(), 0.0D, Skill.RALLY),
+    CAO_CAO("cao_cao", Kingdom.WEI, 130.0D, 8.0D, 0.28D, 0.15F, () -> ModItems.YITIAN_SWORD.get(), 0.0D, Skill.RALLY),
+    SUN_QUAN("sun_quan", Kingdom.WU, 120.0D, 7.0D, 0.28D, 0.15F, () -> ModItems.GU_DING_DAO.get(), 0.0D, Skill.RALLY);
 
     public enum Skill {
         /** 회전베기: hits everything around. */
@@ -48,12 +50,13 @@ public enum General {
     private final double speed;
     /** Added to the raid's will to fight while this general leads it. */
     private final float resolveBonus;
-    private final Item weapon;
+    /** Looked up late: the mod's own items aren't registered yet when the enum loads. */
+    private final Supplier<Item> weapon;
     private final double weaponBonus;
     private final Set<Skill> skills;
 
     General(String id, Kingdom kingdom, double health, double damage, double speed, float resolveBonus,
-            Item weapon, double weaponBonus, Skill... skills) {
+            Supplier<Item> weapon, double weaponBonus, Skill... skills) {
         this.id = id;
         this.kingdom = kingdom;
         this.health = health;
@@ -92,7 +95,7 @@ public enum General {
     }
 
     public ItemStack weapon() {
-        return new ItemStack(weapon);
+        return new ItemStack(weapon.get());
     }
 
     /** A ruler: never marches out with a raid; the one you deal with (DESIGN 4-11 외교와 의뢰). */

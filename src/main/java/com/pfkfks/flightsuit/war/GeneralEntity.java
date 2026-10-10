@@ -836,6 +836,16 @@ public class GeneralEntity extends Monster implements RaidMember {
         role = WarRole.byId(tag.getInt("Role"));
         foe = tag.contains("Foe") ? Kingdom.byId(tag.getInt("Foe")) : null;
         following = tag.getBoolean("Following");
+        // Saved before the generals had their own weapons: swap the vanilla one (and its attack bonus) out, and
+        // put the base damage back to what it is without it.
+        General general = getGeneral();
+        if (!getMainHandItem().is(general.weapon().getItem())) {
+            setItemSlot(EquipmentSlot.MAINHAND, general.weapon());
+        }
+        AttributeInstance damage = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage != null) {
+            damage.setBaseValue(general.baseDamage());
+        }
         bossBar.setName(getDisplayName());
         bossBar.setVisible(canFight() && !isRecruited());
         if (isRecruited() && hallPos != null && !following) {

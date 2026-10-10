@@ -135,6 +135,7 @@ public class ResidentEntity extends PathfinderMob {
 
     private static final UUID GUARD_HEALTH = UUID.fromString("6b1c2b9e-7f43-4a3e-9d57-1f7e0b8a2c11");
     private static final UUID GUARD_DAMAGE = UUID.fromString("0d5e8a41-3c2f-4b6d-8e9a-5a7c4f2b1d36");
+    private static final UUID SMITH_DAMAGE = UUID.fromString("8b1d3f6e-5c2a-4e9b-a7d4-3f0c6e2b9a15");
 
     public ResidentEntity(EntityType<? extends ResidentEntity> type, Level level) {
         super(type, level);
@@ -178,6 +179,8 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(5, new TeacherWorkGoal(this));
         goalSelector.addGoal(5, new ChildSchoolGoal(this));
         goalSelector.addGoal(6, new WandererGoal(this));
+        goalSelector.addGoal(6, new com.pfkfks.flightsuit.village.ai.WorkplaceGoal(this));
+        goalSelector.addGoal(5, new com.pfkfks.flightsuit.village.ai.MusicianGoal(this));
         goalSelector.addGoal(7, new ResidentStrollGoal(this));
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -457,9 +460,10 @@ public class ResidentEntity extends PathfinderMob {
     }
 
     /** The morning meal and the day's mood (VillageHallBlockEntity.morning). */
-    void morning(boolean fed, int recentDeaths, int safety) {
+    /** @param bonus the day's good things: a cook's warm meal, last night's concert (VillageWorkday). */
+    void morning(boolean fed, int recentDeaths, int safety, int bonus) {
         this.fed = fed;
-        int value = 50 + (fed ? 20 : -25) + (homeBed != null ? 15 : -15) - 15 * recentDeaths + (safety >= 75 ? 10 : 0);
+        int value = 50 + (fed ? 20 : -25) + (homeBed != null ? 15 : -15) - 15 * recentDeaths + (safety >= 75 ? 10 : 0) + bonus;
         mood = Mth.clamp(value, 0, 100);
         if (isBaby()) {
             long age = level().getDayTime() / 24000L - bornDay;
@@ -728,11 +732,72 @@ public class ResidentEntity extends PathfinderMob {
         sendScreen(player);
     }
 
+    /**
+     * For the screen (after the M13 test): what they're doing right now (a builder's building and progress, a
+     * merchant's day at the market, asleep, sheltering), whose house they live in, their workplace or farm.
+     */
+    private @Nullable CompoundTag screenInfo(@Nullable VillageHallBlockEntity hall) {
+        if (hall == null || isWanderer()) {
+            return null;
+        }
+        CompoundTag info = new CompoundTag();
+        Component activity = null;
+        if (isSleeping()) {
+            activity = Component.translatable("activity.flightsuit.sleeping");
+        } else if (hall.isAlarm() && !getJob().isFighter()) {
+            activity = Component.translatable("activity.flightsuit.sheltering");
+        } else if (getJob() == ResidentJob.ARCHITECT && !isBaby()) {
+            activity = hall.works().activity(getUUID());
+        } else if (!isBaby() && WORKDAY_JOBS.contains(getJob())) {
+            activity = lastWork != null ? lastWork : Component.translatable(getJob() == ResidentJob.MERCHANT
+                    ? "activity.flightsuit.no_trade" : "activity.flightsuit.no_work_yet");
+        }
+        if (activity != null) {
+            info.putString("Activity", Component.Serializer.toJson(activity));
+        }
+        Construction house = hall.works().buildingAt(homeBed);
+        if (house != null) {
+            info.putString("Home", Component.Serializer.toJson(VillageWorks.describe(house)));
+        }
+        Construction work = getJob() == ResidentJob.FARMER ? hall.works().farmOf(getUUID()) : hall.works().workplaceOf(this);
+        if (work != null && !isBaby()) {
+            info.putString("Work", Component.Serializer.toJson(VillageWorks.describe(work)));
+        }
+        return info;
+    }
+
+    /** The jobs whose day is done by the hall each morning (VillageWorkday, the market) - their last day shows on the screen. */
+    private static final java.util.Set<ResidentJob> WORKDAY_JOBS = java.util.EnumSet.of(ResidentJob.MERCHANT, ResidentJob.COOK,
+            ResidentJob.BLACKSMITH, ResidentJob.RANCHER, ResidentJob.MUSICIAN);
+
+    /** What they got done last (the merchant's market, the cook's kitchen, ...), for the screen. Not saved. */
+    private @Nullable Component lastWork;
+
+    public void setLastWork(Component work) {
+        this.lastWork = work;
+    }
+
+    /**
+     * The blacksmith keeps the fighters' weapons sharp: a guard or soldier hits harder by the best smith's stars
+     * (refreshed each morning; 0 = no smith).
+     */
+    public void setSmithBonus(int stars) {
+        AttributeInstance damage = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage == null) {
+            return;
+        }
+        damage.removeModifier(SMITH_DAMAGE);
+        if (getJob().isFighter() && stars > 0) {
+            damage.addPermanentModifier(new AttributeModifier(SMITH_DAMAGE, "Smith's whetstone",
+                    VillageTuning.SMITH_DAMAGE_PER_STAR * stars, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
     private void sendScreen(ServerPlayer player) {
         VillageHallBlockEntity hall = hall();
         CompoundTag works = hall != null && getJob() == ResidentJob.ARCHITECT && !isWanderer() ? hall.works().screenData() : null;
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new ResidentScreenS2CPacket(getId(), mood, fed, homeBed != null, talents(), works));
+                new ResidentScreenS2CPacket(getId(), mood, fed, homeBed != null, talents(), works, screenInfo(hall)));
     }
 
     private void unloadPack() {

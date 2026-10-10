@@ -51,14 +51,19 @@ import java.util.UUID;
  * come to help an ally (trust 70+). The village is kept loaded throughout (DESIGN 4-15).
  *
  * Win (Thanos beaten, or turned to dust by the Infinity Gauntlet): the Nanotech Mark 50. Lose (still standing
- * after ten minutes): the snap - half the village's people are gone for three days - and he comes back later.
+ * after ten minutes): the snap - half the village's people turn to dust - and he comes back later.
+ *
+ * The snapped don't come back on their own (user decision after the M16 test, like Endgame): only beating
+ * Thanos, or a snap of the full Infinity Gauntlet, brings them back (undoSnap) - the dust gathers into people
+ * again the next time their village is loaded.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class ThanosRaid {
     public static final int STONES_TO_RAID = 3;
     private static final int DELAY_DAYS = 2;
     private static final int RETRY_DAYS = 5;
-    private static final int SNAP_DAYS = 3;
+    /** "Away until the snap is undone" (heroes' away-until day, a village's return day). */
+    private static final long UNTIL_UNDONE = Long.MAX_VALUE / 4;
     private static final long RAID_TICKS = 20L * 60 * 10;
     private static final String ALLY_TAG = "flightsuit_thanos_ally";
     private static final TicketType<ChunkPos> TICKET =
@@ -324,6 +329,8 @@ public final class ThanosRaid {
         clear(level, raid);
         data.raid = null;
         data.defeated.add(raid.player);
+        // Beating him undoes the snap.
+        undoSnap(server);
         data.raidDay.remove(raid.player);
         data.setDirty();
         announce(level, raid, Component.translatable("thanos.flightsuit.won").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
@@ -376,7 +383,7 @@ public final class ThanosRaid {
             HeroData heroes = HeroData.get(server);
             for (HeroType hero : HeroType.values()) {
                 if (hero.isHero() && level.random.nextBoolean()) {
-                    heroes.sendAway(hero, day + SNAP_DAYS);
+                    heroes.sendAway(hero, UNTIL_UNDONE);
                     gone++;
                 }
             }
@@ -386,7 +393,7 @@ public final class ThanosRaid {
                 List<ResidentEntity> people = new ArrayList<>(hall.residents());
                 Collections.shuffle(people, new java.util.Random(level.random.nextLong()));
                 ThanosData.Snapped snapped = data.snapped.computeIfAbsent(raid.villageKey, key -> new ThanosData.Snapped());
-                snapped.returnDay = day + SNAP_DAYS;
+                snapped.returnDay = UNTIL_UNDONE;
                 for (int i = 0; i < people.size() / 2; i++) {
                     ResidentEntity resident = people.get(i);
                     resident.stopRiding();
@@ -403,10 +410,37 @@ public final class ThanosRaid {
                 hall.refreshStats();
             }
         }
-        announce(level, raid, Component.translatable("thanos.flightsuit.snap", gone, SNAP_DAYS).withStyle(ChatFormatting.DARK_RED));
+        announce(level, raid, Component.translatable("thanos.flightsuit.snap", gone).withStyle(ChatFormatting.DARK_RED));
     }
 
-    /** From RaidManager.noteVillage: the snapped come back when the days are up. */
+    /**
+     * The snap undone (Thanos beaten, or the full gauntlet's snap): everyone snapped away comes back - villagers
+     * the next time their village is loaded, heroes to Hero City. Returns whether anyone was waiting.
+     */
+    public static boolean undoSnap(MinecraftServer server) {
+        ThanosData data = ThanosData.get(server);
+        boolean any = false;
+        for (ThanosData.Snapped snapped : data.snapped.values()) {
+            if (snapped.returnDay != 0L) {
+                snapped.returnDay = 0L;
+                any = true;
+            }
+        }
+        if (any) {
+            data.setDirty();
+        }
+        HeroData heroes = HeroData.get(server);
+        long day = server.overworld().getDayTime() / 24000L;
+        for (HeroType hero : HeroType.values()) {
+            if (!heroes.isHome(hero, UNTIL_UNDONE - 1)) {
+                heroes.sendAway(hero, day);
+                any = true;
+            }
+        }
+        return any;
+    }
+
+    /** From RaidManager.noteVillage: the snapped come back once the snap is undone - out of the dust, by the hall. */
     public static void onVillageLoaded(ServerLevel level, String villageKey, VillageHallBlockEntity hall) {
         ThanosData data = ThanosData.get(level.getServer());
         ThanosData.Snapped snapped = data.snapped.get(villageKey);
@@ -423,10 +457,17 @@ public final class ThanosRaid {
                 BlockPos spot = ground(level, at.offset(level.random.nextInt(7) - 3, 0, level.random.nextInt(7) - 3));
                 resident.moveTo(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D, resident.getYRot(), 0.0F);
                 level.addFreshEntity(resident);
+                // The dust gathering back into a person.
+                level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.85F, 0.45F, 0.2F), 1.4F),
+                        spot.getX() + 0.5D, spot.getY() + 1.0D, spot.getZ() + 0.5D, 60, 0.6D, 1.0D, 0.6D, 0.0D);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD, spot.getX() + 0.5D, spot.getY() + 1.0D,
+                        spot.getZ() + 0.5D, 12, 0.3D, 0.8D, 0.3D, 0.02D);
                 back++;
             }
         }
         hall.addNews(Component.translatable("thanos.flightsuit.news_back", back));
+        hall.tellOwner(Component.translatable("thanos.flightsuit.back", back).withStyle(ChatFormatting.GOLD));
+        level.playSound(null, at, SoundEvents.BEACON_POWER_SELECT, SoundSource.NEUTRAL, 2.0F, 0.8F);
         hall.refreshStats();
     }
 

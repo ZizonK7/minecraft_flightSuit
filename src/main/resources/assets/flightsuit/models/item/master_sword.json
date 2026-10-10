@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:item/handheld",
-  "textures": {
-    "layer0": "flightsuit:item/master_sword"
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {"parent": "flightsuit:item/3d/master_sword"},
+  "perspectives": {
+    "gui": {"parent": "minecraft:item/generated", "textures": {"layer0": "flightsuit:item/master_sword"}}
   }
 }

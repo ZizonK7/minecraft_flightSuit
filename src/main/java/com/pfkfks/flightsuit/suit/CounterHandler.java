@@ -44,6 +44,8 @@ public final class CounterHandler {
     public static final byte PRESS = 0;
     public static final byte SHIELD_ON = 1;
     public static final byte RELEASE = 2;
+    /** Mark 3: the aimed shadow step, confirmed with a click. */
+    public static final byte STEP = 3;
 
     private static final Map<UUID, Long> PARRY_UNTIL = new HashMap<>();
     private static final Map<UUID, Long> PARRY_READY_AT = new HashMap<>();
@@ -53,6 +55,15 @@ public final class CounterHandler {
     }
 
     public static void handleInput(ServerPlayer player, byte action) {
+        SuitClass suitClass = SuitWeapons.armedClass(player);
+        if (suitClass != null && suitClass.blinks()) {
+            // Mark 3: Z aims the shadow step on the client (PhantomAimClient), a click sends STEP - no parry, no shield.
+            if (action == STEP && !SuitUpManager.isSuitingUp(player)) {
+                SuitSkills.startShadowStep(player);
+            }
+            setShield(player, false);
+            return;
+        }
         switch (action) {
             case PRESS -> openParry(player);
             case SHIELD_ON -> setShield(player, true);

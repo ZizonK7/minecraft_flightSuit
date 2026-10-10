@@ -19,6 +19,8 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import java.util.ArrayList;
+import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -43,10 +45,13 @@ public class ResidentScreen extends Screen {
     private boolean hasBed;
     private int[] talents;
     private @Nullable CompoundTag works;
+    private @Nullable CompoundTag info;
     private ResidentJob shownJob;
     private boolean shownWanderer;
     private boolean shownChild;
     private boolean buildTab;
+    private int blueprintPage;
+    private static final int BLUEPRINTS_PER_PAGE = 6;
 
     private ResidentScreen(ResidentScreenS2CPacket packet) {
         super(Component.translatable("screen.flightsuit.resident"));
@@ -65,12 +70,27 @@ public class ResidentScreen extends Screen {
         }
     }
 
+    /** One wrapped line of the info under the picture; returns where the next goes. */
+    private int infoLine(GuiGraphics graphics, String key, String label, int x, int y, int color) {
+        if (info == null || !info.contains(key)) {
+            return y;
+        }
+        Component text = Component.Serializer.fromJson(info.getString(key));
+        if (text == null) {
+            return y;
+        }
+        Component line = Component.translatable(label).append(text);
+        graphics.drawWordWrap(font, line, x, y, 82, color);
+        return y + font.split(line, 82).size() * 9 + 3;
+    }
+
     private void update(ResidentScreenS2CPacket packet) {
         this.mood = packet.mood;
         this.fed = packet.fed;
         this.hasBed = packet.hasBed;
         this.talents = packet.talents;
         this.works = packet.works;
+        this.info = packet.info;
     }
 
     private @Nullable ResidentEntity resident() {
@@ -170,17 +190,32 @@ public class ResidentScreen extends Screen {
                     b -> send(ResidentEntity.ACTION_APPROVE, index)).bounds(x + 152, top + 83 + i * 19, 48, 18).build());
         }
         int stage = works.getInt("Stage");
-        int slot = 0;
+        List<Blueprint> open = new ArrayList<>();
         for (Blueprint blueprint : Blueprint.values()) {
-            if (blueprint.stage() > stage || blueprint.isHall()) {
-                continue;
+            if (blueprint.stage() <= stage && !blueprint.isHall()) {
+                open.add(blueprint);
             }
+        }
+        // Six to a page (with the workplaces there are more than fit above the queue).
+        int pages = (open.size() + BLUEPRINTS_PER_PAGE - 1) / BLUEPRINTS_PER_PAGE;
+        blueprintPage = pages == 0 ? 0 : blueprintPage % pages;
+        for (int i = 0; i < BLUEPRINTS_PER_PAGE; i++) {
+            int index = blueprintPage * BLUEPRINTS_PER_PAGE + i;
+            if (index >= open.size()) {
+                break;
+            }
+            Blueprint blueprint = open.get(index);
             addRenderableWidget(Button.builder(Component.translatable(blueprint.translationKey()),
                             b -> send(ResidentEntity.ACTION_TAKE_BLUEPRINT, blueprint.ordinal()))
-                    .bounds(x + (slot % 3) * CELL_WIDTH, top + 155 + (slot / 3) * 20, CELL_WIDTH - 2, 18)
+                    .bounds(x + (i % 3) * CELL_WIDTH, top + 155 + (i / 3) * 20, CELL_WIDTH - 2, 18)
                     .tooltip(Tooltip.create(Component.translatable("screen.flightsuit.build.take_hint")))
                     .build());
-            slot++;
+        }
+        if (pages > 1) {
+            addRenderableWidget(Button.builder(Component.literal((blueprintPage + 1) + "/" + pages + " ▶"), b -> {
+                blueprintPage++;
+                rebuildWidgets();
+            }).bounds(x + 3 * CELL_WIDTH - 38, top + 139, 36, 14).build());
         }
         ListTag queue = works.getList("Queue", Tag.TAG_COMPOUND);
         for (int i = 0; i < Math.min(2, queue.size()); i++) {
@@ -203,10 +238,29 @@ public class ResidentScreen extends Screen {
             return Component.translatable("screen.flightsuit.job_guard", stars,
                     (int) (VillageTuning.GUARD_HEALTH_PER_STAR * (stars - 1) / 2), (int) (VillageTuning.GUARD_DAMAGE_PER_STAR * (stars - 1)));
         }
+        switch (job) {
+            case COOK -> {
+                return Component.translatable("screen.flightsuit.job_cook", stars, 6 + 3 * stars);
+            }
+            case BLACKSMITH -> {
+                return Component.translatable("screen.flightsuit.job_smith", stars, 8 + 4 * stars, VillageTuning.SMITH_DAMAGE_PER_STAR * stars);
+            }
+            case RANCHER -> {
+                return Component.translatable("screen.flightsuit.job_rancher", stars, 2 + stars);
+            }
+            case MUSICIAN -> {
+                return Component.translatable("screen.flightsuit.job_musician", stars, 2 + 2 * stars);
+            }
+            default -> {
+            }
+        }
+        if (job == ResidentJob.MERCHANT) {
+            return Component.translatable("screen.flightsuit.job_merchant", stars, VillageTuning.MARKET_BASE + VillageTuning.MARKET_PER_STAR * stars);
+        }
         if (job.works()) {
             return Component.translatable("screen.flightsuit.job_speed", stars, Math.round(VillageTuning.talentSpeed(stars) * 100));
         }
-        return Component.translatable("screen.flightsuit.job_later", stars);
+        return Component.translatable("screen.flightsuit.job_workplace", stars);
     }
 
     /** "건축가 ★5 · 경비병 ★4" - the gifts (or the best they have). */
@@ -263,6 +317,13 @@ public class ResidentScreen extends Screen {
             Component role = shownChild ? Component.translatable("job.flightsuit.child", resident.getChildDaysLeft())
                     : Component.translatable(shownWanderer ? "job.flightsuit.wanderer" : shownJob.translationKey());
             graphics.drawString(font, role, x, top + 22, 0xA8B4BE);
+            if (info != null && !shownWanderer) {
+                // Under their picture: what they're doing now, their house, their workplace or farm.
+                int y = top + 160;
+                y = infoLine(graphics, "Activity", "screen.flightsuit.resident.now", left + 6, y, 0xF0D060);
+                y = infoLine(graphics, "Home", "screen.flightsuit.resident.home", left + 6, y, 0xC8C8C8);
+                infoLine(graphics, "Work", "screen.flightsuit.resident.work", left + 6, y, 0xC8C8C8);
+            }
             graphics.drawString(font, Component.translatable("screen.flightsuit.resident.mood", mood), x, top + 34, moodColor());
             if (!shownWanderer) {
                 Component meal = Component.translatable(fed ? "screen.flightsuit.resident.fed" : "screen.flightsuit.resident.hungry");

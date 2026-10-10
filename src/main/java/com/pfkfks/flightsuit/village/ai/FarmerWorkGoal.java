@@ -151,6 +151,15 @@ public class FarmerWorkGoal extends Goal {
      * the architects built (so a farm across the village isn't forgotten).
      */
     private @Nullable BlockPos findWork(VillageHallBlockEntity hall) {
+        boolean hasSeed = hasSeed(hall);
+        // Their own farm first (after the M13 test, every farm has a farmer); the rest when it's all done.
+        Construction own = hall.works().farmOf(farmer.getUUID());
+        if (own != null) {
+            BlockPos found = findWorkAround(hall, own.center().above(), hasSeed);
+            if (found != null) {
+                return found;
+            }
+        }
         List<BlockPos> bases = new ArrayList<>();
         bases.add(farmer.blockPosition());
         if (lastField != null) {
@@ -161,7 +170,6 @@ public class FarmerWorkGoal extends Goal {
                 bases.add(building.center().above());
             }
         }
-        boolean hasSeed = hasSeed(hall);
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
         for (BlockPos base : bases) {

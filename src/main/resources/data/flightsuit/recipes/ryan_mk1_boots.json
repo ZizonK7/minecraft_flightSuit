@@ -5,7 +5,7 @@
   "key": {
     "I": {"item": "minecraft:iron_ingot"},
     "G": {"item": "minecraft:gold_ingot"},
-    "B": {"item": "minecraft:blaze_powder"}
+    "B": {"item": "minecraft:gunpowder"}
   },
   "result": {"item": "flightsuit:ryan_mk1_boots"}
 }

@@ -25,8 +25,11 @@ import java.util.List;
  * Coordinates are relative: x east, z south, y = 0 the ground.
  */
 public final class HeroCityBuilder {
-    /** The plan's version: 1 the first 61x61 city (saved as 0), 2 the 121x121 city (after the M13 test). */
-    public static final int LAYOUT = 2;
+    /**
+     * The plan's version: 1 the first 61x61 city (saved as 0), 2 the 121x121 city (after the M13 test), 3 with
+     * furnished homes and shops for its townsfolk (after the M16 test).
+     */
+    public static final int LAYOUT = 3;
     /** Half the site's side. */
     public static final int EDGE = 60;
     public static final int CLEAR_HEIGHT = 56;
@@ -386,9 +389,11 @@ public final class HeroCityBuilder {
                 int height = 8 + seed % 9;
                 BlockState glass = glasses[seed % glasses.length];
                 building(along, depth, height, glass);
+                furnish(along, depth);
                 if (Math.abs(along) != Math.abs(depth)) {
                     // The same corner block from the other side - built once.
                     building(depth, along, 8 + (seed * 7) % 9, glasses[(seed + 1) % glasses.length]);
+                    furnish(depth, along);
                 }
             }
         }
@@ -418,6 +423,45 @@ public final class HeroCityBuilder {
             put(cx + r, y, cz, Blocks.AIR.defaultBlockState());
         }
         put(cx, 3, cz, Blocks.SEA_LANTERN.defaultBlockState());
+    }
+
+    /**
+     * Inside an outer block (the townsfolk live and shop here - town/TownPlan): the north and south ones at
+     * x = +-20 are shops - a counter facing the middle of the city, shelves behind; the rest are homes - two beds,
+     * a table and chairs, a bookshelf. The middle is left clear (where the shopkeeper or the family stands).
+     */
+    private void furnish(int cx, int cz) {
+        BlockState air = Blocks.AIR.defaultBlockState();
+        if (Math.abs(cx) == 20 && Math.abs(cz) == 48) {
+            int toward = cz > 0 ? -1 : 1;
+            for (int dx = -2; dx <= 2; dx++) {
+                put(cx + dx, 1, cz + toward * 2, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+            }
+            put(cx - 2, 2, cz + toward * 2, Blocks.LANTERN.defaultBlockState());
+            put(cx + 2, 2, cz + toward * 2, Blocks.LANTERN.defaultBlockState());
+            for (int dx = -3; dx <= 3; dx++) {
+                if (dx == 0) {
+                    continue;
+                }
+                put(cx + dx, 1, cz - toward * 3, Blocks.BARREL.defaultBlockState());
+                put(cx + dx, 2, cz - toward * 3, Blocks.BOOKSHELF.defaultBlockState());
+            }
+            return;
+        }
+        for (int dz : new int[]{-2, 2}) {
+            put(cx - 3, 1, cz + dz, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST)
+                    .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+            put(cx - 2, 1, cz + dz, Blocks.WHITE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST)
+                    .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        }
+        put(cx + 2, 1, cz - 2, Blocks.OAK_FENCE.defaultBlockState());
+        put(cx + 2, 2, cz - 2, Blocks.OAK_PRESSURE_PLATE.defaultBlockState());
+        put(cx + 3, 1, cz - 2, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
+        put(cx + 2, 1, cz - 3, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH));
+        put(cx + 3, 1, cz + 2, Blocks.BOOKSHELF.defaultBlockState());
+        put(cx + 3, 2, cz + 2, Blocks.BOOKSHELF.defaultBlockState());
+        put(cx + 3, 1, cz + 3, Blocks.BARREL.defaultBlockState());
+        put(cx, 1, cz, air);
     }
 
     /** Street lights along the avenues and the grid streets. */

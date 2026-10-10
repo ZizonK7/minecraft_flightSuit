@@ -64,9 +64,36 @@ public final class ModItems {
     /** Display only: what the Mark 4 hero swings, drawn in the empty hand (not in the creative tab, no recipe). */
     public static final RegistryObject<Item> MASTER_SWORD = ITEMS.register("master_sword",
             () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    /** Display only for now: the Mark 5's sword (also drawn sheathed on its back); the sword art comes later. */
+    public static final RegistryObject<Item> TRUNKS_SWORD = ITEMS.register("trunks_sword",
+            () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     /** Display only: what Thor carries in Hero City (not in the creative tab, no recipe). */
     public static final RegistryObject<Item> MJOLNIR = ITEMS.register("mjolnir",
             () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    /**
+     * Display only: the generals' and Hero City's own weapons (after the M13 test) - what they carry, never a
+     * recipe or the creative tab; damage stays the wielder's own.
+     */
+    public static final RegistryObject<Item> GREEN_DRAGON_BLADE = display("green_dragon_blade");
+    public static final RegistryObject<Item> SERPENT_SPEAR = display("serpent_spear");
+    public static final RegistryObject<Item> XIAHOU_BROADSWORD = display("xiahou_broadsword");
+    public static final RegistryObject<Item> BELLED_SABRE = display("belled_sabre");
+    public static final RegistryObject<Item> TWIN_SWORDS = display("twin_swords");
+    public static final RegistryObject<Item> YITIAN_SWORD = display("yitian_sword");
+    public static final RegistryObject<Item> GU_DING_DAO = display("gu_ding_dao");
+    public static final RegistryObject<Item> CAPTAIN_SHIELD = display("captain_shield");
+    public static final RegistryObject<Item> WIDOW_BATON = display("widow_baton");
+    public static final RegistryObject<Item> HAWKEYE_BOW = display("hawkeye_bow");
+    public static final RegistryObject<Item> SHIELD_PISTOL = display("shield_pistol");
+    /**
+     * The towns' money (after the M16 test: "money instead of emeralds - different eras, different money"): the
+     * Three Kingdoms' wuzhu coins, Hero City's dollars. Earned from their shops, requests and rewards.
+     */
+    public static final RegistryObject<Item> WUZHU_COIN = ITEMS.register("wuzhu_coin", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> DOLLAR = ITEMS.register("dollar", () -> new Item(new Item.Properties()));
+    /** The guide book: controls and how to start (guide/GuideBookItem). */
+    public static final RegistryObject<Item> GUIDE_BOOK = ITEMS.register("guide_book",
+            () -> new com.pfkfks.flightsuit.guide.GuideBookItem(new Item.Properties().stacksTo(1)));
     /** Handed out by the architects; which building is in its NBT (not in the creative tab). */
     public static final RegistryObject<BlueprintItem> BLUEPRINT = ITEMS.register("blueprint",
             () -> new BlueprintItem(new Item.Properties().stacksTo(1)));
@@ -130,5 +157,9 @@ public final class ModItems {
 
     public static SuitCapsuleItem capsuleFor(SuitType type) {
         return CAPSULES.get(type).get();
+    }
+
+    private static RegistryObject<Item> display(String name) {
+        return ITEMS.register(name, () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     }
 }

@@ -2,6 +2,6 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": ["GGG", "LDL", "III"],
-  "key": {"G": {"item": "minecraft:glass"}, "L": {"item": "minecraft:lapis_lazuli"}, "D": {"item": "minecraft:daylight_detector"}, "I": {"item": "minecraft:iron_ingot"}},
+  "key": {"G": {"item": "minecraft:glass"}, "L": {"item": "minecraft:lapis_lazuli"}, "D": {"item": "minecraft:copper_ingot"}, "I": {"item": "minecraft:iron_ingot"}},
   "result": {"item": "flightsuit:solar_panel", "count": 1}
 }

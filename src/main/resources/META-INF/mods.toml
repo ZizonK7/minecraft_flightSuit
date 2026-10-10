@@ -29,3 +29,10 @@ description='''${mod_description}'''
     versionRange="[1.0.2-rc1,)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="jei"
+    mandatory=false
+    versionRange="[15,)"
+    ordering="NONE"
+    side="CLIENT"

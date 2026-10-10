@@ -36,7 +36,7 @@ public class ChildSchoolGoal extends Goal {
         }
         BlockPos best = null;
         for (Construction building : hall.works().buildings()) {
-            if (building.blueprint() == Blueprint.SCHOOL
+            if (building.blueprint().isSchool()
                     && (best == null || building.center().distSqr(resident.blockPosition()) < best.distSqr(resident.blockPosition()))) {
                 best = building.center();
             }

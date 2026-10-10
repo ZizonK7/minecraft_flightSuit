@@ -49,7 +49,7 @@ import java.util.UUID;
  * - primary, held right click with an empty hand: a continuous stream - Mark 1 repulsor beam, Mark 2 cryo
  *   beam (slows, then freezes the target stock-still - Stasis), Mark 3 card stream (PhantomCards);
  * - skill 1 (X): Mark 1 micro-missile salvo from the shoulders; Mark 3 Judgment Draw;
- * - skill 2 (C): Mark 3 card duel (CardDuel);
+ * - skill 2 (C): Mark 1 unibeam, Mark 2 cryo nova (SuitSkills); Mark 3 card duel (CardDuel);
  * - Mark 4 swings the Master Sword instead, with a spin attack and a clawshot (HeroArts).
  * The client only says when the trigger goes down and up and which skill key was pressed; energy, cooldowns,
  * aiming and damage all live here.
@@ -95,6 +95,13 @@ public final class SuitWeapons {
         double hookTravelled;
         LivingEntity hookMob;
         int hookTicks;
+        // Mark 1 unibeam charging; Mark 3 shadow step (SuitSkills): cooldown, and the step under way.
+        int unibeamCharge;
+        long stepReady;
+        int stepTicks;
+        Vec3 stepFrom = Vec3.ZERO;
+        Vec3 stepTo = Vec3.ZERO;
+        float stepYaw;
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -150,7 +157,11 @@ public final class SuitWeapons {
                 }
             }
             case SKILL_2 -> {
-                if (suitClass == SuitClass.PHANTOM) {
+                if (suitClass == SuitClass.STANDARD) {
+                    SuitSkills.startUnibeam(player, state);
+                } else if (suitClass == SuitClass.STEALTH) {
+                    SuitSkills.cryoNova(player, state);
+                } else if (suitClass == SuitClass.PHANTOM) {
                     CardDuel.challenge(player, state);
                 } else if (suitClass == SuitClass.HERO) {
                     HeroArts.clawshot(player, state);
@@ -223,6 +234,12 @@ public final class SuitWeapons {
             }
         }
         tickSalvo(player, state, suitClass);
+        SuitSkills.tickShadowStep(player, state);
+        if (suitClass == SuitClass.STANDARD) {
+            SuitSkills.tickUnibeam(player, state);
+        } else {
+            state.unibeamCharge = 0;
+        }
         HeroArts.tick(player, state, suitClass);
         CardDuel.tick(player);
     }

@@ -17,7 +17,7 @@ public enum ResidentJob {
     DOCTOR("doctor", true),
     GUARD("guard", true),
     BLACKSMITH("blacksmith", false),
-    MERCHANT("merchant", false),
+    MERCHANT("merchant", true),
     MUSICIAN("musician", false),
     SOLDIER("soldier", true);
 
@@ -35,7 +35,10 @@ public enum ResidentJob {
         return id;
     }
 
-    /** Whether this job already has its work (M9: farmer, architect, guard, soldier; M11: teacher, doctor). */
+    /**
+     * Whether this job already has its work (M9: farmer, architect, guard, soldier; M11: teacher, doctor; after the
+     * M13 test the merchant's market day).
+     */
     public boolean works() {
         return works;
     }

@@ -108,8 +108,9 @@ public final class SuitHudOverlay implements IGuiOverlay {
             return null;
         }
         return switch (suitClass) {
-            case STANDARD -> Component.translatable("hud.flightsuit.weapon.missiles", ready(ClientWeapons.skill1Ready));
-            case STEALTH -> Component.translatable("hud.flightsuit.weapon.cryo");
+            case STANDARD -> Component.translatable("hud.flightsuit.weapon.missiles", ready(ClientWeapons.skill1Ready),
+                    ready(ClientWeapons.skill2Ready));
+            case STEALTH -> Component.translatable("hud.flightsuit.weapon.cryo", ready(ClientWeapons.skill2Ready));
             case PHANTOM -> {
                 float spade = ClientWeapons.secondsLeft(ClientWeapons.spadeUntil);
                 Component line = Component.translatable("hud.flightsuit.weapon.cards", ClientWeapons.gauge, SuitTuning.JUDGMENT_GAUGE,
@@ -123,6 +124,8 @@ public final class SuitHudOverlay implements IGuiOverlay {
                 yield player.getHealth() >= player.getMaxHealth() - 0.01F
                         ? line.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : line;
             }
+            // Their own skills come later (palm repulsor only for now).
+            case HULKBUSTER, SWORDSMAN -> null;
         };
     }
 

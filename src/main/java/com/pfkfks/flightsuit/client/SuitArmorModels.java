@@ -17,7 +17,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Suit armor rendered from a 64x64 player-skin-layout texture (the suit is drawn as a skin for now -
@@ -25,6 +27,10 @@ import java.util.Map;
  * slot gets its own inflation so pieces stack outward: legs < chest < boots < helmet. The per-slot
  * textures (tools/SkinSplitter.java) blank out everything that slot doesn't own, which is how leggings
  * and boots share one leg cube split at the knee.
+ *
+ * Suits with a model of their own (SuitType#ownModel: Hulkbuster, Trunks) use a SuitModel per slot instead,
+ * all four on one texture; the Hulkbuster is drawn half again as big when it stands on its own (station,
+ * flying pieces) - worn, the wearer's whole render is scaled instead (SuitSize).
  */
 public final class SuitArmorModels {
     public static final ModelLayerLocation HELMET = layer("helmet");
@@ -45,7 +51,21 @@ public final class SuitArmorModels {
     private static final Map<EquipmentSlot, HumanoidModel<LivingEntity>> BAKED_OTHER = new EnumMap<>(EquipmentSlot.class);
     private static HumanoidModel<LivingEntity> glassesModel;
 
+    /** A suit with its own model: layer, render-time limb offsets, its one texture and its size. */
+    private record Custom(ModelLayerLocation layer, Supplier<LayerDefinition> mesh, float[][] shifts, ResourceLocation texture, float size) {
+    }
+
+    private static final Map<String, Custom> CUSTOM = Map.of(
+            "hulkbuster_mk44", custom("hulkbuster_mk44", HulkbusterModel::createLayer, HulkbusterModel.SHIFTS, HulkbusterModel.SIZE),
+            "trunks_mk5", custom("trunks_mk5", TrunksSuitModel::createLayer, TrunksSuitModel.SHIFTS, 1.0F));
+    private static final Map<String, Map<EquipmentSlot, SuitModel>> CUSTOM_BAKED = new HashMap<>();
+    private static final Map<String, Map<EquipmentSlot, SuitModel>> CUSTOM_OTHER = new HashMap<>();
+
     private SuitArmorModels() {
+    }
+
+    private static Custom custom(String id, Supplier<LayerDefinition> mesh, float[][] shifts, float size) {
+        return new Custom(layer(id), mesh, shifts, new ResourceLocation(FlightSuitMod.MODID, "textures/models/armor/" + id + ".png"), size);
     }
 
     private static ModelLayerLocation layer(String name) {
@@ -59,6 +79,9 @@ public final class SuitArmorModels {
         event.registerLayerDefinition(BOOTS, () -> create(0.50F));
         event.registerLayerDefinition(GLASSES, SuitArmorModels::createGlasses);
         event.registerLayerDefinition(EMPTY, SuitArmorModels::createEmpty);
+        for (Custom custom : CUSTOM.values()) {
+            event.registerLayerDefinition(custom.layer(), custom.mesh());
+        }
     }
 
     /** Re-bakes on every resource reload (AddLayers fires each time). */
@@ -73,6 +96,17 @@ public final class SuitArmorModels {
         BAKED_OTHER.put(EquipmentSlot.FEET, new HumanoidModel<>(models.bakeLayer(BOOTS)));
         glassesModel = new HumanoidModel<>(models.bakeLayer(GLASSES));
         emptyModel = new HumanoidModel<>(models.bakeLayer(EMPTY));
+        for (Map.Entry<String, Custom> entry : CUSTOM.entrySet()) {
+            Custom custom = entry.getValue();
+            Map<EquipmentSlot, SuitModel> own = new EnumMap<>(EquipmentSlot.class);
+            Map<EquipmentSlot, SuitModel> other = new EnumMap<>(EquipmentSlot.class);
+            for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                own.put(slot, new SuitModel(models.bakeLayer(custom.layer()), custom.shifts(), slot));
+                other.put(slot, new SuitModel(models.bakeLayer(custom.layer()), custom.shifts(), slot));
+            }
+            CUSTOM_BAKED.put(entry.getKey(), own);
+            CUSTOM_OTHER.put(entry.getKey(), other);
+        }
     }
 
     /** A humanoid model with no geometry - what a cloaked stealth suit renders as. */
@@ -124,12 +158,26 @@ public final class SuitArmorModels {
     }
 
     /** Armor model for whoever is wearing the piece (players and everything else get separate instances). */
-    public static HumanoidModel<LivingEntity> forWearer(LivingEntity wearer, EquipmentSlot slot) {
-        if (wearer instanceof net.minecraft.world.entity.player.Player) {
-            return forSlot(slot);
-        }
+    public static HumanoidModel<LivingEntity> forWearer(LivingEntity wearer, String suitId, EquipmentSlot slot) {
+        boolean player = wearer instanceof net.minecraft.world.entity.player.Player;
         forSlot(slot);
-        return BAKED_OTHER.get(slot);
+        if (CUSTOM.containsKey(suitId)) {
+            return (player ? CUSTOM_BAKED : CUSTOM_OTHER).get(suitId).get(slot);
+        }
+        return player ? BAKED.get(slot) : BAKED_OTHER.get(slot);
+    }
+
+    /** The model a suit's piece is drawn with on its own (station, flying pieces, first-person arm). */
+    public static HumanoidModel<LivingEntity> forSlot(String suitId, EquipmentSlot slot) {
+        HumanoidModel<LivingEntity> plain = forSlot(slot);
+        Map<EquipmentSlot, SuitModel> own = CUSTOM_BAKED.get(suitId);
+        return own != null ? own.get(slot) : plain;
+    }
+
+    /** How big the suit is drawn standing on its own (1 except the Hulkbuster). */
+    public static float size(String suitId) {
+        Custom custom = CUSTOM.get(suitId);
+        return custom == null ? 1.0F : custom.size();
     }
 
     public static HumanoidModel<LivingEntity> forSlot(EquipmentSlot slot) {
@@ -140,6 +188,10 @@ public final class SuitArmorModels {
     }
 
     public static ResourceLocation texture(String suitId, EquipmentSlot slot) {
+        Custom custom = CUSTOM.get(suitId);
+        if (custom != null) {
+            return custom.texture();
+        }
         String piece = switch (slot) {
             case HEAD -> "helmet";
             case CHEST -> "chestplate";

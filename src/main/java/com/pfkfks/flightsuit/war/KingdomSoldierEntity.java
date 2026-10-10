@@ -389,8 +389,8 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
         if (random.nextFloat() < 0.4F) {
             spawnAtLocation(new ItemStack(Items.BREAD));
         }
-        if (random.nextFloat() < 0.1F) {
-            spawnAtLocation(new ItemStack(Items.EMERALD));
+        if (random.nextFloat() < 0.35F) {
+            spawnAtLocation(new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get(), 1 + random.nextInt(3)));
         }
     }
 

@@ -52,8 +52,27 @@ public class TextureGen {
         write(stationArm(), new File(entity, "station_arm.png"));
         write(card(0xFFF6F4EE, GOLD, RED), new File(entity, "card_blanche.png"));
         write(card(0xFF1A1620, 0xFF8A4FD8, 0xFFF6F4EE), new File(entity, "card_noir.png"));
+        // The same faces for the shadow step's card swirl (particles live in their own atlas).
+        File particle = new File(entity.getParentFile(), "particle");
+        particle.mkdirs();
+        write(card(0xFFF6F4EE, GOLD, RED), new File(particle, "card_blanche.png"));
+        write(card(0xFF1A1620, 0xFF8A4FD8, 0xFFF6F4EE), new File(particle, "card_noir.png"));
         write(masterSword(), new File(item, "master_sword.png"));
         write(mjolnir(), new File(item, "mjolnir.png"));
+        write(greenDragonBlade(), new File(item, "green_dragon_blade.png"));
+        write(serpentSpear(), new File(item, "serpent_spear.png"));
+        write(broadsword(), new File(item, "xiahou_broadsword.png"));
+        write(belledSabre(), new File(item, "belled_sabre.png"));
+        write(twinSwords(), new File(item, "twin_swords.png"));
+        write(yitianSword(), new File(item, "yitian_sword.png"));
+        write(guDingDao(), new File(item, "gu_ding_dao.png"));
+        write(widowBaton(), new File(item, "widow_baton.png"));
+        write(hawkeyeBow(), new File(item, "hawkeye_bow.png"));
+        write(shieldPistol(), new File(item, "shield_pistol.png"));
+        write(captainShield(), new File(item, "captain_shield.png"));
+        write(wuzhuCoin(), new File(item, "wuzhu_coin.png"));
+        write(dollar(), new File(item, "dollar.png"));
+        write(guideBook(), new File(item, "guide_book.png"));
         write(hallSide(false), new File(block, "village_hall_side.png"));
         write(hallSide(true), new File(block, "village_hall_front.png"));
         write(hallTop(), new File(block, "village_hall_top.png"));
@@ -229,6 +248,353 @@ public class TextureGen {
                 }
             }
         }
+        return img;
+    }
+
+    // ---------------------------------------------------------------- weapons (display items, after the M13 test)
+
+    /** Colour for a point at (u along the weapon from the grip at the bottom left, v across it), or 0 for none. */
+    interface Along {
+        int at(double u, double v);
+    }
+
+    /** Paints a weapon lying along the item's diagonal (like Mjolnir): u runs up the handle, v across it. */
+    static BufferedImage along(Along painter) {
+        BufferedImage img = img(16, 16);
+        double r2 = Math.sqrt(2.0D);
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double u = (x - y) / r2;
+                double v = (x + y + 1) / r2 - 16.0D / r2;
+                int c = painter.at(u, v);
+                if (c != 0) {
+                    px(img, x, y, c);
+                }
+            }
+        }
+        return img;
+    }
+
+    static final int POLE = 0xFF5A2E1A, POLE_DARK = 0xFF3A1C0E, STEEL = 0xFFDCE3EC, STEEL_SHADE = 0xFF9AA6B6, STEEL_EDGE = 0xFF4A5260;
+
+    /** Guan Yu's Green Dragon Crescent Blade: a long red-brown pole, a broad curved blade, a green dragon at its base. */
+    static BufferedImage greenDragonBlade() {
+        return along((u, v) -> {
+            if (u >= 1.5D && u <= 10.0D) {
+                double t = (u - 1.5D) / 8.5D;
+                double outer = 0.7D + 2.6D * Math.sin(Math.PI * Math.min(1.0D, t * 1.15D));
+                if (v >= -0.8D && v <= outer) {
+                    if (u < 3.0D) {
+                        return v > 0.6D ? 0xFF2E8A3E : 0xFF1E5A28;
+                    }
+                    return v > outer - 0.8D ? STEEL_EDGE : v > outer - 1.6D ? STEEL : STEEL_SHADE;
+                }
+            }
+            if (Math.abs(v) <= 0.75D && u >= -10.0D && u < 1.5D) {
+                return u < -8.6D ? GOLD : ((int) Math.floor(u * 1.3D)) % 3 == 0 ? POLE_DARK : POLE;
+            }
+            return 0;
+        });
+    }
+
+    /** Zhang Fei's Serpent Spear: a long dark pole, a red tassel, a wavy blade like a snake. */
+    static BufferedImage serpentSpear() {
+        return along((u, v) -> {
+            if (u >= 3.8D && u <= 10.8D) {
+                double centre = 0.45D * Math.sin((u - 3.8D) * 1.4D);
+                double half = u > 9.0D ? 1.0D - (u - 9.0D) * 0.45D : 1.0D;
+                if (Math.abs(v - centre) <= half) {
+                    return v - centre > 0.35D ? STEEL : v - centre < -0.35D ? STEEL_EDGE : STEEL_SHADE;
+                }
+            }
+            if (u >= 2.6D && u < 4.0D && Math.abs(v) <= 1.6D) {
+                return Math.abs(v) > 0.9D ? 0xFFB01E1E : 0xFFD8342A;
+            }
+            if (Math.abs(v) <= 0.75D && u >= -10.0D && u < 2.6D) {
+                return u < -8.8D ? STEEL_SHADE : 0xFF2A2A30;
+            }
+            return 0;
+        });
+    }
+
+    /** Xiahou Dun's broadsword: a heavy, broad blade with a dark spine, a gold guard, a wrapped grip. */
+    static BufferedImage broadsword() {
+        return along((u, v) -> {
+            if (u >= -3.6D && u <= 8.8D) {
+                double top = u > 6.5D ? 1.6D - (u - 6.5D) * 1.2D : 1.6D;
+                if (v >= -1.3D && v <= top) {
+                    return v < -0.6D ? STEEL_EDGE : v > top - 0.7D ? STEEL : STEEL_SHADE;
+                }
+            }
+            if (u >= -4.6D && u < -3.6D && Math.abs(v) <= 2.2D) {
+                return Math.abs(v) > 1.4D ? GOLD_DARK : GOLD;
+            }
+            if (Math.abs(v) <= 0.75D && u >= -9.5D && u < -4.6D) {
+                return u < -8.6D ? GOLD : ((int) Math.floor(u * 1.5D)) % 2 == 0 ? 0xFF2A3A6A : 0xFF1A2448;
+            }
+            return 0;
+        });
+    }
+
+    /** Gan Ning's belled sabre: a slim curved blade, a red grip, and the bell he was known by at its pommel. */
+    static BufferedImage belledSabre() {
+        return along((u, v) -> {
+            if (u >= -4.0D && u <= 9.5D) {
+                double centre = 0.012D * (u + 4.0D) * (u + 4.0D) - 0.3D;
+                double half = u > 7.5D ? 0.7D - (u - 7.5D) * 0.3D : 0.75D;
+                if (Math.abs(v - centre) <= half) {
+                    return v - centre > 0.1D ? STEEL : STEEL_SHADE;
+                }
+            }
+            if (u >= -5.0D && u < -4.0D && Math.abs(v) <= 1.5D) {
+                return GOLD_DARK;
+            }
+            if (Math.abs(v) <= 0.75D && u >= -9.0D && u < -5.0D) {
+                return 0xFFB52A24;
+            }
+            double bu = u + 9.6D;
+            double bv = v - 1.4D;
+            if (bu * bu + bv * bv <= 1.6D) {
+                return bv > 0.3D ? GOLD_DARK : GOLD;
+            }
+            return 0;
+        });
+    }
+
+    /** Liu Bei's twin swords: two slim straight blades side by side, gold guards, green grips. */
+    static BufferedImage twinSwords() {
+        return along((u, v) -> {
+            for (double off : new double[]{-1.5D, 1.5D}) {
+                double w = v - off;
+                double tip = off < 0 ? 9.0D : 8.0D;
+                if (u >= -3.0D && u <= tip && Math.abs(w) <= (u > tip - 1.2D ? 0.4D : 0.75D)) {
+                    return w > 0.0D ? STEEL : STEEL_SHADE;
+                }
+                if (u >= -4.0D && u < -3.0D && Math.abs(w) <= 1.3D) {
+                    return GOLD;
+                }
+                if (u >= -8.0D && u < -4.0D && Math.abs(w) <= 0.6D) {
+                    return u < -7.2D ? GOLD_DARK : 0xFF2E7A3E;
+                }
+            }
+            return 0;
+        });
+    }
+
+    /** Cao Cao's Yitian sword: a long, fine straight blade, a dark guard set with gold, a blue tassel. */
+    static BufferedImage yitianSword() {
+        return along((u, v) -> {
+            if (u >= -3.0D && u <= 10.2D && Math.abs(v) <= (u > 9.0D ? 0.4D : 0.75D)) {
+                return v > 0.0D ? STEEL : STEEL_SHADE;
+            }
+            if (u >= -4.2D && u < -3.0D && Math.abs(v) <= 1.8D) {
+                return Math.abs(v) < 0.6D ? GOLD : 0xFF1E2A5A;
+            }
+            if (Math.abs(v) <= 0.75D && u >= -8.6D && u < -4.2D) {
+                return u < -7.8D ? GOLD : 0xFF14142A;
+            }
+            if (u >= -10.4D && u < -8.6D && v >= -2.0D && v <= 0.2D) {
+                return 0xFF2E5AD8;
+            }
+            return 0;
+        });
+    }
+
+    /** Sun Quan's Gu Ding Dao: the Sun family's straight broad blade, a red-and-gold guard (Wu's colours), a red tassel. */
+    static BufferedImage guDingDao() {
+        return along((u, v) -> {
+            if (u >= -3.2D && u <= 8.8D) {
+                double half = u > 7.0D ? 1.1D - (u - 7.0D) * 0.6D : 1.1D;
+                if (Math.abs(v) <= half) {
+                    return v > 0.4D ? STEEL : v < -0.6D ? STEEL_EDGE : STEEL_SHADE;
+                }
+            }
+            if (u >= -4.4D && u < -3.2D && Math.abs(v) <= 1.9D) {
+                return Math.abs(v) < 0.7D ? GOLD : 0xFFB52A24;
+            }
+            if (Math.abs(v) <= 0.75D && u >= -8.8D && u < -4.4D) {
+                return u < -8.0D ? GOLD : 0xFF4A1E14;
+            }
+            if (u >= -10.6D && u < -8.8D && v >= -0.2D && v <= 2.0D) {
+                return 0xFFD8342A;
+            }
+            return 0;
+        });
+    }
+
+    /** Black Widow's Widow's Bite baton: a short black baton with a glowing blue tip. */
+    static BufferedImage widowBaton() {
+        return along((u, v) -> {
+            if (Math.abs(v) <= 0.8D && u >= -7.0D && u <= 6.0D) {
+                if (u > 4.4D) {
+                    return v > 0.0D ? CYAN_GLOW : CYAN;
+                }
+                if (u < -5.4D) {
+                    return 0xFF5A5E66;
+                }
+                return ((int) Math.floor(u * 1.4D)) % 4 == 0 ? 0xFF3A3E46 : 0xFF16181C;
+            }
+            if (u > 6.0D && u <= 7.0D && Math.abs(v) <= 0.4D) {
+                return CYAN_GLOW;
+            }
+            return 0;
+        });
+    }
+
+    /**
+     * Hawkeye's recurve bow: dark purple limbs curving to the tips, a black grip, a taut string. Laid like the
+     * vanilla bow (the limbs bow out to the top left, the string on the diagonal) - its held pose expects that.
+     */
+    static BufferedImage hawkeyeBow() {
+        return along((u, w) -> {
+            double v = -w;
+            if (Math.abs(u) <= 7.6D) {
+                double limb = 2.4D - 0.042D * u * u;
+                if (Math.abs(u) > 6.4D) {
+                    // Recurve: the tips flick back out.
+                    limb += (Math.abs(u) - 6.4D) * 0.5D;
+                }
+                if (Math.abs(v - limb) <= 0.65D) {
+                    return Math.abs(u) < 1.4D ? 0xFF141418 : v > limb ? 0xFF8A4AC8 : 0xFF4E2878;
+                }
+                double string = -0.1D + 0.0D * u;
+                if (Math.abs(u) < 6.8D && Math.abs(v - string) <= 0.35D) {
+                    return 0xFFD8D8D0;
+                }
+            }
+            return 0;
+        });
+    }
+
+    /**
+     * A S.H.I.E.L.D. pistol: black slide and grip, a steel barrel tip. Drawn barrel to the left, grip down - held
+     * in the hand ("handheld"), the sprite's right side points back, so this way it points ahead, grip down
+     * (worked out from how the first two drawings sat in the hand in game).
+     */
+    static BufferedImage shieldPistol() {
+        return flipHorizontally(pistolUpright());
+    }
+
+    static BufferedImage flipHorizontally(BufferedImage in) {
+        BufferedImage out = img(in.getWidth(), in.getHeight());
+        for (int y = 0; y < in.getHeight(); y++) {
+            for (int x = 0; x < in.getWidth(); x++) {
+                out.setRGB(in.getWidth() - 1 - x, y, in.getRGB(x, y));
+            }
+        }
+        return out;
+    }
+
+    static BufferedImage flipVertically(BufferedImage in) {
+        BufferedImage out = img(in.getWidth(), in.getHeight());
+        for (int y = 0; y < in.getHeight(); y++) {
+            for (int x = 0; x < in.getWidth(); x++) {
+                out.setRGB(x, in.getHeight() - 1 - y, in.getRGB(x, y));
+            }
+        }
+        return out;
+    }
+
+    static BufferedImage pistolUpright() {
+        BufferedImage img = img(16, 16);
+        int black = 0xFF1A1C20, dark = 0xFF2C3036, light = 0xFF4A5058;
+        fill(img, 3, 5, 11, 3, black);
+        fill(img, 3, 5, 11, 1, light);
+        fill(img, 14, 6, 1, 1, STEEL_SHADE);
+        fill(img, 4, 8, 4, 6, dark);
+        fill(img, 4, 8, 1, 6, black);
+        fill(img, 8, 8, 2, 1, black);
+        fill(img, 9, 9, 1, 2, black);
+        px(img, 5, 10, light);
+        px(img, 5, 12, light);
+        return img;
+    }
+
+    /** Captain's shield, face on: red and white rings, a blue disc with a white star; transparent outside the circle. */
+    static BufferedImage captainShield() {
+        BufferedImage img = img(16, 16);
+        int red = 0xFFC8202A, white = 0xFFF0F0F0, blue = 0xFF1E3C9A, rim = 0xFF8A141C;
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double dx = x + 0.5D - 8.0D;
+                double dy = y + 0.5D - 8.0D;
+                double d = Math.sqrt(dx * dx + dy * dy);
+                if (d > 8.0D) {
+                    continue;
+                }
+                int c = d > 7.2D ? rim : d > 5.8D ? red : d > 4.4D ? white : blue;
+                px(img, x, y, c);
+            }
+        }
+        // The star.
+        String[] star = {"..#..", "#####", ".###.", ".#.#."};
+        for (int row = 0; row < star.length; row++) {
+            for (int col = 0; col < 5; col++) {
+                if (star[row].charAt(col) == '#') {
+                    px(img, 6 + col, 6 + row, white);
+                }
+            }
+        }
+        return img;
+    }
+
+    /** A wuzhu coin (the Three Kingdoms' money): a round bronze coin with a square hole and a raised rim. */
+    static BufferedImage wuzhuCoin() {
+        BufferedImage img = img(16, 16);
+        int rim = 0xFF6A4A1E, face = 0xFFB8862E, shine = 0xFFE0B458, dark = 0xFF8A6424;
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double dx = x + 0.5D - 8.0D;
+                double dy = y + 0.5D - 8.0D;
+                double d = Math.sqrt(dx * dx + dy * dy);
+                if (d > 6.6D) {
+                    continue;
+                }
+                boolean hole = Math.abs(dx) < 1.6D && Math.abs(dy) < 1.6D;
+                boolean holeRim = Math.abs(dx) < 2.6D && Math.abs(dy) < 2.6D;
+                int c = d > 5.6D ? rim : hole ? 0 : holeRim ? dark : (dx + dy < -3.0D ? shine : face);
+                if (c != 0) {
+                    px(img, x, y, c);
+                }
+            }
+        }
+        return img;
+    }
+
+    /** A dollar bill (Hero City's money): a green note with a pale border and a dark oval portrait. */
+    static BufferedImage dollar() {
+        BufferedImage img = img(16, 16);
+        int edge = 0xFF2E5A2A, paper = 0xFF8ABE7A, light = 0xFFC8E8B8, ink = 0xFF2A4A26;
+        fill(img, 1, 4, 14, 8, edge);
+        fill(img, 2, 5, 12, 6, paper);
+        fill(img, 3, 6, 10, 4, light);
+        fill(img, 6, 6, 4, 4, ink);
+        fill(img, 7, 7, 2, 2, paper);
+        px(img, 3, 6, ink);
+        px(img, 12, 9, ink);
+        return img;
+    }
+
+    /** The guide book: a Ryan-red cover with a gold spine and an arc reactor on the front, pages showing at the edge. */
+    static BufferedImage guideBook() {
+        BufferedImage img = img(16, 16);
+        int dark = 0xFF6A1414, red = 0xFFB8302A, page = 0xFFF2EEDF, pageShade = 0xFFC8C2AE;
+        fill(img, 3, 2, 11, 12, dark);
+        fill(img, 4, 3, 9, 10, red);
+        fill(img, 2, 2, 2, 12, GOLD);
+        fill(img, 13, 3, 1, 11, page);
+        fill(img, 4, 14, 10, 1, page);
+        px(img, 13, 14, pageShade);
+        fill(img, 14, 4, 1, 10, pageShade);
+        // The arc reactor: a cyan ring, white heart.
+        fill(img, 7, 5, 3, 1, CYAN);
+        fill(img, 7, 9, 3, 1, CYAN);
+        fill(img, 6, 6, 1, 3, CYAN);
+        fill(img, 10, 6, 1, 3, CYAN);
+        fill(img, 7, 6, 3, 3, 0xFF2A5A6A);
+        px(img, 8, 7, 0xFFFFFFFF);
+        // Gold title lines under it.
+        fill(img, 6, 11, 5, 1, GOLD);
         return img;
     }
 

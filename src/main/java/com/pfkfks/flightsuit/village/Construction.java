@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * One building - going up, or already standing on the hall's list: a blueprint at a spot, turned some way.
@@ -36,6 +38,12 @@ public class Construction {
     private final List<Blueprint.Entry> entries;
     private final Map<BlockPos, Blueprint.Entry> byPos = new HashMap<>();
     private final @Nullable Construction replaces;
+    /**
+     * Whose it is (after the M13 test): a house's household head, a farm's farmer, a workplace's worker. Kept by
+     * name too, for the screens (the owner may be far away or gone).
+     */
+    private @Nullable UUID owner;
+    private String ownerName = "";
 
     public Construction(Blueprint blueprint, BlockPos center, Rotation rotation) {
         this(blueprint, center, rotation, null);
@@ -52,9 +60,30 @@ public class Construction {
         }
     }
 
-    /** The bigger version of this building on the same spot. */
+    /** The bigger version of this building on the same spot (still theirs). */
     public Construction rebuiltAs(Blueprint next) {
-        return new Construction(next, center, rotation, this);
+        Construction rebuilt = new Construction(next, center, rotation, this);
+        rebuilt.owner = owner;
+        rebuilt.ownerName = ownerName;
+        return rebuilt;
+    }
+
+    public @Nullable UUID owner() {
+        return owner;
+    }
+
+    public String ownerName() {
+        return ownerName;
+    }
+
+    public void setOwner(@Nullable UUID owner, String name) {
+        this.owner = owner;
+        this.ownerName = owner == null ? "" : name;
+    }
+
+    /** Whether {@code pos} is inside the building (its blocks' box). */
+    public boolean holds(BlockPos pos) {
+        return bounds().contains(Vec3.atCenterOf(pos));
     }
 
     public Blueprint blueprint() {
@@ -277,6 +306,10 @@ public class Construction {
         if (replaces != null) {
             tag.put("Replaces", replaces.save());
         }
+        if (owner != null) {
+            tag.putUUID("Owner", owner);
+            tag.putString("OwnerName", ownerName);
+        }
         return tag;
     }
 
@@ -290,6 +323,10 @@ public class Construction {
             return null;
         }
         Construction replaces = tag.contains("Replaces") ? load(tag.getCompound("Replaces")) : null;
-        return new Construction(blueprint, NbtUtils.readBlockPos(tag.getCompound("Center")), rotation, replaces);
+        Construction construction = new Construction(blueprint, NbtUtils.readBlockPos(tag.getCompound("Center")), rotation, replaces);
+        if (tag.hasUUID("Owner")) {
+            construction.setOwner(tag.getUUID("Owner"), tag.getString("OwnerName"));
+        }
+        return construction;
     }
 }

@@ -45,7 +45,6 @@ import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -94,7 +93,10 @@ public class CityHeroEntity extends PathfinderMob {
         // The shield goes in the off hand, like Captain carries it.
         if (type == HeroType.CAPTAIN) {
             hero.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-            hero.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
+            hero.setItemSlot(EquipmentSlot.OFFHAND, type.held());
+        } else if (type == HeroType.BLACK_WIDOW) {
+            // A Widow's Bite baton in each hand.
+            hero.setItemSlot(EquipmentSlot.OFFHAND, type.held());
         }
         set(hero, Attributes.MAX_HEALTH, type.health());
         set(hero, Attributes.ATTACK_DAMAGE, type.damage());
@@ -304,6 +306,12 @@ public class CityHeroEntity extends PathfinderMob {
 
     private void shoot(LivingEntity target) {
         swing(InteractionHand.MAIN_HAND);
+        if (getHeroType() == HeroType.AGENT) {
+            beam(target, ParticleTypes.SMOKE);
+            target.hurt(damageSources().mobAttack(this), (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.7F);
+            playSound(SoundEvents.FIREWORK_ROCKET_BLAST, 0.6F, 1.8F);
+            return;
+        }
         if (getHeroType() == HeroType.IRON_MAN) {
             beam(target, ParticleTypes.END_ROD);
             target.hurt(damageSources().mobAttack(this), (float) getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.75F);

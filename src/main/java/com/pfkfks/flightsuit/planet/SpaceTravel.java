@@ -99,6 +99,9 @@ public final class SpaceTravel {
         }
         MutableComponent line = Component.empty();
         for (Planet planet : Planet.values()) {
+            if (!PlanetStory.canFlyTo(player, planet)) {
+                continue;
+            }
             line.append(button(Component.translatable("space.flightsuit.button_launch", planet.displayName()), "/spaceship launch " + planet.id(),
                     Component.translatable("space.flightsuit.hint." + planet.id()), ChatFormatting.GOLD)).append(" ");
         }
@@ -132,7 +135,7 @@ public final class SpaceTravel {
     private static boolean launch(ServerPlayer player, String planetId) {
         Planet planet = Planet.byId(planetId);
         ServerLevel level = player.serverLevel();
-        if (planet == null || player.server.getLevel(planet.dimension()) == null) {
+        if (planet == null || player.server.getLevel(planet.dimension()) == null || !PlanetStory.canFlyTo(player, planet)) {
             player.sendSystemMessage(Component.translatable("space.flightsuit.no_planet").withStyle(ChatFormatting.RED));
             return false;
         }

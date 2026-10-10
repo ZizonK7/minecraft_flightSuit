@@ -138,7 +138,7 @@ public class SuitStationRenderer implements BlockEntityRenderer<SuitStationBlock
         poseStack.translate(offset.x, offset.y, offset.z);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0D, -1.501D, 0.0D);
-        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(slot);
+        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(suitId, slot);
         if (blend < 0.0F) {
             SuitUpPose.applyStanding(model);
         } else {

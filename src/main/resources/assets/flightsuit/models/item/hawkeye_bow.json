@@ -1,0 +1,8 @@
+{
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {"parent": "flightsuit:item/3d/hawkeye_bow"},
+  "perspectives": {
+    "gui": {"parent": "minecraft:item/generated", "textures": {"layer0": "flightsuit:item/hawkeye_bow"}}
+  }
+}

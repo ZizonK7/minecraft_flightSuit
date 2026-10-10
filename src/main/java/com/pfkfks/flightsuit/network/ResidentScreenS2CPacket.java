@@ -21,14 +21,18 @@ public class ResidentScreenS2CPacket {
     public final int[] talents;
     /** For an architect: the village's suggestions, open blueprints and building queue (VillageWorks.screenData). */
     public final @Nullable CompoundTag works;
+    /** What they're doing right now, and their home and workplace or farm (JSON components; after the M13 test). */
+    public final @Nullable CompoundTag info;
 
-    public ResidentScreenS2CPacket(int entityId, int mood, boolean fed, boolean hasBed, int[] talents, @Nullable CompoundTag works) {
+    public ResidentScreenS2CPacket(int entityId, int mood, boolean fed, boolean hasBed, int[] talents, @Nullable CompoundTag works,
+                                   @Nullable CompoundTag info) {
         this.entityId = entityId;
         this.mood = mood;
         this.fed = fed;
         this.hasBed = hasBed;
         this.talents = talents;
         this.works = works;
+        this.info = info;
     }
 
     public static void encode(ResidentScreenS2CPacket packet, FriendlyByteBuf buf) {
@@ -38,10 +42,12 @@ public class ResidentScreenS2CPacket {
         buf.writeBoolean(packet.hasBed);
         buf.writeVarIntArray(packet.talents);
         buf.writeNbt(packet.works);
+        buf.writeNbt(packet.info);
     }
 
     public static ResidentScreenS2CPacket decode(FriendlyByteBuf buf) {
-        return new ResidentScreenS2CPacket(buf.readVarInt(), buf.readByte(), buf.readBoolean(), buf.readBoolean(), buf.readVarIntArray(), buf.readNbt());
+        return new ResidentScreenS2CPacket(buf.readVarInt(), buf.readByte(), buf.readBoolean(), buf.readBoolean(), buf.readVarIntArray(), buf.readNbt(),
+                buf.readNbt());
     }
 
     public static void handle(ResidentScreenS2CPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {

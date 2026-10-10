@@ -30,12 +30,15 @@ import java.util.Map;
  * - WEAR: swap into it (the suit you're wearing stays out as a companion, or goes home if worn out);
  * - SET_MAIN: make that station the one G calls;
  * - ALL: House Party Protocol - every docked suit deploys, up to EDITH's control capacity;
- * - REMOTE: remote-pilot it (DESIGN.md 4-7) - a companion, or a docked suit straight off its station.
+ * - REMOTE: remote-pilot it (DESIGN.md 4-7) - a companion, or a docked suit straight off its station. Stations in
+ *   another dimension (home, seen from a planet) are listed too, for this only (DESIGN.md 4-15).
  */
 public final class SuitWheel {
     public static final byte STATION = 0;
     public static final byte COMPANION = 1;
     public static final byte CAPSULE = 2;
+    /** A station in another dimension: only a remote link reaches it. */
+    public static final byte FAR_STATION = 3;
 
     public static final byte SUMMON = 0;
     public static final byte WEAR = 1;
@@ -71,11 +74,15 @@ public final class SuitWheel {
         List<Entry> entries = new ArrayList<>();
         MainStation.Link main = MainStation.get(player);
         for (MainStation.Link link : OwnedStations.all(player)) {
-            if (!MainStation.isInPlayerDimension(player, link)) {
-                continue;
-            }
+            boolean here = MainStation.isInPlayerDimension(player, link);
             SuitStationBlockEntity station = loadStation(player, link);
             if (station == null || !station.hasSuit() || station.getSuitType() == null) {
+                continue;
+            }
+            if (!here) {
+                entries.add(new Entry(FAR_STATION, link.pos().asLong(), station.getSuitType().hudName(),
+                        chargePercent(station.getParts().values()), durabilityPercent(station.getParts().values()), -1,
+                        main != null && main.equals(link), anyBroken(station.getParts().values())));
                 continue;
             }
             entries.add(new Entry(STATION, link.pos().asLong(), station.getSuitType().hudName(),
@@ -110,6 +117,10 @@ public final class SuitWheel {
         }
         if (action == REMOTE) {
             remote(player, kind, key);
+            return;
+        }
+        if (kind == FAR_STATION) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.far_remote_only"), true);
             return;
         }
         if (action == ALL) {
@@ -209,6 +220,19 @@ public final class SuitWheel {
                 // Where the docked suit stands - the same spot as stepping into it at the station.
                 Vec3 spot = Vec3.atBottomCenterOf(station.getBlockPos()).add(0.0D, 0.25D, 0.0D);
                 RemoteLink.start(player, station.takeAll(), spot, yaw, false);
+            }
+            case FAR_STATION -> {
+                // Across dimensions (from a planet to the suits back home): the body stays here, its chunks loaded.
+                MainStation.Link link = farLink(player, key);
+                ServerLevel level = link == null ? null : player.server.getLevel(link.dimension());
+                SuitStationBlockEntity station = link == null ? null : loadStation(player, link);
+                if (level == null || station == null || !station.hasSuit() || refuseBroken(player, station.getParts().values())
+                        || !RemoteLink.canPilot(player, station.getParts())) {
+                    return;
+                }
+                float yaw = station.getBlockState().getValue(SuitStationBlock.FACING).toYRot();
+                Vec3 spot = Vec3.atBottomCenterOf(station.getBlockPos()).add(0.0D, 0.25D, 0.0D);
+                RemoteLink.start(player, level, station.takeAll(), spot, yaw, false);
             }
             case COMPANION -> {
                 if (!(player.serverLevel().getEntity((int) key) instanceof SuitCompanionEntity suit) || !suit.isOwnedBy(player)
@@ -333,9 +357,22 @@ public final class SuitWheel {
         return OwnedStations.contains(player, pos) ? loadStation(player, new MainStation.Link(player.level().dimension(), pos)) : null;
     }
 
-    /** Loads the station's chunk if needed; forgets stations whose block is gone. */
+    /** One of the player's stations in another dimension, by its position key. */
+    private static MainStation.Link farLink(ServerPlayer player, long key) {
+        for (MainStation.Link link : OwnedStations.all(player)) {
+            if (!MainStation.isInPlayerDimension(player, link) && link.pos().asLong() == key) {
+                return link;
+            }
+        }
+        return null;
+    }
+
+    /** Loads the station's chunk if needed (in whatever dimension it is); forgets stations whose block is gone. */
     private static SuitStationBlockEntity loadStation(ServerPlayer player, MainStation.Link link) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = player.server.getLevel(link.dimension());
+        if (level == null) {
+            return null;
+        }
         level.getChunkAt(link.pos());
         if (level.getBlockEntity(link.pos()) instanceof SuitStationBlockEntity station) {
             return station;

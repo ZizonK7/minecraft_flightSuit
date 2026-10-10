@@ -36,6 +36,26 @@ public final class SuitTuning {
     public static final int MISSILE_COUNT = 6;
     public static final int MISSILE_COST = 1200;
     public static final int MISSILE_COOLDOWN_TICKS = 60;
+
+    // Skills added after the M13 test (SuitSkills).
+    /** Mark 1 C: the unibeam - charge, then a wide beam through everything in a line. */
+    public static final int UNIBEAM_COST = 2_500;
+    public static final int UNIBEAM_COOLDOWN_TICKS = 160;
+    public static final int UNIBEAM_CHARGE_TICKS = 20;
+    public static final float UNIBEAM_DAMAGE = 18.0F;
+    public static final double UNIBEAM_RANGE = 32.0D;
+    /** Mark 2 C: cryo nova - everything around frozen stock-still. */
+    public static final int CRYO_NOVA_COST = 2_000;
+    public static final int CRYO_NOVA_COOLDOWN_TICKS = 200;
+    public static final double CRYO_NOVA_RADIUS = 7.0D;
+    public static final float CRYO_NOVA_DAMAGE = 6.0F;
+    public static final int CRYO_NOVA_HOLD_TICKS = 60;
+    /** Mark 3 Z: shadow step - the phantom blinks instead of flying. */
+    public static final int SHADOW_STEP_COST = 400;
+    public static final int SHADOW_STEP_COOLDOWN_TICKS = 30;
+    public static final double SHADOW_STEP_RANGE = 20.0D;
+    /** The card swirls turn this long before the phantom steps through. */
+    public static final int SHADOW_STEP_CHANNEL_TICKS = 10;
     public static final float MISSILE_POWER = 1.5F;
     public static final double MISSILE_LOCK_RANGE = 48.0D;
     public static final double MISSILE_LOCK_ANGLE_DEG = 25.0D;

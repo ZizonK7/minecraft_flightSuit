@@ -109,7 +109,12 @@ public class CompanionFollowGoal extends Goal {
         if (path != null && path.canReach()) {
             navigation.moveTo(path, Math.max(1.0D, Math.min(1.8D, ownerDistance / 6.0D)));
         } else if (owner.onGround() && suit.hasLineOfSight(owner)) {
-            suit.clawTo(spot.add(0.0D, 1.0D, 0.0D), null);
+            // Mark 4 clawshots over; Mark 3 shadow-steps.
+            if (suit.suitClass() == com.pfkfks.flightsuit.suit.SuitClass.PHANTOM) {
+                suit.blinkTo(spot);
+            } else {
+                suit.clawTo(spot.add(0.0D, 1.0D, 0.0D), null);
+            }
         } else if (path != null) {
             navigation.moveTo(path, 1.4D);
         }

@@ -4,6 +4,10 @@ package com.pfkfks.flightsuit.village;
 public final class VillageTuning {
     /** How far the village reaches around its hall, sideways (a square, so it matches the board's "area"). */
     public static final int RADIUS = 48;
+    /** The merchant's market day: food kept back (days' worth for everyone), and how much one sells. */
+    public static final int MARKET_KEEP_DAYS = 4;
+    public static final int MARKET_BASE = 8;
+    public static final int MARKET_PER_STAR = 4;
     /** And up / down. */
     public static final int HEIGHT = 24;
 
@@ -49,6 +53,10 @@ public final class VillageTuning {
     /** A guard's talent: extra health (hearts x2) and sword damage per star above one. */
     public static final double GUARD_HEALTH_PER_STAR = 4.0D;
     public static final double GUARD_DAMAGE_PER_STAR = 1.0D;
+    /** The blacksmith's whetstone: extra damage for guards and soldiers per star of the best smith. */
+    public static final double SMITH_DAMAGE_PER_STAR = 0.5D;
+    /** Mood from a cook's warm meal. */
+    public static final int WARM_MEAL_MOOD = 8;
 
     // ---- families (M11) ----
 

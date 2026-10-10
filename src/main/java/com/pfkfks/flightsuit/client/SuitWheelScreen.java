@@ -102,6 +102,7 @@ public class SuitWheelScreen extends Screen {
         Component where = switch (entry.kind()) {
             case SuitWheel.STATION -> Component.translatable("screen.flightsuit.source_station", entry.distance());
             case SuitWheel.COMPANION -> Component.translatable("screen.flightsuit.source_companion", entry.distance());
+            case SuitWheel.FAR_STATION -> Component.translatable("screen.flightsuit.source_far");
             default -> Component.translatable("screen.flightsuit.source_capsule");
         };
         return Component.translatable("screen.flightsuit.entry_detail", where, entry.charge(), entry.durability());
@@ -133,7 +134,9 @@ public class SuitWheelScreen extends Screen {
             return true;
         }
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            byte action = hasControlDown() ? SuitWheel.REMOTE : hasShiftDown() ? SuitWheel.WEAR : SuitWheel.SUMMON;
+            // A suit in another dimension can only be reached by a remote link - any click connects.
+            byte action = hasControlDown() || entry.kind() == SuitWheel.FAR_STATION ? SuitWheel.REMOTE
+                    : hasShiftDown() ? SuitWheel.WEAR : SuitWheel.SUMMON;
             send(action, entry.kind(), entry.key());
             return true;
         }

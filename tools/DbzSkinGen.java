@@ -41,7 +41,9 @@ public class DbzSkinGen {
         File item = new File(root, "item");
         dir.mkdirs();
         item.mkdirs();
-        for (String name : new String[]{"goku", "bulma", "raditz", "nappa", "vegeta", "saibaman"}) {
+        java.util.List<String> names = new java.util.ArrayList<>(java.util.List.of("goku", "bulma", "raditz", "nappa", "vegeta", "saibaman"));
+        names.addAll(java.util.List.of(SAGA));
+        for (String name : names) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
             pal.put('W', 0xFFFFFFFF);
@@ -53,7 +55,7 @@ public class DbzSkinGen {
                 case "nappa" -> nappa();
                 case "vegeta" -> vegeta();
                 case "saibaman" -> saibaman();
-                default -> throw new IllegalStateException(name);
+                default -> sagaSkin(name);
             }
             File out = new File(dir, name + ".png");
             ImageIO.write(skin, "png", out);
@@ -181,6 +183,229 @@ public class DbzSkinGen {
             bottom(arm, 'g');
         }
     }
+
+    // ---------------------------------------------------------------- chapters 2-4 (after the M16 test)
+
+    /** Ginyu Force / Frieza Force armour: a dark bodysuit under white plates, the given shoulder colour. */
+    static void forceArmour(int suit, int shoulder) {
+        saiyanArmour(suit, 0xFFF0EEE6, shoulder);
+    }
+
+    /** Namekian head: green skin, two antennae on top, a bald dome. */
+    static void namekian(int skin) {
+        tone(skin, shade(skin, 0.7), 0xFF141216);
+        hair(shade(skin, 0.8));
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> (i == 2 || i == 5) && j == 3 ? 'h' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "..h..h.."));
+    }
+
+    /** Dende: a young Namekian, a white robe with a purple sash. */
+    static void dende() {
+        namekian(0xFF6ABF5A);
+        colors("w", 0xFFF2F1EC, "P", 0xFF7A3AA8);
+        wrap(BODY, (f, i, j) -> j == 7 ? 'P' : 'w');
+        top(BODY, 'w');
+        limbs("wwwwSSSSSSSS", "wwwwwwwwwwKK");
+    }
+
+    /** A Frieza Force soldier: a blue-skinned alien in the white armour with gold shoulders, a scouter. */
+    static void friezaSoldier() {
+        tone(0xFF6A8AC8, 0xFF2A3A6A, 0xFF141216);
+        hair(0xFF4A6AA8);
+        colors("G", 0xFF3ADB5A);
+        head("bald", "none", false);
+        face(HEAD, Face.LEFT, rowsOf(8, "SSSSSSSS", 4, "SSSSSGGS"));
+        forceArmour(0xFF2A2A44, 0xFFC8A040);
+    }
+
+    /** Dodoria: big, pink, covered in spikes, in the white armour. */
+    static void dodoria() {
+        tone(0xFFE88AA8, 0xFFB05A7A, 0xFF141216);
+        hair(0xFFC86A8A);
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> (i + j) % 3 == 0 ? 'h' : '.');
+        face(HAT, Face.RIGHT, rowsOf(8, "........", 1, ".h..h..h", 3, "h..h..h."));
+        face(HAT, Face.LEFT, rowsOf(8, "........", 1, "h..h..h.", 3, ".h..h..h"));
+        forceArmour(0xFF3A2A3A, 0xFF8A6A3A);
+    }
+
+    /** Zarbon: pale blue-green skin, a long dark green braid, white armour with blue shoulders, a cape. */
+    static void zarbon() {
+        tone(0xFF9AD0C0, 0xFF1E4A3A, 0xFF1E4A3A);
+        hair(0xFF1E5A3A);
+        head("ponytail", "none", false);
+        forceArmour(0xFF1E2A5A, 0xFF4A6AC8);
+        colors("C", 0xFF3A5AB8);
+        face(JACKET, Face.BACK, rowsOf(12, "CCCCCCCC"));
+    }
+
+    /** Guldo: short, green, four eyes, purple Ginyu armour. */
+    static void guldo() {
+        tone(0xFF7ABF5A, 0xFF3A6A2A, 0xFF141216);
+        hair(0xFF5A9A3A);
+        head("bald", "none", false);
+        face(HEAD, Face.FRONT, "SSSSSSSS", "SWeSSeWS", "SSSSSSSS", "SWeSSeWS", "SSSSSSSS", "SSssSSSS", "SSMMMMSS", "SSSSSSSS");
+        forceArmour(0xFF1E1A1E, 0xFF8A5AB0);
+    }
+
+    /** Recoome: huge, pale, a shock of orange hair, purple Ginyu armour. */
+    static void recoome() {
+        tone(0xFFF0D4C0, 0xFFC8501E, 0xFF141216);
+        hair(0xFFE0601E);
+        head("short", "none", false);
+        spikes('H');
+        forceArmour(0xFF1E1A1E, 0xFF8A5AB0);
+    }
+
+    /** Burter: tall, blue-skinned, bald, purple Ginyu armour. */
+    static void burter() {
+        tone(0xFF5A7AD8, 0xFF2A3A8A, 0xFFE02A2A);
+        hair(0xFF4A6AC8);
+        head("bald", "none", false);
+        forceArmour(0xFF1E1A1E, 0xFF8A5AB0);
+    }
+
+    /** Jeice: red skin, long white hair, purple Ginyu armour. */
+    static void jeice() {
+        tone(0xFFD0503A, 0xFFE8E8E0, 0xFF141216);
+        hair(0xFFF0F0EA);
+        head("bob", "none", false);
+        forceArmour(0xFF1E1A1E, 0xFF8A5AB0);
+    }
+
+    /** Captain Ginyu: purple skin, two black horns, his own purple-trimmed armour. */
+    static void ginyu() {
+        tone(0xFF8A5AB8, 0xFF141216, 0xFF141216);
+        hair(0xFF141216);
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> (i == 1 || i == 6) && j <= 2 ? 'H' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, ".H....H.", 1, ".H....H."));
+        forceArmour(0xFF1E1A1E, 0xFF6A3A9A);
+    }
+
+    /** Frieza (final form): white, purple domes on head, shoulders, chest and forearms, red eyes. */
+    static void frieza() {
+        tone(0xFFF4F2F4, 0xFF8A3A9A, 0xFFC82A3A);
+        hair(0xFFE8E6EA);
+        colors("P", 0xFF8A3AAA, "p", 0xFF6A2A8A, "w", 0xFFF4F2F4, "g", 0xFFC8C4CC);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> i >= 2 && i <= 5 && j >= 2 && j <= 5 ? 'P' : 'S');
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && j >= 2 && j <= 5 && i >= 2 && i <= 5 ? 'P' : (j % 6 == 5 ? 'g' : 'w'));
+        top(BODY, 'P');
+        limbs("PPwwwPPPwwww", "wwwwwwgwwwww");
+    }
+
+    /** Trunks: lavender hair, the blue Capsule Corp jacket over black, grey trousers, yellow boots. */
+    static void trunks() {
+        tone(0xFFF0C8A0, 0xFF8A6AB8, 0xFF2A4AB0);
+        hair(0xFFB89AD8);
+        colors("B", 0xFF2A4AB0, "b", 0xFF1E3480, "K", 0xFF141216, "G", 0xFF7A7A82, "Y", 0xFFE8C030);
+        head("bob", "none", false);
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && i >= 3 && i <= 4 ? 'K' : 'B');
+        top(BODY, 'B');
+        face(BODY, Face.BACK, rowsOf(12, "BBBBBBBB", 3, "BBbbbbBB", 4, "BBbBBbBB"));
+        limbs("BBBBBBBBBBKS", "GGGGGGGGYYYY");
+    }
+
+    /** Android 17: shoulder-length black hair, an orange scarf, black shirt, jeans. */
+    static void android17() {
+        tone(0xFFF0D0B4, 0xFF141216, 0xFF3A5A8A);
+        hair(0xFF141216);
+        colors("O", 0xFFE8701E, "K", 0xFF1E1E22, "J", 0xFF3A5A8A);
+        head("bob", "none", false);
+        wrap(BODY, (f, i, j) -> j <= 1 ? 'O' : 'K');
+        top(BODY, 'O');
+        limbs("KKKKKKKKKKSS", "JJJJJJJJJJKK");
+    }
+
+    /** Android 18: a blonde bob, a denim vest over black-and-white stripes, a blue skirt. */
+    static void android18() {
+        tone(0xFFF4D6BC, 0xFFC8A040, 0xFF2A6AB0);
+        hair(0xFFF2D06A);
+        colors("D", 0xFF3A6AB0, "w", 0xFFF0F0F0, "K", 0xFF1E1E22);
+        head("bob", "none", false);
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && i >= 2 && i <= 5 ? (j % 2 == 0 ? 'w' : 'K') : 'D');
+        top(BODY, 'D');
+        limbs("DDwKwKwKwKSS", "DDDDSSSSSSKK");
+    }
+
+    /** A Cell Junior: little, blue-skinned, a green spotted carapace. */
+    static void cellJr() {
+        tone(0xFF6A9AD8, 0xFF2A4A8A, 0xFF141216);
+        hair(0xFF4A8A3A);
+        colors("G", 0xFF6ABF5A, "g", 0xFF1E3A1E);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> (i + j) % 3 == 0 ? 'g' : 'G');
+        wrap(BODY, (f, i, j) -> (i * 3 + j) % 5 == 0 ? 'g' : 'G');
+        top(BODY, 'G');
+        limbs("GGGGgGGGGgGG", "GGGgGGGGgGKK");
+    }
+
+    /** Perfect Cell: a green body with black spots, a pale purple face, black on the arms and legs. */
+    static void cell() {
+        tone(0xFFD8C8E0, 0xFF8A3A9A, 0xFFC82A3A);
+        hair(0xFF4A8A3A);
+        colors("G", 0xFF6ABF5A, "g", 0xFF141216, "K", 0xFF1E1E22);
+        head("bald", "none", false);
+        top(HEAD, (f, i, j) -> (i + j) % 4 == 0 ? 'g' : 'G');
+        top(HAT, (f, i, j) -> (i == 0 || i == 7) && j <= 3 ? 'G' : '.');
+        face(HAT, Face.FRONT, rowsOf(8, "........", 0, "G......G", 1, "GG....GG"));
+        wrap(BODY, (f, i, j) -> (i * 5 + j * 3) % 7 == 0 ? 'g' : 'G');
+        top(BODY, 'G');
+        limbs("GGGgGGKKKKKK", "GGgGGGKKKKKK");
+    }
+
+    /** Majin Buu: big and pink, an antenna on his head, a black vest, white trousers, a gold belt. */
+    static void majinBuu() {
+        tone(0xFFF0A0C0, 0xFF141216, 0xFF141216);
+        hair(0xFFE08AAA);
+        colors("V", 0xFF2A2236, "w", 0xFFF2F1EC, "Y", 0xFFE8C030);
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> i >= 3 && i <= 4 && j >= 3 && j <= 4 ? 'h' : '.');
+        wrap(BODY, (f, i, j) -> j == 9 ? 'Y' : j > 9 ? 'w' : (f == Face.FRONT && i >= 2 && i <= 5 ? 'S' : 'V'));
+        top(BODY, 'V');
+        limbs("SSSSSSSSSSYY", "wwwwwwwwwwYY");
+    }
+
+    /** Kid Buu: small, pink and lean, bare-chested, white trousers, a gold belt. */
+    static void kidBuu() {
+        tone(0xFFE88AB0, 0xFF141216, 0xFF141216);
+        hair(0xFFC86A90);
+        colors("w", 0xFFF2F1EC, "Y", 0xFFE8C030);
+        head("bald", "none", false);
+        top(HAT, (f, i, j) -> i >= 3 && i <= 4 && j >= 2 && j <= 5 ? 'h' : '.');
+        wrap(BODY, (f, i, j) -> j == 10 ? 'Y' : j > 10 ? 'w' : 'S');
+        top(BODY, 'S');
+        limbs("SSSSSSSSSSYY", "wwwwwwwwwwYY");
+    }
+
+    /** Draws one of the chapter 2-4 characters by id (the generator's main list and the new-skins harness). */
+    static void sagaSkin(String name) {
+        switch (name) {
+            case "dende" -> dende();
+            case "frieza_soldier" -> friezaSoldier();
+            case "dodoria" -> dodoria();
+            case "zarbon" -> zarbon();
+            case "guldo" -> guldo();
+            case "recoome" -> recoome();
+            case "burter" -> burter();
+            case "jeice" -> jeice();
+            case "ginyu" -> ginyu();
+            case "frieza" -> frieza();
+            case "trunks" -> trunks();
+            case "android_17" -> android17();
+            case "android_18" -> android18();
+            case "cell_jr" -> cellJr();
+            case "cell" -> cell();
+            case "majin_buu" -> majinBuu();
+            case "kid_buu" -> kidBuu();
+            default -> throw new IllegalStateException(name);
+        }
+    }
+
+    static final String[] SAGA = {"dende", "frieza_soldier", "dodoria", "zarbon", "guldo", "recoome", "burter", "jeice", "ginyu",
+            "frieza", "trunks", "android_17", "android_18", "cell_jr", "cell", "majin_buu", "kid_buu"};
 
     // ---------------------------------------------------------------- items
 

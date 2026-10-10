@@ -557,7 +557,7 @@ public final class RaidManager {
     private static void victory(MinecraftServer server, WarData data, ServerLevel level, RaidState raid, @Nullable VillageHallBlockEntity hall) {
         if (hall != null) {
             RandomSource random = level.random;
-            List<ItemStack> spoils = List.of(new ItemStack(Items.EMERALD, 2 + random.nextInt(4)),
+            List<ItemStack> spoils = List.of(new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get(), 8 + random.nextInt(13)),
                     new ItemStack(Items.IRON_INGOT, 3 + random.nextInt(5)), new ItemStack(Items.BREAD, 4 + random.nextInt(6)),
                     new ItemStack(Items.ARROW, 8 + random.nextInt(12)));
             for (ItemStack stack : spoils) {

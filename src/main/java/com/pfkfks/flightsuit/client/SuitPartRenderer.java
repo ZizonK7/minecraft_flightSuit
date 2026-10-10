@@ -74,7 +74,7 @@ public class SuitPartRenderer extends EntityRenderer<SuitPartEntity> {
         poseStack.translate(0.0D, -1.501D, 0.0D);
 
         EquipmentSlot slot = entity.getSlot();
-        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(slot);
+        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(entity.getSuitId(), slot);
         if (entity.isLeaving()) {
             SuitUpPose.applyStanding(model);
         } else {
@@ -98,7 +98,7 @@ public class SuitPartRenderer extends EntityRenderer<SuitPartEntity> {
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0D, -1.501D, 0.0D);
         for (EquipmentSlot slot : WornSuit.SLOTS) {
-            HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(slot);
+            HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(entity.getSuitId(), slot);
             SuitUpPose.applyFall(model);
             draw(model, slot, entity.getSuitId(), poseStack, buffers, packedLight);
         }
@@ -109,7 +109,16 @@ public class SuitPartRenderer extends EntityRenderer<SuitPartEntity> {
                      MultiBufferSource buffers, int packedLight) {
         SuitArmorModels.showOnly(model, slot);
         VertexConsumer consumer = buffers.getBuffer(RenderType.armorCutoutNoCull(SuitArmorModels.texture(suitId, slot)));
+        // A Hulkbuster on its own is as big as when it's worn: scaled up from its feet (model y 24 = 1.5 blocks).
+        float size = SuitArmorModels.size(suitId);
+        poseStack.pushPose();
+        if (size != 1.0F) {
+            poseStack.translate(0.0D, 1.5D, 0.0D);
+            poseStack.scale(size, size, size);
+            poseStack.translate(0.0D, -1.5D, 0.0D);
+        }
         model.renderToBuffer(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        poseStack.popPose();
     }
 
     @Override

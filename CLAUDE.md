@@ -18,6 +18,7 @@
   - 문법은 JDK 파서로만 확인한다 (스크래치패드의 `ParseOnly.java`, `javax.tools`로 `JavacTask.parse()`만 실행).
   - 빌드·인게임 테스트는 사용자가 한다. 테스트 전인 기능은 DESIGN.md에 "인게임 테스트 전"으로 표시.
 - 텍스처는 코드로 그린다 (`tools/*.java`, JDK 21의 단일 파일 실행: `java tools/X.java ...`). 기존 PNG를 덮어쓰지 않도록, 새 텍스처만 그릴 때는 해당 메서드만 호출하는 하네스를 쓴다.
+- 3D 모델은 `java tools/ModelGen.java . <hulk|hulkbuster|trunks|shenron|weapons|all>`: 큐브 배치·UV·텍스처·미리보기(`docs/reference/*_preview.png`)를 만들고 모델 클래스의 `// <ModelGen:이름>` 블록을 다시 씀 (그 블록은 손으로 고치지 말 것). 무기는 `models/item/3d/` + `textures/item/3d/`, 인벤토리 아이콘은 기존 2D 그림 (없을 때만 렌더해서 만듦). 미리보기 PNG로 모양을 확인하고 나서 빌드.
 
 ## 코드 지도 (`src/main/java/com/pfkfks/flightsuit/`)
 
@@ -31,28 +32,37 @@
 | `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
 | `planet/` | 우주·행성: Planet(차원 키), PlanetData(SavedData: 착륙 지점, 플레이어별 집 발사대·스토리 진행, 행성별 월드 상태), LaunchPadBlock/Entity, SpaceshipEntity(상승·하강·착륙), SpaceTravel(`/spaceship launch|return|remote`, 우주 건너기), PlanetStory |
-| `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
+| `planet/dbz/` | 드래곤볼: DbzSaga(2~4장: 장면 Site/Scene, 웨이브, 원기옥), DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`, 단계 DbzStage는 ordinal로 저장되니 끝에만 추가, `goal()` = 다음 목표 → HUD `StoryGoalOverlay` + 금빛 빛기둥) |
 | `thanos/` | 타노스 사가: InfinityStone(+Item), ThanosForce/ThanosForceEntity(Monster, 저장 안 함, 레이드 태그 `RAID_TAG`), TitanSites, ThanosSaga(타이탄 관리·스톤 기록·레드 스컬·타임 스톤·전조), ThanosRaid(최종전) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드, 좌석(SeatEntity: 지도자가 왕좌에 앉음, 저장 안 함) |
-| `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |
+| `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면. 전용 모델 슈트는 `SuitModel`(슬롯별 조각, `SuitArmorModels.CUSTOM`에 등록) + 생성 블록 클래스(`HulkbusterModel`, `TrunksSuitModel`), 헐크 `HulkModel/HulkRenderer`, 신룡 `ShenronModel/ShenronRenderer` |
+| `town/` | 성채·히어로 시티의 마을 사람 TownsfolkEntity(저장 안 함, 역할 TownRole, 일과 TownLife, 배치 TownPlan), 거래 TownTrades(`money(city)` = 오수전/달러), 부탁 TownRequests |
+| `guide/` | 안내서 GuideBookItem(처음 접속 때 지급, 화면은 `client/GuideBook`), ItemTips(`tip.flightsuit.*` → Shift 툴팁 `client/ItemTipsClient` + JEI 정보), JeiFlightSuit(@JeiPlugin, JEI는 선택 의존성) |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
 
 자주 쓰는 연결점:
 - 마을 찾기: `Villages.containing(level, pos)`, `Villages.hallAt(level, pos)`. 피해 기록: `Villages.recordDamage`.
 - 회관 → 습격 시스템: 회관이 100틱마다 `RaidManager.noteVillage(hall)`로 자신을 알림 (여기서 포로 도착, `Diplomacy.onVillageLoaded`, `HeroCity.onVillageLoaded`로 파견 병사 귀환, `ThiefManager.onVillageLoaded`로 계산된 도둑의 밤 처리). 회관이 부서지면 `RaidManager.forgetVillage`.
 - 습격병·장수는 `RaidMember`. 무릎 꿇은 포로·아군 장수는 `RaidMember.isNoThreat(entity)`로 각종 표적 규칙에서 빠진다 (경비병, 동료 슈트, 헬멧 HUD, 망루, 주민 도망).
+- 큰 슈트(헐크버스터): `SuitType.size()` → `SuitSize`가 풀세트 착용자(플레이어·동료)의 히트박스를 키우고, 그림은 `SuitSize.drawn()`으로 전체를 키움. 새 큰 슈트를 만들면 모델 쪽 `SIZE`와 `SuitType` 크기를 맞출 것.
 - 슈트 배터리 용량은 항상 `SuitEnergy.capacity(stack)` (아이언맨 업그레이드 포함). `SuitArmorItem.getEnergyCapacity()`를 직접 쓰지 말 것.
 - 1.20.1에서 goalSelector는 엔티티마다 2틱에 한 번 돈다. `canUse`에 `tickCount % N` 같은 짝수 의존 조건을 쓰지 말 것 (`getRandom().nextInt(reducedTickDelay(N))` 사용). `customServerAiStep`은 매 틱이라 괜찮음.
 - 차원: 행성은 데이터팩 차원 (`data/flightsuit/dimension/*.json`). `RemoteLink.start(player, suitLevel, ...)`로 다른 차원의 슈트에 접속할 수 있음 (세션 등록은 순간이동 뒤에 - 세션이 있으면 차원 이동을 막으므로).
 - `/flightsuit` 루트를 새로 등록할 때는 루트에도 `.requires(op)`를 붙일 것 (Brigadier는 먼저 등록된 루트의 조건을 유지 - 하나라도 빠지면 등록 순서에 따라 전부 열림).
 - 주인에게 알림: 채팅 + `EdithAlert.send(...)` (안경/슈트 헬멧이 있으면 HUD 경고창).
+- 새 아이템을 만들면 `tip.flightsuit.<id>` 번역(줄은 `
+`, 키 인자는 GuideBook.keys() 순서 %1$s=G … %10$s=웅크리기)을 ko/en에 넣을 것 → Shift 툴팁·JEI 정보 페이지가 저절로 생김. 안내서 쪽수는 `GuideBook.PAGES`.
+- 파티클: `registry/ModParticles` (카드 소용돌이 `card_swirl`은 count 0으로 보내 속도 칸에 궤도 값을 실음).
+- JEI: `build.gradle`의 BlameJared 저장소 필터에 `mezz.jei`와 `net.mezzdev.config` 둘 다 있어야 함 (버전 `gradle.properties`의 `jei_version`).
+- 테스트 중 치트(`/time set` 등)로 막힌 상황은 코드로 막지 말고 월드를 넘기는 명령을 알려 줄 것 (사용자 결정).
 
 ## 진행 상태 (2026-10-10)
 
-- M1~M9: 사용자 인게임 테스트 통과 (M9 마지막 수정 일부 재확인 필요, DESIGN.md 참고).
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **2026-10-10 사용자 인게임 테스트 통과** (차원을 넘는 원격 조종만 확인 전). M13까지의 피드백(성채·도시 확장, 치타우리 침공, 아군 장수, 왕좌, 묠니르, tp)도 반영·테스트 통과.
-- 다음: 테스트 피드백 반영이 우선.
+- M1~M9: 사용자 인게임 테스트 통과.
+- 2026-10-10 1~4차 피드백 반영분도 통과 (사용자: 말하지 않은 것은 통과). 남은 확인은 `docs/TEST_PLAN.md` (팬텀 카드 파티클, JEI·Shift 툴팁, 스토리 길안내, 드래곤볼 1장 끝~4장).
+- 다음에 이야기할 것 (DESIGN.md 6장): 드래곤볼 캐릭터 모델링·스토리·컷신, 슈트 기능 전체 재검토.
+- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **2026-10-10 사용자 인게임 테스트 통과**. M13까지의 피드백(성채·도시 확장, 치타우리 침공, 아군 장수, 왕좌, 묠니르, tp)도 반영·테스트 통과.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 

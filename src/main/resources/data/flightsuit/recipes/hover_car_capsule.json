@@ -2,6 +2,6 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": ["GBG", "RCR", "III"],
-  "key": {"G": {"item": "minecraft:glass_pane"}, "B": {"item": "minecraft:blaze_rod"}, "R": {"item": "minecraft:redstone"}, "C": {"item": "minecraft:minecart"}, "I": {"item": "minecraft:iron_ingot"}},
+  "key": {"G": {"item": "minecraft:glass_pane"}, "B": {"item": "minecraft:redstone_block"}, "R": {"item": "minecraft:redstone"}, "C": {"item": "minecraft:minecart"}, "I": {"item": "minecraft:iron_ingot"}},
   "result": {"item": "flightsuit:hover_car_capsule", "count": 1}
 }

@@ -11,12 +11,14 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Where the spaceship can fly (DESIGN.md 4-16, M15). Each planet is its own dimension
- * (data/flightsuit/dimension/<id>.json) - an open world with a main story on top. One for now; Namek and
- * Titan come with their chapters.
+ * (data/flightsuit/dimension/<id>.json) - an open world with a main story on top: Dragon Ball Earth, Titan
+ * (the Thanos saga) and Namek (Dragon Ball chapter 2, opened once chapter 1 is done).
  */
 public enum Planet {
     DBZ_EARTH("dbz_earth"),
-    TITAN("titan");
+    TITAN("titan"),
+    /** Dragon Ball chapter 2 (after the M16 test): its own biome - green sky, teal water, blue-green grass. */
+    NAMEK("namek");
 
     private final String id;
     private final ResourceKey<Level> dimension;

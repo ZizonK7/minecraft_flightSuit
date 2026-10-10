@@ -70,6 +70,9 @@ public class SuitArmorItem extends ArmorItem {
 
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
+        if (suitType.ownModel()) {
+            return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + ".png";
+        }
         return FlightSuitMod.MODID + ":textures/models/armor/" + suitType.id() + "_" + getType().getName() + ".png";
     }
 
@@ -104,6 +107,10 @@ public class SuitArmorItem extends ArmorItem {
             tooltip.add(Component.translatable("tooltip.flightsuit.class.phantom").withStyle(ChatFormatting.GOLD));
         } else if (suitType.suitClass() == SuitClass.HERO) {
             tooltip.add(Component.translatable("tooltip.flightsuit.class.hero").withStyle(ChatFormatting.GREEN));
+        } else if (suitType.suitClass() == SuitClass.SWORDSMAN) {
+            tooltip.add(Component.translatable("tooltip.flightsuit.class.swordsman").withStyle(ChatFormatting.BLUE));
+        } else if (suitType.suitClass() == SuitClass.HULKBUSTER) {
+            tooltip.add(Component.translatable("tooltip.flightsuit.class.hulkbuster").withStyle(ChatFormatting.RED));
         }
     }
 
@@ -118,7 +125,7 @@ public class SuitArmorItem extends ArmorItem {
                         && StealthHandler.wearsStealthSuit(WornSuit.of(player))) {
                     return SuitArmorModels.empty();
                 }
-                return SuitArmorModels.forWearer(livingEntity, equipmentSlot);
+                return SuitArmorModels.forWearer(livingEntity, suitType.id(), equipmentSlot);
             }
         });
     }

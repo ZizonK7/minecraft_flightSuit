@@ -71,6 +71,15 @@ repositories {
             includeGroup("dev.kosmx.player-anim")
         }
     }
+    // JEI (mezz, MIT) - optional: recipes on R/U in the inventory plus our items' info pages (guide/JeiFlightSuit).
+    maven {
+        name = 'BlameJared'
+        url 'https://maven.blamejared.com/'
+        content {
+            includeGroup("mezz.jei")
+            includeGroup("net.mezzdev.config")
+        }
+    }
 }
 
 dependencies {
@@ -78,6 +87,11 @@ dependencies {
 
     implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:${player_anim_version}")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // JEI is optional for players: compiled against its API only, and present in the dev client.
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
+    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
 }
 
 tasks.named('processResources', ProcessResources).configure {

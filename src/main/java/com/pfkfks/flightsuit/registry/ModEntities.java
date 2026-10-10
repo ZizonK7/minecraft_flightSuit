@@ -134,6 +134,24 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("seat"));
 
+    /** The townsfolk of the fortresses and Hero City (after the M16 test) - never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.town.TownsfolkEntity>> TOWNSFOLK = ENTITY_TYPES.register("townsfolk",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.town.TownsfolkEntity>of(com.pfkfks.flightsuit.town.TownsfolkEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.9F)
+                    .noSave()
+                    .clientTrackingRange(10)
+                    .build("townsfolk"));
+
+    /** Shenron, summoned by the Dragon Balls (DragonBalls) - never saved; huge, so seen from far off. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.dbz.ShenronEntity>> SHENRON = ENTITY_TYPES.register("shenron",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.dbz.ShenronEntity>of(com.pfkfks.flightsuit.planet.dbz.ShenronEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 1.0F)
+                    .noSave()
+                    .fireImmune()
+                    .clientTrackingRange(10)
+                    .updateInterval(20)
+                    .build("shenron"));
+
     private ModEntities() {
     }
 }

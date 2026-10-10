@@ -4,20 +4,22 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 /**
- * A Dragon Ball in hand (1 to 7 stars, NBT "Stars"). With all seven, right-click one to call Shenron
- * (DragonBalls.summon). Dropped, it never despawns and nothing destroys it.
+ * A Dragon Ball in hand (1 to 7 stars, NBT "Stars"). Set it down on Dragon Ball Earth (right-click a block) -
+ * all seven together call Shenron (DragonBalls.place). Dropped, it never despawns and nothing destroys it.
  */
 public class DragonBallItem extends Item {
     public static final String STARS = "Stars";
@@ -37,12 +39,20 @@ public class DragonBallItem extends Item {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (player instanceof ServerPlayer serverPlayer) {
-            DragonBalls.summon(serverPlayer);
+    public InteractionResult useOn(UseOnContext context) {
+        if (!(context.getPlayer() instanceof ServerPlayer player)) {
+            return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        return DragonBalls.place(player, context.getHand(), context.getItemInHand(), context.getClickedPos(), context.getClickedFace());
+    }
+
+    /** Right-click in the air: a reminder of how they work. */
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (!level.isClientSide) {
+            player.displayClientMessage(Component.translatable("dragonball.flightsuit.place_hint"), true);
+        }
+        return InteractionResultHolder.pass(player.getItemInHand(hand));
     }
 
     @Override

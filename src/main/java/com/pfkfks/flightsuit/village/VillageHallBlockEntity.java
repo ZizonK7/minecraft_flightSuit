@@ -246,21 +246,47 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
                 VillageTuning.RADIUS * 3 / 2, PoiManager.Occupancy.ANY).toList();
     }
 
-    /** A bed no other resident has claimed, the one closest to the hall. */
+    /**
+     * A bed no other resident has claimed (after the M13 test, houses have owners): back in their own house if it
+     * has a free bed; a child next to where they are (their parents' house - they're born by a parent's bed);
+     * a grown-up in an empty house first, so each household gets one of its own; else the free bed closest to
+     * the hall. The house's owner is settled right after (VillageWorks.assignOwners).
+     */
     public @Nullable BlockPos claimBed(ResidentEntity resident) {
         Set<BlockPos> taken = new HashSet<>();
+        Set<Construction> occupied = new HashSet<>();
         for (ResidentEntity other : residents()) {
             if (other != resident && other.getHomeBed() != null) {
                 taken.add(other.getHomeBed());
+                Construction house = works.buildingAt(other.getHomeBed());
+                if (house != null) {
+                    occupied.add(house);
+                }
+            }
+        }
+        List<BlockPos> free = new ArrayList<>();
+        for (BlockPos bed : beds()) {
+            if (!taken.contains(bed)) {
+                free.add(bed);
             }
         }
         BlockPos best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (BlockPos bed : beds()) {
-            double dist = bed.distSqr(worldPosition);
-            if (!taken.contains(bed) && dist < bestDist) {
+        double bestScore = Double.MAX_VALUE;
+        for (BlockPos bed : free) {
+            Construction house = works.buildingAt(bed);
+            double score;
+            if (house != null && resident.getUUID().equals(house.owner())) {
+                score = 0.0D;
+            } else if (resident.isBaby()) {
+                score = 1.0D + bed.distSqr(resident.blockPosition());
+            } else if (house != null && house.blueprint().isLodging() && !occupied.contains(house)) {
+                score = 1.0E6D + bed.distSqr(worldPosition);
+            } else {
+                score = 1.0E8D + bed.distSqr(worldPosition);
+            }
+            if (score < bestScore) {
                 best = bed;
-                bestDist = dist;
+                bestScore = score;
             }
         }
         return best;
@@ -294,6 +320,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     public void announceDeath(ResidentEntity resident) {
+        works.forgetOwner(resident.getUUID());
         if (level != null) {
             deathDays.add(level.getDayTime() / 24000L);
         }
@@ -363,7 +390,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
      * 선생님 → 아이 교육 → 커서 가질 재능).
      */
     private void schoolDay() {
-        if (works.count(Blueprint.SCHOOL) == 0) {
+        if (works.schools() == 0) {
             return;
         }
         int bestTeacher = 0;
@@ -453,6 +480,70 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
             }
         }
         return false;
+    }
+
+    /**
+     * The merchants' day at the market (after the M13 test - "what does the merchant do?"): each sells some of
+     * the food beyond what the village eats in four days, and brings back what the builders are short of (the
+     * first missing material), or emeralds if they lack nothing. More stars, more sold and a better price.
+     */
+    /** Who played for the village last night (MusicianGoal); the concert counts at the next morning. Not saved. */
+    private @Nullable UUID concertBy;
+
+    public void noteConcert(ResidentEntity musician) {
+        if (concertBy == null || !concertBy.equals(musician.getUUID())
+                && musician.talent(ResidentJob.MUSICIAN) > talentOf(concertBy)) {
+            concertBy = musician.getUUID();
+        }
+    }
+
+    private int talentOf(UUID id) {
+        ResidentEntity resident = residentById(id);
+        return resident == null ? 0 : resident.talent(ResidentJob.MUSICIAN);
+    }
+
+    private @Nullable ResidentEntity residentById(UUID id) {
+        for (ResidentEntity resident : residents()) {
+            if (resident.getUUID().equals(id)) {
+                return resident;
+            }
+        }
+        return null;
+    }
+
+    private void marketDay() {
+        for (ResidentEntity merchant : residents()) {
+            if (merchant.getJob() != ResidentJob.MERCHANT || merchant.isBaby() || merchant.isDowned()) {
+                continue;
+            }
+            int stars = merchant.talent(ResidentJob.MERCHANT);
+            int surplus = countFood() - getPopulation() * VillageTuning.MARKET_KEEP_DAYS;
+            int sell = Math.min(surplus, VillageTuning.MARKET_BASE + VillageTuning.MARKET_PER_STAR * stars);
+            if (sell <= 0) {
+                merchant.setLastWork(Component.translatable("activity.flightsuit.no_surplus"));
+                continue;
+            }
+            int sold = 0;
+            for (int i = 0; i < sell && takeMeal(); i++) {
+                sold++;
+            }
+            List<ItemStack> lacking = works.missing();
+            ItemStack bought;
+            if (!lacking.isEmpty() && lacking.get(0).getItem() != net.minecraft.world.item.Items.AIR) {
+                int amount = Math.max(1, Math.min(lacking.get(0).getCount(), sold * (2 + stars) / 6));
+                bought = new ItemStack(lacking.get(0).getItem(), amount);
+            } else {
+                bought = new ItemStack(net.minecraft.world.item.Items.EMERALD, Math.max(1, sold * (2 + stars) / 16));
+            }
+            Component line = Component.translatable("news.flightsuit.market", merchant.getName(), sold, bought.getHoverName(), bought.getCount());
+            ItemStack left = store(bought);
+            if (!left.isEmpty()) {
+                level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, worldPosition.getX() + 0.5D,
+                        worldPosition.getY() + 1.0D, worldPosition.getZ() + 0.5D, left));
+            }
+            merchant.setLastWork(Component.translatable("activity.flightsuit.traded", sold, bought.getHoverName(), bought.getCount()));
+            addNews(line);
+        }
     }
 
     private int countFood() {
@@ -641,10 +732,23 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         lastMorning = day;
         refreshStats();
         int deaths = recentDeaths();
+        // The jobs' day (VillageWorkday): the cook first, so the bread is on the table for breakfast.
+        int bonus = VillageWorkday.cook(this) ? VillageTuning.WARM_MEAL_MOOD : 0;
+        ResidentEntity musician = concertBy == null ? null : residentById(concertBy);
+        int concert = VillageWorkday.concertBonus(this, musician);
+        if (concert > 0) {
+            addNews(Component.translatable("news.flightsuit.concert", musician.getName()));
+            musician.setLastWork(Component.translatable("activity.flightsuit.played", concert));
+        }
+        concertBy = null;
+        int smithStars = VillageWorkday.smith(this);
+        VillageWorkday.ranch(this);
         for (ResidentEntity resident : residents()) {
-            resident.morning(takeMeal(), deaths, safety);
+            resident.morning(takeMeal(), deaths, safety, bonus + concert);
+            resident.setSmithBonus(smithStars);
         }
         schoolDay();
+        marketDay();
         tryBirth();
         refreshStats();
         float chance = VillageTuning.WANDERER_BASE_CHANCE + Math.max(0, happiness) / 200.0F;
@@ -659,6 +763,8 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         if (level == null || level.isClientSide) {
             return;
         }
+        // Houses, farms and workplaces to their owners (after the M13 test).
+        works.assignOwners(residents());
         List<ResidentEntity> people = people();
         Arrays.fill(jobCounts, 0);
         int moodSum = 0;
@@ -690,9 +796,9 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         safety = Mth.clamp(guarded - 20 * recentDeaths(), 0, 100);
         int teachers = jobCounts[ResidentJob.TEACHER.ordinal()];
         if (children == 0) {
-            education = teachers > 0 && works.count(Blueprint.SCHOOL) > 0 ? 100 : -1;
+            education = teachers > 0 && works.schools() > 0 ? 100 : -1;
         } else {
-            education = works.count(Blueprint.SCHOOL) == 0 ? 0
+            education = works.schools() == 0 ? 0
                     : Math.min(100, teachers * VillageTuning.PUPILS_PER_TEACHER * 100 / children);
         }
         alarm = isAlarm();

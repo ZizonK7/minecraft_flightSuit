@@ -2,6 +2,6 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": ["I I", "PEP"],
-  "key": {"I": {"item": "minecraft:iron_ingot"}, "P": {"item": "minecraft:glass_pane"}, "E": {"item": "minecraft:ender_eye"}},
+  "key": {"I": {"item": "minecraft:iron_ingot"}, "P": {"item": "minecraft:glass_pane"}, "E": {"item": "minecraft:amethyst_shard"}},
   "result": {"item": "flightsuit:edith_glasses", "count": 1}
 }

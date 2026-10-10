@@ -260,6 +260,7 @@ public final class HeroCity {
                 chest.setItem(4, new ItemStack(ModItems.ENERGY_CELL.get(), 3 + random.nextInt(3)));
                 chest.setItem(6, new ItemStack(Items.REDSTONE_BLOCK, 4 + random.nextInt(5)));
                 chest.setItem(8, new ItemStack(Items.NETHERITE_SCRAP, 1 + random.nextInt(2)));
+                chest.setItem(10, new ItemStack(ModItems.DOLLAR.get(), 40 + random.nextInt(41)));
                 chest.setChanged();
             }
         }
@@ -827,6 +828,7 @@ public final class HeroCity {
         if (player != null) {
             give(player, new ItemStack(Items.DIAMOND, 1 + level.random.nextInt(2)));
             give(player, new ItemStack(ModItems.ENERGY_CELL.get(), 2));
+            give(player, new ItemStack(ModItems.DOLLAR.get(), 30 + level.random.nextInt(31)));
             player.sendSystemMessage(HeroType.CAPTAIN.line("thanks", player.getName()));
             player.sendSystemMessage(Component.translatable("request.flightsuit.done", Component.translatable("hero.flightsuit.city"),
                     Component.translatable("tier.flightsuit." + tierKey(data.trust(request.player))), data.trust(request.player))

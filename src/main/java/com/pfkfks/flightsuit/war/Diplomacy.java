@@ -493,7 +493,7 @@ public final class Diplomacy {
             return;
         }
         RandomSource random = level.random;
-        List<ItemStack> reward = new ArrayList<>(List.of(new ItemStack(Items.EMERALD, 4 + random.nextInt(5)),
+        List<ItemStack> reward = new ArrayList<>(List.of(new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get(), 16 + random.nextInt(17)),
                 new ItemStack(Items.GOLD_INGOT, 2 + random.nextInt(4))));
         if (request.type == Request.Type.INVADE) {
             reward.add(new ItemStack(Items.DIAMOND, 1 + random.nextInt(2)));
@@ -613,7 +613,7 @@ public final class Diplomacy {
     }
 
     private static void tribute(ServerPlayer player, Kingdom kingdom, RandomSource random) {
-        List<ItemStack> goods = new ArrayList<>(List.of(new ItemStack(Items.EMERALD, 3 + random.nextInt(4)),
+        List<ItemStack> goods = new ArrayList<>(List.of(new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get(), 12 + random.nextInt(13)),
                 new ItemStack(Items.GOLD_INGOT, 2 + random.nextInt(3)), new ItemStack(Items.BREAD, 6 + random.nextInt(6))));
         goods.add(switch (kingdom) {
             case SHU -> new ItemStack(Items.WHEAT, 16);

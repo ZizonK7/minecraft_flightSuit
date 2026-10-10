@@ -1,6 +1,7 @@
 package com.pfkfks.flightsuit.village;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -112,6 +113,11 @@ public class VillageWorks {
         return count;
     }
 
+    /** Schools standing (the open-air one or the schoolhouse). */
+    public int schools() {
+        return count(Blueprint.SCHOOL) + count(Blueprint.SCHOOLHOUSE);
+    }
+
     private int queued(Blueprint blueprint) {
         int count = 0;
         for (Construction order : queue) {
@@ -214,15 +220,15 @@ public class VillageWorks {
         if (!hallWorkQueued()) {
             Construction current = hallBuilding();
             int next = stage + 1;
-            boolean canGrow = next <= 2 && hall.getPopulation() >= VillageTuning.stagePopulation(next);
+            boolean canGrow = next <= 3 && hall.getPopulation() >= VillageTuning.stagePopulation(next);
             if (canGrow) {
                 out.add(new Proposal(ProposalKind.HALL, Blueprint.hallFor(next), "proposal.flightsuit.hall_" + next, -1));
             } else if (current == null) {
                 out.add(new Proposal(ProposalKind.HALL, Blueprint.hallFor(stage), "proposal.flightsuit.hall_roof", -1));
             }
         }
-        Blueprint lodging = stage >= 2 ? Blueprint.HOUSE : Blueprint.TENT;
-        boolean lodgingQueued = queued(Blueprint.TENT) + queued(Blueprint.HOUSE) > 0;
+        Blueprint lodging = Blueprint.lodgingFor(stage);
+        boolean lodgingQueued = queued(Blueprint.TENT) + queued(Blueprint.HOUSE) + queued(Blueprint.APARTMENT) > 0;
         if (hall.getFreeBeds() == 0 && !lodgingQueued) {
             out.add(new Proposal(ProposalKind.BUILD, lodging, "proposal.flightsuit.no_beds", -1));
         }
@@ -234,8 +240,16 @@ public class VillageWorks {
             out.add(new Proposal(ProposalKind.BUILD, Blueprint.WATCHTOWER, "proposal.flightsuit.lookout", -1));
         }
         boolean teaching = hall.getChildren() > 0 || hall.getJobCount(ResidentJob.TEACHER) > 0;
-        if (teaching && count(Blueprint.SCHOOL) + queued(Blueprint.SCHOOL) == 0) {
+        if (teaching && schools() + queued(Blueprint.SCHOOL) + queued(Blueprint.SCHOOLHOUSE) == 0) {
             out.add(new Proposal(ProposalKind.BUILD, Blueprint.SCHOOL, "proposal.flightsuit.school", -1));
+        }
+        // Somewhere to work for every job that has a place of its own (after the M13 test).
+        for (ResidentJob job : ResidentJob.values()) {
+            Blueprint workplace = Blueprint.workplaceFor(job);
+            if (workplace != null && workplace.stage() <= stage && hall.getJobCount(job) > 0
+                    && count(workplace) + queued(workplace) == 0) {
+                out.add(new Proposal(ProposalKind.BUILD, workplace, "proposal.flightsuit.workplace", -1));
+            }
         }
         for (int i = 0; i < buildings.size(); i++) {
             Construction building = buildings.get(i);
@@ -466,10 +480,24 @@ public class VillageWorks {
             return null;
         }
         int waitingLayer = noteLacking(level, order, free, new HashMap<>());
+        // Water first, whoever's quarter it's in: farmland laid before its water dries back to dirt (and the
+        // farmers keep tilling it again).
+        for (Blueprint.Entry entry : order.entries()) {
+            BlockPos pos = entry.pos();
+            if (entry.state().getFluidState().isEmpty() || entry.layer() > waitingLayer || order.isDone(level, entry)
+                    || skipUntil.containsKey(pos) || claimedByOther(pos, builder) || !order.isReady(level, entry)) {
+                continue;
+            }
+            int cost = DamageLedger.cost(entry.state());
+            if (free || cost <= 0 || available(entry.state()) >= cost) {
+                return new Task(pos, new ItemStack(Items.WATER_BUCKET), Kind.BUILD);
+            }
+        }
         for (int pass = 0; pass < 2; pass++) {
             Task best = null;
             double bestDist = Double.MAX_VALUE;
             int bestLayer = -1;
+            boolean bestWater = false;
             for (Blueprint.Entry entry : order.entries()) {
                 BlockPos pos = entry.pos();
                 if (pass == 0 && order.quarter(pos) != quarter || entry.layer() > waitingLayer
@@ -484,11 +512,17 @@ public class VillageWorks {
                     continue;
                 }
                 double dist = Vec3.atCenterOf(pos).distanceToSqr(from);
-                if (bestLayer < 0 || entry.layer() < bestLayer || dist < bestDist) {
+                // Water goes in before anything else on its layer: farmland laid before the water dries
+                // back to dirt (and the farmers keep tilling it again).
+                boolean water = !entry.state().getFluidState().isEmpty();
+                boolean better = bestLayer < 0 || entry.layer() < bestLayer
+                        || entry.layer() == bestLayer && (water && !bestWater || water == bestWater && dist < bestDist);
+                if (better) {
                     ItemStack held = entry.state().isAir() ? ItemStack.EMPTY : new ItemStack(entry.state().getBlock().asItem());
                     best = new Task(pos, held, Kind.BUILD);
                     bestDist = dist;
                     bestLayer = entry.layer();
+                    bestWater = water;
                 }
             }
             if (best != null) {
@@ -734,6 +768,187 @@ public class VillageWorks {
     }
 
     /** For the architect's screen: suggestions, open blueprints and the queue. */
+    /**
+     * What this builder is doing right now, for the resident screen (after the M13 test): the building their
+     * crew is on and how far it has got, waiting for materials, repairs, or nothing to do.
+     */
+    public Component activity(UUID builder) {
+        Level level = level();
+        Crew crew = crews.get(builder);
+        if (crew != null && queue.contains(crew.order()) && level != null) {
+            Construction order = crew.order();
+            Component name = Component.translatable(order.blueprint().translationKey());
+            MutableComponent line = Component.translatable(order.replaces() != null ? "activity.flightsuit.rebuilding" : "activity.flightsuit.building",
+                    name, order.placedCount(level), order.solidCount());
+            if (!missing.isEmpty() && !hall.ownerBuildsFree()) {
+                ItemStack first = missing.get(0);
+                line.append(Component.translatable("activity.flightsuit.lacking", first.getHoverName(), first.getCount()));
+            }
+            return line;
+        }
+        if (!ledger.entries().isEmpty()) {
+            return Component.translatable("activity.flightsuit.repairing", ledger.entries().size());
+        }
+        if (!queue.isEmpty()) {
+            return Component.translatable("activity.flightsuit.crew_full");
+        }
+        return Component.translatable("activity.flightsuit.idle_builder");
+    }
+
+    // ---- whose is what (after the M13 test) ----
+
+    /** The standing building {@code pos} is in, or null. */
+    public @Nullable Construction buildingAt(@Nullable BlockPos pos) {
+        if (pos == null) {
+            return null;
+        }
+        for (Construction building : buildings) {
+            if (building.holds(pos)) {
+                return building;
+            }
+        }
+        return null;
+    }
+
+    /** The farm this farmer looks after (the one they own), or null. */
+    public @Nullable Construction farmOf(UUID farmer) {
+        for (Construction building : buildings) {
+            if (building.blueprint() == Blueprint.FARM && farmer.equals(building.owner())) {
+                return building;
+            }
+        }
+        return null;
+    }
+
+    /** Where this resident works: their own workplace, else any of their job's. Null if there is none. */
+    public @Nullable Construction workplaceOf(ResidentEntity resident) {
+        Blueprint blueprint = Blueprint.workplaceFor(resident.getJob());
+        if (blueprint == null) {
+            return null;
+        }
+        Construction any = null;
+        for (Construction building : buildings) {
+            if (building.blueprint() == blueprint) {
+                if (resident.getUUID().equals(building.owner())) {
+                    return building;
+                }
+                if (any == null) {
+                    any = building;
+                }
+            }
+        }
+        return any;
+    }
+
+    /**
+     * Gives every house, farm and workplace an owner, and takes it back when the owner has gone or changed job:
+     * a house is its household head's (the first grown-up sleeping in it), a farm a farmer's (one each, the
+     * nearest), a workplace one of the workers of that job. Tells the village when a house gets a new owner.
+     */
+    public void assignOwners(List<ResidentEntity> residents) {
+        Map<UUID, ResidentEntity> byId = new HashMap<>();
+        for (ResidentEntity resident : residents) {
+            if (!resident.isWanderer()) {
+                byId.put(resident.getUUID(), resident);
+            }
+        }
+        boolean changed = false;
+        for (Construction building : buildings) {
+            Blueprint blueprint = building.blueprint();
+            ResidentEntity owner = building.owner() == null ? null : byId.get(building.owner());
+            // An owner who isn't loaded right now keeps what's theirs (they may be in an unloaded corner,
+            // or the village just loaded); the dead are forgotten by forgetOwner.
+            boolean away = building.owner() != null && owner == null;
+            if (away) {
+                continue;
+            }
+            if (blueprint.isLodging()) {
+                if (owner == null || owner.getHomeBed() == null || !building.holds(owner.getHomeBed())) {
+                    ResidentEntity head = null;
+                    for (ResidentEntity resident : byId.values()) {
+                        if (resident.getHomeBed() != null && building.holds(resident.getHomeBed())
+                                && (head == null || head.isBaby() && !resident.isBaby())) {
+                            head = resident;
+                        }
+                    }
+                    boolean moved = setOwner(building, head);
+                    changed |= moved;
+                    if (moved && head != null) {
+                        hall.addNews(Component.translatable("news.flightsuit.house_owner", head.getName(),
+                                Component.translatable(blueprint.translationKey())));
+                    }
+                }
+            } else if (blueprint == Blueprint.FARM || blueprint.workplaceOf() != null) {
+                ResidentJob job = blueprint == Blueprint.FARM ? ResidentJob.FARMER : blueprint.workplaceOf();
+                if (owner == null || owner.getJob() != job || owner.isBaby()) {
+                    changed |= setOwner(building, null);
+                }
+            }
+        }
+        // Hand the unowned farms and workplaces to workers who have none yet (the nearest first).
+        for (Construction building : buildings) {
+            Blueprint blueprint = building.blueprint();
+            ResidentJob job = blueprint == Blueprint.FARM ? ResidentJob.FARMER : blueprint.workplaceOf();
+            if (job == null || building.owner() != null) {
+                continue;
+            }
+            ResidentEntity best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (ResidentEntity resident : byId.values()) {
+                if (resident.getJob() != job || resident.isBaby() || ownsOne(resident.getUUID(), blueprint)) {
+                    continue;
+                }
+                double dist = resident.distanceToSqr(Vec3.atCenterOf(building.center()));
+                if (dist < bestDist) {
+                    best = resident;
+                    bestDist = dist;
+                }
+            }
+            changed |= setOwner(building, best);
+        }
+        if (changed) {
+            hall.setChanged();
+        }
+    }
+
+    /** A resident died (or left for good): their house, farm and workplace go to someone else. */
+    public void forgetOwner(UUID resident) {
+        for (Construction building : buildings) {
+            if (resident.equals(building.owner())) {
+                building.setOwner(null, "");
+                hall.setChanged();
+            }
+        }
+    }
+
+    private boolean ownsOne(UUID resident, Blueprint blueprint) {
+        for (Construction building : buildings) {
+            if (building.blueprint() == blueprint && resident.equals(building.owner())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean setOwner(Construction building, @Nullable ResidentEntity owner) {
+        UUID id = owner == null ? null : owner.getUUID();
+        if (java.util.Objects.equals(id, building.owner())) {
+            return false;
+        }
+        building.setOwner(id, owner == null ? "" : owner.getName().getString());
+        return true;
+    }
+
+    /** "철수네 집", "영희의 대장간", "밭 (주인 없음)" - for the resident screen. */
+    public static Component describe(Construction building) {
+        Component name = Component.translatable(building.blueprint().translationKey());
+        if (building.owner() == null) {
+            return Component.translatable("place.flightsuit.unowned", name);
+        }
+        return Component.translatable(building.blueprint().isLodging() ? "place.flightsuit.household" : "place.flightsuit.owned",
+                building.ownerName(), name);
+    }
+
     public CompoundTag screenData() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("Stage", hall.getStage());

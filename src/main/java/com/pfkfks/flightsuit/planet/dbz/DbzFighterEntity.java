@@ -60,6 +60,12 @@ public class DbzFighterEntity extends PathfinderMob {
     private int specialCooldown = 160;
     private int charging;
     private boolean gone;
+    /** Frieza's final form, Cell's regeneration, Zarbon's monster form: once each (after the M16 test). */
+    private boolean transformed;
+    /** Android 17's barrier is up (halves what reaches him). */
+    private int barrier;
+    /** Goku gathering the Spirit Bomb: he stands, hands up, and does nothing else (DbzSaga). */
+    private int channeling;
 
     public DbzFighterEntity(EntityType<? extends DbzFighterEntity> type, Level level) {
         super(type, level);
@@ -94,6 +100,9 @@ public class DbzFighterEntity extends PathfinderMob {
         fighter.setCustomNameVisible(type.role() != DbzCharacter.Role.MINION);
         if (type.role() == DbzCharacter.Role.NPC || !fighter.isFighting()) {
             fighter.restrictTo(home, 6);
+        }
+        if (type == DbzCharacter.TRUNKS) {
+            fighter.setItemSlot(EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(com.pfkfks.flightsuit.registry.ModItems.TRUNKS_SWORD.get()));
         }
         if (type.role() == DbzCharacter.Role.BOSS) {
             fighter.bossBar.setName(type.displayName());
@@ -212,6 +221,23 @@ public class DbzFighterEntity extends PathfinderMob {
             chargeTick(server, target);
             return;
         }
+        if (channeling > 0) {
+            channelTick(server);
+            return;
+        }
+        if (barrier > 0) {
+            barrier--;
+            if (barrier % 4 == 0) {
+                server.sendParticles(ParticleTypes.ENCHANT, getX(), getY() + 1.0D, getZ(), 6, 0.8D, 1.0D, 0.8D, 0.2D);
+            }
+        }
+        sagaTransform(server);
+        if (getCharacter() == DbzCharacter.MAJIN_BUU || getCharacter() == DbzCharacter.KID_BUU) {
+            // Buu pulls himself back together.
+            if (tickCount % 20 == 0 && getHealth() < getMaxHealth()) {
+                heal(getCharacter() == DbzCharacter.KID_BUU ? 3.0F : 2.0F);
+            }
+        }
         if (target == null || !target.isAlive()) {
             return;
         }
@@ -264,15 +290,127 @@ public class DbzFighterEntity extends PathfinderMob {
                     selfDestruct(server);
                 }
             }
+            case FRIEZA_SOLDIER, CELL_JR -> {
+                if (blastCooldown <= 0 && sees && distance > 3.0D && distance < 20.0D) {
+                    kiBlast(server, target, me == DbzCharacter.CELL_JR ? 6.0F : 5.0F, 1);
+                    blastCooldown = me == DbzCharacter.CELL_JR ? 50 : 70;
+                }
+            }
+            case DODORIA -> {
+                if (specialCooldown <= 0 && distance < 7.0D) {
+                    blastWave(server, 6.0D, 11.0F);
+                    specialCooldown = 120;
+                } else if (specialCooldown <= 0 && distance > 10.0D) {
+                    dash(server, target);
+                    specialCooldown = 80;
+                }
+            }
+            case ZARBON, JEICE, GINYU -> {
+                if (specialCooldown <= 0 && distance > 10.0D) {
+                    dash(server, target);
+                    specialCooldown = 90;
+                } else if (blastCooldown <= 0 && sees && distance < 24.0D) {
+                    kiBlast(server, target, me == DbzCharacter.GINYU ? 9.0F : 7.0F, me == DbzCharacter.JEICE ? 2 : 1);
+                    blastCooldown = 55;
+                }
+            }
+            case GULDO -> {
+                // Time freeze: a moment where you can't move at all.
+                if (specialCooldown <= 0 && sees && distance < 16.0D) {
+                    com.pfkfks.flightsuit.suit.Stasis.hold(server, target, 40, false);
+                    say(server, me.line("freeze"));
+                    specialCooldown = 200;
+                } else if (blastCooldown <= 0 && sees && distance < 20.0D) {
+                    kiBlast(server, target, 5.0F, 1);
+                    blastCooldown = 60;
+                }
+            }
+            case RECOOME, CELL, TRUNKS -> {
+                if (specialCooldown <= 0 && sees && distance < 28.0D) {
+                    charging = me == DbzCharacter.CELL ? 40 : 30;
+                    say(server, me.line("charge"));
+                } else if (blastCooldown <= 0 && sees && distance > 4.0D && distance < 22.0D) {
+                    kiBlast(server, target, me == DbzCharacter.CELL ? 9.0F : 7.0F, me == DbzCharacter.CELL ? 2 : 1);
+                    blastCooldown = 60;
+                }
+                if (me == DbzCharacter.CELL && tickCount % 400 == 0) {
+                    // Solar Flare: everyone around can't see for a moment.
+                    for (LivingEntity foe : server.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(12.0D), this::isEnemy)) {
+                        foe.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 60, 0));
+                    }
+                    server.sendParticles(ParticleTypes.FLASH, getX(), getY() + 1.6D, getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    say(server, me.line("flare"));
+                }
+            }
+            case BURTER -> {
+                // The fastest in the universe: never far from you.
+                if (specialCooldown <= 0 && distance > 5.0D) {
+                    dash(server, target);
+                    specialCooldown = 40;
+                }
+            }
+            case FRIEZA -> {
+                if (specialCooldown <= 0 && sees && distance < 30.0D && transformed) {
+                    charging = 50;
+                    say(server, me.line("charge"));
+                } else if (blastCooldown <= 0 && sees && distance < 30.0D) {
+                    // Death Beam: quick and thin.
+                    kiBlast(server, target, transformed ? 12.0F : 9.0F, 1);
+                    blastCooldown = 45;
+                }
+            }
+            case ANDROID_17, ANDROID_18 -> {
+                if (me == DbzCharacter.ANDROID_17 && specialCooldown <= 0 && getHealth() < getMaxHealth() * 0.8F) {
+                    barrier = 60;
+                    say(server, me.line("barrier"));
+                    specialCooldown = 240;
+                } else if (me == DbzCharacter.ANDROID_18 && specialCooldown <= 0 && distance > 8.0D) {
+                    dash(server, target);
+                    specialCooldown = 100;
+                }
+                if (blastCooldown <= 0 && sees && distance < 24.0D) {
+                    kiBlast(server, target, 7.0F, me == DbzCharacter.ANDROID_18 ? 3 : 2);
+                    blastCooldown = 55;
+                }
+            }
+            case MAJIN_BUU -> {
+                if (specialCooldown <= 0 && sees && distance < 14.0D) {
+                    // The candy beam: you're slowed to a crawl and weak for a while.
+                    kiBlast(server, target, 4.0F, 1);
+                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
+                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 100, 1));
+                    say(server, me.line("candy"));
+                    specialCooldown = 300;
+                } else if (blastCooldown <= 0 && distance < 6.0D) {
+                    blastWave(server, 5.0D, 10.0F);
+                    blastCooldown = 100;
+                }
+            }
+            case KID_BUU -> {
+                if (specialCooldown <= 0 && distance < 9.0D) {
+                    blastWave(server, 8.0D, 14.0F);
+                    specialCooldown = 160;
+                } else if (blastCooldown <= 0 && sees && distance < 26.0D) {
+                    kiBlast(server, target, 8.0F, 3);
+                    blastCooldown = 50;
+                } else if (specialCooldown <= 0 && distance > 12.0D) {
+                    dash(server, target);
+                    specialCooldown = 60;
+                }
+            }
             default -> {
             }
         }
     }
 
-    /** Vegeta's Galick Gun / Goku's Kamehameha: gathering energy, then a wide beam. */
+    /**
+     * A charged beam: Vegeta's Galick Gun, Goku's (and Cell's) Kamehameha, Recoome's Eraser Gun, Trunks' Burning
+     * Attack, Frieza's Supernova - gathering energy, then a wide beam.
+     */
     private void chargeTick(ServerLevel server, @Nullable LivingEntity target) {
         getNavigation().stop();
-        boolean vegeta = getCharacter() == DbzCharacter.VEGETA;
+        DbzCharacter me = getCharacter();
+        boolean vegeta = me == DbzCharacter.VEGETA || me == DbzCharacter.RECOOME || me == DbzCharacter.FRIEZA;
         ParticleOptions glow = vegeta ? ParticleTypes.WITCH : ParticleTypes.SOUL_FIRE_FLAME;
         server.sendParticles(glow, getX(), getY() + 1.0D, getZ(), 6, 0.6D, 0.6D, 0.6D, 0.05D);
         if (target != null) {
@@ -282,13 +420,22 @@ public class DbzFighterEntity extends PathfinderMob {
             return;
         }
         specialCooldown = vegeta ? 240 : 160;
+        if (me == DbzCharacter.CELL || me == DbzCharacter.FRIEZA) {
+            specialCooldown = 200;
+        }
         if (target == null || !target.isAlive()) {
             return;
         }
         Vec3 from = getEyePosition();
         Vec3 dir = target.getEyePosition().subtract(from).normalize();
         Vec3 to = from.add(dir.scale(30.0D));
-        float damage = vegeta ? 18.0F : 14.0F;
+        float damage = switch (me) {
+            case VEGETA -> 18.0F;
+            case RECOOME, TRUNKS -> 15.0F;
+            case CELL -> 22.0F;
+            case FRIEZA -> 24.0F;
+            default -> 14.0F;
+        };
         for (int i = 0; i <= 60; i++) {
             Vec3 at = from.add(dir.scale(i * 0.5D));
             server.sendParticles(vegeta ? ParticleTypes.DRAGON_BREATH : ParticleTypes.END_ROD, at.x, at.y, at.z, 3, 0.25D, 0.25D, 0.25D, 0.0D);
@@ -303,6 +450,58 @@ public class DbzFighterEntity extends PathfinderMob {
             }
         }
         playSound(SoundEvents.GENERIC_EXPLODE, 1.5F, vegeta ? 0.6F : 0.9F);
+    }
+
+    /**
+     * Once each, at half health (after the M16 test): Frieza goes to his final form (heals, hits harder - the saga
+     * brings Goku in then), Cell regenerates, Zarbon turns into his monster form.
+     */
+    private void sagaTransform(ServerLevel server) {
+        DbzCharacter me = getCharacter();
+        if (transformed || getHealth() > getMaxHealth() * 0.5F
+                || me != DbzCharacter.FRIEZA && me != DbzCharacter.CELL && me != DbzCharacter.ZARBON) {
+            return;
+        }
+        transformed = true;
+        heal(getMaxHealth() * (me == DbzCharacter.ZARBON ? 0.1F : 0.3F));
+        net.minecraft.world.entity.ai.attributes.AttributeInstance damage = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (damage != null) {
+            damage.setBaseValue(damage.getBaseValue() * 1.4D);
+        }
+        server.sendParticles(ParticleTypes.EXPLOSION_EMITTER, getX(), getY() + 1.0D, getZ(), 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        server.sendParticles(ParticleTypes.END_ROD, getX(), getY() + 1.0D, getZ(), 40, 0.6D, 1.2D, 0.6D, 0.2D);
+        playSound(SoundEvents.WITHER_SPAWN, 1.5F, 1.3F);
+        say(server, me.line("transform"));
+    }
+
+    public boolean isTransformed() {
+        return transformed;
+    }
+
+    /** Goku: hands up, gathering the Spirit Bomb for {@code ticks} (DbzSaga lets it fly). */
+    public void channel(int ticks) {
+        channeling = ticks;
+        getNavigation().stop();
+        setTarget(null);
+    }
+
+    public boolean isChanneling() {
+        return channeling > 0;
+    }
+
+    /** The Spirit Bomb growing over his head, light drawn in from all around. */
+    private void channelTick(ServerLevel server) {
+        channeling--;
+        getNavigation().stop();
+        setXRot(-60.0F);
+        float grown = 1.0F - channeling / 600.0F;
+        double size = 0.5D + grown * 3.0D;
+        server.sendParticles(ParticleTypes.END_ROD, getX(), getY() + 4.0D + size, getZ(), 6, size * 0.5D, size * 0.5D, size * 0.5D, 0.0D);
+        if (tickCount % 4 == 0) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            server.sendParticles(ParticleTypes.GLOW, getX() + Math.cos(angle) * 12.0D, getY() + 2.0D, getZ() + Math.sin(angle) * 12.0D,
+                    0, -Math.cos(angle), 0.3D, -Math.sin(angle), 0.6D);
+        }
     }
 
     private void kiBlast(ServerLevel server, LivingEntity target, float damage, int count) {
@@ -391,9 +590,12 @@ public class DbzFighterEntity extends PathfinderMob {
         if (!isFighting() || source.getEntity() instanceof DbzFighterEntity other && other.getCharacter().isFoe() == me.isFoe()) {
             return false;
         }
-        // Goku only takes hits from the Saiyans' side.
-        if (me == DbzCharacter.GOKU && !(source.getEntity() instanceof DbzFighterEntity)) {
+        // Goku and Trunks only take hits from the other side.
+        if ((me == DbzCharacter.GOKU || me == DbzCharacter.TRUNKS) && !(source.getEntity() instanceof DbzFighterEntity)) {
             return false;
+        }
+        if (barrier > 0) {
+            amount *= 0.5F;
         }
         return super.hurt(source, amount);
     }
@@ -402,7 +604,7 @@ public class DbzFighterEntity extends PathfinderMob {
     @Override
     public void die(DamageSource source) {
         DbzCharacter me = getCharacter();
-        if (level().isClientSide || me == DbzCharacter.SAIBAMAN || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
+        if (level().isClientSide || me.role() == DbzCharacter.Role.MINION || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
                 || !(level() instanceof ServerLevel server)) {
             super.die(source);
             return;

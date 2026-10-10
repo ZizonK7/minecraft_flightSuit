@@ -1,5 +1,6 @@
 package com.pfkfks.flightsuit.client;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.network.CommandAttackC2SPacket;
 import com.pfkfks.flightsuit.network.CounterC2SPacket;
@@ -9,6 +10,7 @@ import com.pfkfks.flightsuit.network.ModNetwork;
 import com.pfkfks.flightsuit.network.SuitToggleC2SPacket;
 import com.pfkfks.flightsuit.network.SuitWheelC2SPacket;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
+import com.pfkfks.flightsuit.suit.SuitSize;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -26,6 +28,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
 import net.minecraftforge.client.event.RenderArmEvent;
+import net.minecraftforge.client.event.RenderPlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -150,15 +154,43 @@ public final class ClientEvents {
             return;
         }
         boolean right = event.getArm() == HumanoidArm.RIGHT;
-        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(EquipmentSlot.CHEST);
-        ModelPart arm = right ? model.rightArm : model.leftArm;
-        arm.visible = true;
-        arm.setPos(right ? -5.0F : 5.0F, 2.0F, 0.0F);
-        arm.setRotation(0.0F, 0.0F, right ? 0.1F : -0.1F);
-        ResourceLocation texture = SuitArmorModels.texture(armor.getSuitType().id(), EquipmentSlot.CHEST);
-        arm.render(event.getPoseStack(), event.getMultiBufferSource().getBuffer(RenderType.armorCutoutNoCull(texture)),
-                event.getPackedLight(), OverlayTexture.NO_OVERLAY);
+        String suitId = armor.getSuitType().id();
+        HumanoidModel<LivingEntity> model = SuitArmorModels.forSlot(suitId, EquipmentSlot.CHEST);
+        ResourceLocation texture = SuitArmorModels.texture(suitId, EquipmentSlot.CHEST);
+        VertexConsumer buffer = event.getMultiBufferSource().getBuffer(RenderType.armorCutoutNoCull(texture));
+        if (model instanceof SuitModel own) {
+            own.renderArm(event.getPoseStack(), buffer, event.getPackedLight(), right);
+        } else {
+            ModelPart arm = right ? model.rightArm : model.leftArm;
+            arm.visible = true;
+            arm.setPos(right ? -5.0F : 5.0F, 2.0F, 0.0F);
+            arm.setRotation(0.0F, 0.0F, right ? 0.1F : -0.1F);
+            arm.render(event.getPoseStack(), buffer, event.getPackedLight(), OverlayTexture.NO_OVERLAY);
+        }
         event.setCanceled(true);
+    }
+
+    /**
+     * A grown Hulkbuster wearer (SuitSize) is drawn half again as big from their feet - suit, held items and all
+     * - and the skin underneath is hidden so it can't poke out of the bigger frame. Lowest priority and only when
+     * nobody cancelled, so the push here always meets the pop in onRenderPlayerPost.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onRenderPlayerPre(RenderPlayerEvent.Pre event) {
+        float size = SuitSize.drawn(event.getEntity());
+        if (size == 1.0F) {
+            return;
+        }
+        event.getPoseStack().pushPose();
+        event.getPoseStack().scale(size, size, size);
+        event.getRenderer().getModel().setAllVisible(false);
+    }
+
+    @SubscribeEvent
+    public static void onRenderPlayerPost(RenderPlayerEvent.Post event) {
+        if (SuitSize.drawn(event.getEntity()) != 1.0F) {
+            event.getPoseStack().popPose();
+        }
     }
 
     /** Stand still while the suit assembles around you. */

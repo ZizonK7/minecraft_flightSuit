@@ -90,6 +90,10 @@ public class InfinityGauntletItem extends Item {
             level.sendParticles(ParticleTypes.ASH, monster.getX(), monster.getY() + 1.0D, monster.getZ(), 20, 0.3D, 0.6D, 0.3D, 0.02D);
             monster.hurt(player.damageSources().playerAttack(player), Float.MAX_VALUE);
         }
+        // Like the Endgame snap: everyone snapped away comes back.
+        if (ThanosRaid.undoSnap(level.getServer())) {
+            player.sendSystemMessage(Component.translatable("thanos.flightsuit.snap_undone").withStyle(ChatFormatting.GOLD));
+        }
         // The price.
         player.setHealth(2.0F);
         player.getFoodData().setFoodLevel(0);

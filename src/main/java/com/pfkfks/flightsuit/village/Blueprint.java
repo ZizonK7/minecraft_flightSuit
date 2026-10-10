@@ -97,11 +97,114 @@ public enum Blueprint {
             {"X.....X", ".......", ".......", ".......", ".......", ".......", "XPkkkPX"},
             {"X.....X", ".......", ".......", "...h...", ".......", ".......", "XPPPPPX"},
             {"ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooooooo"}
+    }),
+    // ---- Stage 2 (나무집, 학교) and stage 3 (신도시), after the M16 test: the user's stages are a nomad camp,
+    // then a village of timber houses and a schoolhouse, then a new town of concrete, glass and flats.
+    /** Stage 2 school: a timber schoolhouse (the open-air school rebuilt) - benches facing the blackboard at the back. */
+    SCHOOLHOUSE("schoolhouse", 2, false, new String[][]{
+            {"SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS"},
+            {"XPPDPPX", "P.....P", "Pv.v.vP", "P.....P", "Pv.v.vP", "P..n..P", "XPkkkPX"},
+            {"XGPdPGX", "P.....P", "G.....G", "P.....P", "G.....G", "P.....P", "XPkkkPX"},
+            {"XPPPPPX", "P.....P", "P.....P", "P..h..P", "P.....P", "P.....P", "XPPPPPX"},
+            {"ePPPPPw", "e.....w", "e.....w", "e.....w", "e.....w", "e.....w", "ePPPPPw"},
+            {" ePPPw ", " e...w ", " e...w ", " e...w ", " e...w ", " e...w ", " ePPPw "},
+            {"  ePw  ", "  e.w  ", "  e.w  ", "  e.w  ", "  e.w  ", "  e.w  ", "  ePw  "},
+            {"   P   ", "   P   ", "   P   ", "   P   ", "   P   ", "   P   ", "   P   "}
+    }),
+    /**
+     * Stage 3 hall: the new town's city hall - white concrete and glass round a double-height lobby (the board
+     * stands over the hall block in the middle), a flat roof with a parapet and a flag.
+     */
+    HALL_CITY("hall_city", 3, true, new String[][]{
+            {"IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII"},
+            {"VGGGVDVGGGV", "G.........G", "G.........G", "G.........G", "G.........G", "V.... ....V", "G.........G", "G.........G", "G.........G", "Vl.......lV", "VVVVVVVVVVV"},
+            {"VGGGVdVGGGV", "G.........G", "G.........G", "G.........G", "G.........G", "V.........V", "G.........G", "G.........G", "G.........G", "V.........V", "VVVVVVVVVVV"},
+            {"VGGGGGGGGGV", "G.........G", "G.........G", "G.........G", "G.........G", "V.........V", "G.........G", "G.........G", "G.........G", "V.........V", "VVVVVVVVVVV"},
+            {"VVVVVVVVVVV", "V.........V", "V.h.....h.V", "V.........V", "V.........V", "V.........V", "V.........V", "V.........V", "V.h.....h.V", "V.........V", "VVVVVVVVVVV"},
+            {"IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII", "IIIIIIIIIII"},
+            {"VVVVVVVVVVV", "V         V", "V         V", "V         V", "V         V", "V    F    V", "V         V", "V         V", "V         V", "V         V", "VVVVVVVVVVV"},
+            {"           ", "           ", "           ", "           ", "           ", "     F     ", "           ", "           ", "           ", "           ", "           "},
+            {"           ", "           ", "           ", "           ", "           ", "     FQQ   ", "           ", "           ", "           ", "           ", "           "}
+    }),
+    /**
+     * Stage 3 lodging: a block of flats (the timber house rebuilt) - eight beds on two floors joined by a
+     * staircase along the side wall, big windows, a flat roof with a parapet.
+     */
+    APARTMENT("apartment", 3, false, new String[][]{
+            {"IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII"},
+            {"VVVDVVV", "V....uV", "V.....V", "V.....V", "Vbbbb.V", "VBBBB.V", "VVVVVVV"},
+            {"VGVdVGV", "V.....V", "V....uV", "V.....V", "V.....V", "V.....V", "VGGVGGV"},
+            {"VGVVVGV", "V.....V", "V.....V", "V....uV", "V.....V", "V.....V", "VGGVGGV"},
+            {"VVVVVVV", "V.....V", "V.h...V", "V.....V", "V....uV", "V.....V", "VVVVVVV"},
+            {"VVVVVVV", "VIIII.V", "VIIII.V", "VIIII.V", "VIIII.V", "VIIIIuV", "VVVVVVV"},
+            {"VGVVVGV", "V...F.V", "V...F.V", "V...F.V", "Vbbbb.V", "VBBBB.V", "VGGVGGV"},
+            {"VGVVVGV", "V.....V", "V.....V", "V.....V", "V.....V", "V.....V", "VGGVGGV"},
+            {"VVVVVVV", "V.....V", "V.h...V", "V.....V", "V.....V", "V.....V", "VVVVVVV"},
+            {"IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII", "IIIIIII"},
+            {"IIIIIII", "I     I", "I     I", "I     I", "I     I", "I     I", "IIIIIII"}
+    }),
+    // ---- Workplaces (after the M13 test): each job's own place to work, apart from the houses. Cheap
+    // materials and one block that says what the job is (no anvils or jukeboxes to buy).
+    /** The cook's kitchen: an open pavilion, smokers either side of a campfire at the back, a barrel and a table. */
+    KITCHEN("kitchen", 1, false, new String[][]{
+            {"SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS"},
+            {"X...X", ".....", ".....", ".r.c.", "XMZMX"},
+            {"X...X", ".....", ".....", ".....", "X...X"},
+            {"X...X", ".....", "..h..", ".....", "X...X"},
+            {"ooooo", "ooooo", "ooooo", "ooooo", "ooooo"}
+    }),
+    /** The blacksmith's forge: a cobbled floor, blast furnaces and a brick chimney at the back, a smithing table. */
+    SMITHY("smithy", 1, false, new String[][]{
+            {"CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC"},
+            {"X.....X", ".......", ".......", "....E..", "XUrjsUX"},
+            {"X.....X", ".......", ".......", ".......", "X..j..X"},
+            {"X.....X", ".......", "...h...", ".......", "X..j..X"},
+            {"ooooooo", "ooooooo", "ooooooo", "ooooooo", "ooojooo"},
+            {"       ", "       ", "       ", "       ", "   j   "},
+            {"       ", "       ", "       ", "       ", "   j   "}
+    }),
+    /** The merchant's shop: a stall - a counter of barrels at the front, shelves at the back, a striped awning. */
+    MARKET("market", 1, false, new String[][]{
+            {"PPPPP", "PPPPP", "PPPPP", "PPPPP", "PPPPP"},
+            {"FrrrF", ".....", ".....", "..c..", "FrprF"},
+            {"F...F", ".....", ".....", ".....", "F...F"},
+            {"yWyWy", "yWyWy", "yWyWy", "yWyWy", "yWyWy"}
+    }),
+    /** The rancher's pen: a fenced paddock with a gate, hay and a water trough. */
+    PEN("pen", 1, false, new String[][]{
+            {"         ", "         ", "         ", "         ", "         ", "         ", "         ", "         ", "         "},
+            {"FFFFqFFFF", "F.......F", "F.H.....F", "F.......F", "F.......F", "F.......F", "F.....O.F", "F.......F", "FFFFFFFFF"}
+    }),
+    /** The doctor's clinic: a white tent with a red mark over the door, a cauldron of clean water, supplies. */
+    CLINIC("clinic", 1, false, new String[][]{
+            {"SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS"},
+            {"WW.WW", "W...W", "Wr.OW", "W...W", "Wc.rW", "WWWWW"},
+            {"WW.WW", "W...W", "W...W", "W...W", "W...W", "WWWWW"},
+            {" WQW ", " W.W ", " WhW ", " W.W ", " W.W ", " WWW "},
+            {"  R  ", "  R  ", "  R  ", "  R  ", "  R  ", "  R  "}
+    }),
+    /** The musician's stage: a raised plank floor, note blocks along the back, a half roof, torches at the front. */
+    STAGE("stage", 1, false, new String[][]{
+            {"PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP"},
+            {"t.....t", ".......", ".......", ".......", "XNN.NNX"},
+            {".......", ".......", ".......", ".......", "X.....X"},
+            {".......", ".......", ".......", "ooooooo", "ooooooo"}
+    }),
+    /** The architect's workshop: a roofed bench - crafting table, stonecutter, a barrel of tools. */
+    WORKSHOP("workshop", 1, false, new String[][]{
+            {"SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS"},
+            {"X...X", ".....", ".....", ".....", "XcsrX"},
+            {"X...X", ".....", ".....", ".....", "X...X"},
+            {"X...X", ".....", "..h..", ".....", "X...X"},
+            {"ooooo", "ooooo", "ooooo", "ooooo", "ooooo"}
     });
 
     static {
         TENT.upgrade = HOUSE;
+        HOUSE.upgrade = APARTMENT;
+        SCHOOL.upgrade = SCHOOLHOUSE;
         HALL_CAMP.upgrade = HALL_VILLAGE;
+        HALL_VILLAGE.upgrade = HALL_CITY;
     }
 
     private final String id;
@@ -138,11 +241,45 @@ public enum Blueprint {
 
     /** The hall building that stands for a village stage. */
     public static Blueprint hallFor(int stage) {
-        return stage >= 2 ? HALL_VILLAGE : HALL_CAMP;
+        return stage >= 3 ? HALL_CITY : stage == 2 ? HALL_VILLAGE : HALL_CAMP;
     }
 
     public boolean isLodging() {
-        return this == TENT || this == HOUSE;
+        return this == TENT || this == HOUSE || this == APARTMENT;
+    }
+
+    /** The open-air school (stage 1) or the schoolhouse it becomes (stage 2). */
+    public boolean isSchool() {
+        return this == SCHOOL || this == SCHOOLHOUSE;
+    }
+
+    /** The lodging a village of this stage builds new. */
+    public static Blueprint lodgingFor(int stage) {
+        return stage >= 3 ? APARTMENT : stage == 2 ? HOUSE : TENT;
+    }
+
+    /** The job this is the workplace of (null = not a workplace). */
+    public @Nullable ResidentJob workplaceOf() {
+        return switch (this) {
+            case KITCHEN -> ResidentJob.COOK;
+            case SMITHY -> ResidentJob.BLACKSMITH;
+            case MARKET -> ResidentJob.MERCHANT;
+            case PEN -> ResidentJob.RANCHER;
+            case CLINIC -> ResidentJob.DOCTOR;
+            case STAGE -> ResidentJob.MUSICIAN;
+            case WORKSHOP -> ResidentJob.ARCHITECT;
+            default -> null;
+        };
+    }
+
+    /** The workplace building for a job (null if it has none of its own, or works elsewhere - fields, school). */
+    public static @Nullable Blueprint workplaceFor(ResidentJob job) {
+        for (Blueprint blueprint : values()) {
+            if (blueprint.workplaceOf() == job) {
+                return blueprint;
+            }
+        }
+        return null;
     }
 
     public int width() {
@@ -253,6 +390,24 @@ public enum Blueprint {
             case 'v' -> Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH);
             case 'o' -> Blocks.OAK_SLAB.defaultBlockState();
             case '~' -> Blocks.WATER.defaultBlockState();
+            // Workplaces.
+            case 'U' -> Blocks.BLAST_FURNACE.defaultBlockState().setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING, Direction.NORTH);
+            case 'M' -> Blocks.SMOKER.defaultBlockState().setValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING, Direction.NORTH);
+            case 'Z' -> Blocks.CAMPFIRE.defaultBlockState();
+            case 'r' -> Blocks.BARREL.defaultBlockState();
+            case 'p' -> Blocks.COMPOSTER.defaultBlockState();
+            case 'N' -> Blocks.NOTE_BLOCK.defaultBlockState();
+            case 'O' -> Blocks.WATER_CAULDRON.defaultBlockState().setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3);
+            case 'H' -> Blocks.HAY_BLOCK.defaultBlockState();
+            case 's' -> Blocks.STONECUTTER.defaultBlockState().setValue(net.minecraft.world.level.block.StonecutterBlock.FACING, Direction.NORTH);
+            case 'y' -> Blocks.YELLOW_WOOL.defaultBlockState();
+            case 'q' -> Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(net.minecraft.world.level.block.FenceGateBlock.FACING, Direction.NORTH);
+            case 'E' -> Blocks.SMITHING_TABLE.defaultBlockState();
+            case 'j' -> Blocks.BRICKS.defaultBlockState();
+            // The new town (stage 3).
+            case 'V' -> Blocks.WHITE_CONCRETE.defaultBlockState();
+            case 'I' -> Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
+            case 'u' -> Blocks.QUARTZ_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH);
             default -> Blocks.AIR.defaultBlockState();
         };
     }
