@@ -127,7 +127,6 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("thief"));
 
-    /** An invisible seat (the fortress throne) - never saved. */
     /** M17: the Hulkbuster's delivery pod (Veronica), purely visual. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.VeronicaPodEntity>> VERONICA_POD = ENTITY_TYPES.register("veronica_pod",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.VeronicaPodEntity>of(com.pfkfks.flightsuit.entity.VeronicaPodEntity::new, MobCategory.MISC)
@@ -148,6 +147,7 @@ public final class ModEntities {
                     .clientTrackingRange(1)
                     .build("cutscene_camera"));
 
+    /** An invisible seat (the fortress throne) - never saved. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.SeatEntity>> SEAT = ENTITY_TYPES.register("seat",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.SeatEntity>of(com.pfkfks.flightsuit.entity.SeatEntity::new, MobCategory.MISC)
                     .sized(0.01F, 0.01F)
