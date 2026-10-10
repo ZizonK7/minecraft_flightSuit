@@ -18,7 +18,7 @@ import java.util.List;
  * %7$s jump, %8$s sprint, %9$s use, %10$s sneak, %11$s ultimate (V, M17), %12$s stolen skill (B, M17).
  */
 public final class GuideBook {
-    public static final int PAGES = 17;
+    public static final int PAGES = 18;
 
     private GuideBook() {
     }

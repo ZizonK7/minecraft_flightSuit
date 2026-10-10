@@ -18,13 +18,13 @@
   - 문법은 JDK 파서로만 확인한다 (스크래치패드의 `ParseOnly.java`, `javax.tools`로 `JavacTask.parse()`만 실행).
   - 빌드·인게임 테스트는 사용자가 한다. 테스트 전인 기능은 DESIGN.md에 "인게임 테스트 전"으로 표시.
 - 텍스처는 코드로 그린다 (`tools/*.java`, JDK 21의 단일 파일 실행: `java tools/X.java ...`). 기존 PNG를 덮어쓰지 않도록, 새 텍스처만 그릴 때는 해당 메서드만 호출하는 하네스를 쓴다.
-- 3D 모델은 `java tools/ModelGen.java . <hulk|hulkbuster|trunks|shenron|weapons|all>`: 큐브 배치·UV·텍스처·미리보기(`docs/reference/*_preview.png`)를 만들고 모델 클래스의 `// <ModelGen:이름>` 블록을 다시 씀 (그 블록은 손으로 고치지 말 것). 무기는 `models/item/3d/` + `textures/item/3d/`, 인벤토리 아이콘은 기존 2D 그림 (없을 때만 렌더해서 만듦). 미리보기 PNG로 모양을 확인하고 나서 빌드.
+- 3D 모델은 `java tools/ModelGen.java . <hulk|hulkbuster|trunks|shenron|oozaru|weapons|all>`: 큐브 배치·UV·텍스처·미리보기(`docs/reference/*_preview.png`)를 만들고 모델 클래스의 `// <ModelGen:이름>` 블록을 다시 씀 (그 블록은 손으로 고치지 말 것). 무기는 `models/item/3d/` + `textures/item/3d/`, 인벤토리 아이콘은 기존 2D 그림 (없을 때만 렌더해서 만듦). 미리보기 PNG로 모양을 확인하고 나서 빌드.
 
 ## 코드 지도 (`src/main/java/com/pfkfks/flightsuit/`)
 
 | 패키지 | 내용 |
 |---|---|
-| `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert) |
+| `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert). M17: 헐크버스터 주먹 `HulkbusterArts`, 트랭크스 검·초사이어인 `SwordArts`, 팬텀 훔치기·템페스트 `PhantomArts`(+`TempestRain`, `CandyShrink`), 훔친 기술 15종 `StolenSkill`(드래곤볼 인물과 공유하는 발사 코드), 날아가는 기탄 `KiShots`, 기탄 막기 판정 `KiGuard`. 수치는 전부 `SuitTuning`. 키 액션 번호는 `SuitWeapons`(ULTIMATE=4, STOLEN_SKILL=5, STEAL=6) |
 | `war/StructureJob` | 큰 건물(성채·히어로 시티) 건설: 부지 정리(기둥 단위) → 배치 목록. 설계 버전(`FortressBuilder.LAYOUT`, `HeroCityBuilder.LAYOUT`)이 저장된 것보다 새로우면 가까이 갈 때 같은 높이에 다시 지음 |
 | `block/` | 슈트 스테이션, 전력 블록, 스테이션 창고(StationStorageBlock/Entity), 보안 센서(SecuritySensorBlock/Entity) |
 | `energy/` | 무선 전력망(PowerGrid, 반경 8), 수치(PowerTuning) |
@@ -32,12 +32,13 @@
 | `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
 | `planet/` | 우주·행성: Planet(차원 키), PlanetData(SavedData: 착륙 지점, 플레이어별 집 발사대·스토리 진행, 행성별 월드 상태), LaunchPadBlock/Entity, SpaceshipEntity(상승·하강·착륙), SpaceTravel(`/spaceship launch|return|remote`, 우주 건너기), PlanetStory |
-| `planet/dbz/` | 드래곤볼: DbzSaga(2~4장: 장면 Site/Scene, 웨이브, 원기옥), DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`, 단계 DbzStage는 ordinal로 저장되니 끝에만 추가, `goal()` = 다음 목표 → HUD `StoryGoalOverlay` + 금빛 빛기둥) |
+| `cutscene/` | M17 컷신 엔진: `Cutscene`(대본·빌더, 좌표는 앵커 기준·yaw로 회전, y=0은 그 자리 땅), `Cutscenes`(등록, 처음 물을 때 `DbzCutscenes.registerAll`), `CutsceneRunner`(서버: 배우 배치·이동·끝 상태·건너뛰기·한 번만·보는 사람 고정), `CameraEntity`. 클라: `client/CutsceneClient`(카메라를 같은 대본으로 매 프레임 계산, 점프 키 건너뛰기, 화면 흔들림), `client/CutsceneOverlay`. 패킷 `CutsceneS2CPacket`/`CutsceneSkipC2SPacket` |
+| `planet/dbz/` | 드래곤볼: DbzSaga(1~4장: 장면 Site/Scene, 웨이브 + 시작 컷신 + 체력 이정표 `atHealth` 컷신, 컷신 대기열, 동행, 나메크 최후 3분, 셀 게임, 원기옥, 나메크 마을 `NAMEK_DOMES`), DbzCutscenes(컷신 대본 25개, 배역 id는 `DbzSaga.castId`), DbzAction(동작 15종, 모델 `client/DbzFighterModel`), DbzMoves(인물별 기술표), WestCity(서쪽 도시), DbzCommands(`/flightsuit dbz stage|cutscene|stop`), DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리·서쪽 도시 건설·NPC 유지·밤 재배맨. 크레이터 전투는 M17부터 DbzSaga), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`, `/planet replay`, 단계 DbzStage는 M17부터 **이름으로 저장**(`Traveller.stageName`, 옛 숫자는 `LEGACY` 순서로 변환)이라 중간에 넣어도 됨, 선언 순서 = 진행 순서, `goal()` = 다음 목표 → HUD `StoryGoalOverlay` + 금빛 빛기둥). 인물(`DbzCharacter`)도 이름으로 저장, 같은 사람의 다른 형태는 `voice`로 대사를 공유 |
 | `thanos/` | 타노스 사가: InfinityStone(+Item), ThanosForce/ThanosForceEntity(Monster, 저장 안 함, 레이드 태그 `RAID_TAG`), TitanSites, ThanosSaga(타이탄 관리·스톤 기록·레드 스컬·타임 스톤·전조), ThanosRaid(최종전) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드, 좌석(SeatEntity: 지도자가 왕좌에 앉음, 저장 안 함) |
-| `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면. 전용 모델 슈트는 `SuitModel`(슬롯별 조각, `SuitArmorModels.CUSTOM`에 등록) + 생성 블록 클래스(`HulkbusterModel`, `TrunksSuitModel`), 헐크 `HulkModel/HulkRenderer`, 신룡 `ShenronModel/ShenronRenderer` |
-| `town/` | 성채·히어로 시티의 마을 사람 TownsfolkEntity(저장 안 함, 역할 TownRole, 일과 TownLife, 배치 TownPlan), 거래 TownTrades(`money(city)` = 오수전/달러), 부탁 TownRequests |
+| `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면. 전용 모델 슈트는 `SuitModel`(슬롯별 조각, `SuitArmorModels.CUSTOM`에 등록) + 생성 블록 클래스(`HulkbusterModel`, `TrunksSuitModel`), 헐크 `HulkModel/HulkRenderer`, 신룡 `ShenronModel/ShenronRenderer`, M17: 드래곤볼 인물 `DbzFighterModel/DbzFighterRenderer`(동작별 코드 포즈), 거대원숭이 `OozaruModel/OozaruRenderer`, 베로니카 포드, 팬텀 조준 `PhantomAimClient`(짧게 = 조준, 길게 = 훔치기, 휠 = 거리) |
+| `town/` | 성채·히어로 시티·서쪽 도시·나메크 마을의 마을 사람 TownsfolkEntity(저장 안 함, 마을 번호 0~2 성채·3 히어로 시티·4 서쪽 도시·5 나메크, 역할 TownRole(`group()`), 일과 TownLife(행성 마을은 `planetTowns`), 배치 TownPlan), 거래 TownTrades(`money(town)` = 오수전/달러/제니), 부탁 TownRequests |
 | `guide/` | 안내서 GuideBookItem(처음 접속 때 지급, 화면은 `client/GuideBook`), ItemTips(`tip.flightsuit.*` → Shift 툴팁 `client/ItemTipsClient` + JEI 정보), JeiFlightSuit(@JeiPlugin, JEI는 선택 의존성) |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
 
@@ -59,12 +60,10 @@
 
 ## 진행 상태 (2026-10-10)
 
-- **M17 설계 확정, 구현 전**: 작업 지시서 `docs/WORK_ORDER_M17.md` (슈트 3벌 기능 + 궁극기 키 `V` + 팬텀 기술 훔치기·순간이동 개선 + 드래곤볼 컷신 엔진·전투 모션·1~4장 재구성 + 마을). **M17을 맡은 세션은 그 문서를 읽고 묶음 A→B→C→D 순서로, 묶음마다 커밋하고, 끝낼 때 문서 갱신(지시서 5장)을 반드시 한다.** 사용자 결정과 Claude 판단의 구분은 지시서 6장. 설계 논의에서 나온 전체 흐름 평가는 DESIGN.md 5장 "M17 설계 확정".
-- M1~M9: 사용자 인게임 테스트 통과.
-- 2026-10-10 1~4차 피드백 반영분도 통과 (사용자: 말하지 않은 것은 통과). 남은 확인은 `docs/TEST_PLAN.md` (팬텀 카드 파티클, JEI·Shift 툴팁, 스토리 길안내, 드래곤볼 1장 끝~4장).
-- 드래곤볼 모델링·스토리·컷신과 슈트 기능 재검토는 2026-10-10 사용자와 이야기해 M17로 확정됨 (위). 그 다음 후보: Mark 1·2·4·50 궁극기(섬멸 모드), 성채끼리의 전쟁, 행성 지형 개편, 인물별 입체 부품 모델링.
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **2026-10-10 사용자 인게임 테스트 통과**. M13까지의 피드백(성채·도시 확장, 치타우리 침공, 아군 장수, 왕좌, 묠니르, tp)도 반영·테스트 통과.
+- **M17 구현 완료, 인게임 테스트 전** (`docs/WORK_ORDER_M17.md` 묶음 A~D, 진행 기록은 그 7장, 결과·Claude 판단은 DESIGN.md 5장 "M17"). 클라우드라 컴파일을 못 했으니 **사용자의 첫 `./gradlew build` 오류부터 고칠 것**. 테스트 순서는 `docs/TEST_PLAN.md`. 사용자가 테스트를 마치면 main 병합(사용자가 함).
+- 다음 후보: Mark 1·2·4·50 궁극기(섬멸 모드), 성채끼리의 전쟁, 행성 지형 개편, 인물별 입체 부품 모델링(꼬리·더듬이·프리저 체형).
+- M1~M16과 2026-10-10 1~4차 피드백 반영분: 사용자 인게임 테스트 통과.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 
-`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/spaceship ...`, `/shenron <소원>`, `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
+`/flightsuit durability|energy <0-100>`, `/flightsuit village wanderer|birth|grow`, `/flightsuit raid start [wei|shu|wu]`, `/flightsuit raid stop`, `/flightsuit raid general <이름>`, `/flightsuit fort tp|trust|done|request <나라> ...`, `/flightsuit hero tp|trust|request`, `/flightsuit thief now|spawn|when`, `/flightsuit dragonballs give|reset`, `/flightsuit dbz stage <단계>|cutscene <id>|stop`, `/flightsuit thanos now|stones`. 권한 없이: `/planet`, `/planet replay [id]`, `/spaceship ...`, `/shenron <소원>`, `/village recruit|release <습격 번호>` (항복 처리, 채팅 버튼이 실행).
