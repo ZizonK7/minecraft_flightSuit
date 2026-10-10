@@ -41,7 +41,8 @@ public class ThanosGen {
         File item = new File(root, "item");
         dir.mkdirs();
         item.mkdirs();
-        for (String name : new String[]{"chitauri", "ebony_maw", "proxima_midnight", "corvus_glaive", "cull_obsidian", "thanos", "red_skull"}) {
+        for (String name : new String[]{"chitauri", "ebony_maw", "proxima_midnight", "corvus_glaive", "cull_obsidian", "thanos", "red_skull",
+                "chitauri_gunner", "chitauri_brute"}) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
             pal.put('W', 0xFFFFFFFF);
@@ -54,6 +55,8 @@ public class ThanosGen {
                 case "cull_obsidian" -> cull();
                 case "thanos" -> thanos();
                 case "red_skull" -> redSkull();
+                case "chitauri_gunner" -> chitauriGunner();
+                case "chitauri_brute" -> chitauriBrute();
                 default -> throw new IllegalStateException(name);
             }
             ImageIO.write(skin, "png", new File(dir, name + ".png"));
@@ -94,6 +97,37 @@ public class ThanosGen {
         wrap(BODY, (f, i, j) -> j < 8 ? ((i + j) % 4 == 0 ? 'b' : 'B') : hide.at(f, i, j));
         top(BODY, 'B');
         limbs("BBBGGGGgGGGg", "GGGGBBBBgggg");
+    }
+
+    /** Chitauri gunner: the same hide under darker gunmetal plates, a glowing cyan visor across the eyes, a power pack. */
+    static void chitauriGunner() {
+        tone(0xFF5E6858, 0xFF2E322C, 0xFF5FE3FF);
+        hair(0xFF3E4638);
+        colors("G", 0xFF5E6858, "g", 0xFF3E4638, "B", 0xFF4A4E58, "b", 0xFF2C2F36, "E", 0xFF7FF0FF, "e", 0xFF2A8FA8);
+        Pattern hide = (f, i, j) -> (i + j * 2) % 5 == 0 ? 'g' : 'G';
+        wrap(HEAD, hide);
+        top(HEAD, 'B');
+        bottom(HEAD, 'g');
+        face(HEAD, Face.FRONT, "BBBBBBBB", "BbBBBBbB", "GGGGGGGG", "eEEEEEEe", "GGGggGGG", "gKKKKKKg", "GKbbbbKG", "GGgggGGG");
+        wrap(BODY, (f, i, j) -> j < 9 ? ((i + j) % 3 == 0 ? 'b' : 'B') : hide.at(f, i, j));
+        top(BODY, 'B');
+        face(BODY, Face.BACK, rowsOf(12, "BBBBBBBB", 1, "BbeeeebB", 2, "BbEEEEbB", 3, "BbeeeebB"));
+        limbs("BBBBGGGgGGGg", "GGGGBBBBbbbb");
+    }
+
+    /** Chitauri brute: hulking, heavy bronze plates over the shoulders and chest, red eyes, a jutting jaw. */
+    static void chitauriBrute() {
+        tone(0xFF5A6050, 0xFF2E302A, 0xFFE23A2A);
+        hair(0xFF3E4236);
+        colors("G", 0xFF5A6050, "g", 0xFF3E4236, "B", 0xFF9A7438, "b", 0xFF5E4420, "E", 0xFFFF4A2A);
+        Pattern hide = (f, i, j) -> (i * 2 + j) % 4 == 0 ? 'g' : 'G';
+        wrap(HEAD, hide);
+        top(HEAD, 'B');
+        bottom(HEAD, 'g');
+        face(HEAD, Face.FRONT, "BBBBBBBB", "BBbBBbBB", "GGGGGGGG", "GEEGGEEG", "GGGggGGG", "bKKKKKKb", "bKbbbbKb", "bbbbbbbb");
+        wrap(BODY, (f, i, j) -> j < 6 ? ((i + j) % 4 == 0 ? 'b' : 'B') : j < 8 ? 'b' : hide.at(f, i, j));
+        top(BODY, 'B');
+        limbs("BBBBBbGGgGGG", "GGGGgBBBBbbb");
     }
 
     /** Ebony Maw: grey skin, no nose, slicked back hair, long black robes with a high collar. */

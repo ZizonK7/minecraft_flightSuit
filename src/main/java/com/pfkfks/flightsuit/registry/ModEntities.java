@@ -125,6 +125,15 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("thief"));
 
+    /** An invisible seat (the fortress throne) - never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.SeatEntity>> SEAT = ENTITY_TYPES.register("seat",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.SeatEntity>of(com.pfkfks.flightsuit.entity.SeatEntity::new, MobCategory.MISC)
+                    .sized(0.01F, 0.01F)
+                    .noSave()
+                    .noSummon()
+                    .clientTrackingRange(10)
+                    .build("seat"));
+
     private ModEntities() {
     }
 }

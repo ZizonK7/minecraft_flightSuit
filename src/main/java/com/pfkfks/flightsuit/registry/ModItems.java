@@ -64,6 +64,9 @@ public final class ModItems {
     /** Display only: what the Mark 4 hero swings, drawn in the empty hand (not in the creative tab, no recipe). */
     public static final RegistryObject<Item> MASTER_SWORD = ITEMS.register("master_sword",
             () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    /** Display only: what Thor carries in Hero City (not in the creative tab, no recipe). */
+    public static final RegistryObject<Item> MJOLNIR = ITEMS.register("mjolnir",
+            () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     /** Handed out by the architects; which building is in its NBT (not in the creative tab). */
     public static final RegistryObject<BlueprintItem> BLUEPRINT = ITEMS.register("blueprint",
             () -> new BlueprintItem(new Item.Properties().stacksTo(1)));

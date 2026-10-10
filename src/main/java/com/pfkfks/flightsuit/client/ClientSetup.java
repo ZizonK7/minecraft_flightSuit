@@ -66,6 +66,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.SPACESHIP.get(), SpaceshipRenderer::new);
         event.registerEntityRenderer(ModEntities.DBZ_FIGHTER.get(), DbzFighterRenderer::new);
         event.registerEntityRenderer(ModEntities.THANOS_FORCE.get(), ThanosForceRenderer::new);
+        event.registerEntityRenderer(ModEntities.SEAT.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 

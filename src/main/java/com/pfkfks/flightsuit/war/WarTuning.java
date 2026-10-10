@@ -36,7 +36,8 @@ public final class WarTuning {
     /** How far the fortresses stand from world spawn: this plus up to the spread. */
     public static final int FORT_DISTANCE = 600;
     public static final int FORT_DISTANCE_SPREAD = 250;
-    public static final int GARRISON_SIZE = 8;
+    /** Soldiers keeping a fortress (12 since the fortress grew to a town, M13 test - still a few dozen at most in a fight). */
+    public static final int GARRISON_SIZE = 12;
     public static final int FALLEN_GARRISON = 2;
     /** A fallen fortress stays weak (and asks nothing) this long. */
     public static final int FALLEN_DAYS = 7;

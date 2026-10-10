@@ -14,6 +14,8 @@ public class FortRecord {
     /** Ground level it was built on (-1000 = not built yet). */
     public int y = -1000;
     public boolean built;
+    /** Which plan it was built from (FortressBuilder.LAYOUT): an older one is put up again from the new plan. */
+    public int layout;
     /** Fallen (conquered): weak garrison, no generals, until this day. */
     public long fallenUntilDay;
     /** 0..1: how much of the garrison must fall before it gives up (항전 의지, rolled once per fortress). */
@@ -37,6 +39,7 @@ public class FortRecord {
         tag.putInt("Z", z);
         tag.putInt("Y", y);
         tag.putBoolean("Built", built);
+        tag.putInt("Layout", layout);
         tag.putLong("FallenUntil", fallenUntilDay);
         tag.putFloat("Resolve", resolve);
         return tag;
@@ -48,6 +51,7 @@ public class FortRecord {
         fort.z = tag.getInt("Z");
         fort.y = tag.getInt("Y");
         fort.built = tag.getBoolean("Built");
+        fort.layout = tag.getInt("Layout");
         fort.fallenUntilDay = tag.getLong("FallenUntil");
         fort.resolve = tag.getFloat("Resolve");
         return fort;

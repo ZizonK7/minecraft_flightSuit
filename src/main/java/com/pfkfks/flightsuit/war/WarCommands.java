@@ -84,6 +84,13 @@ public final class WarCommands {
                                         .executes(WarCommands::general))))
                 .then(Commands.literal("fort")
                         .then(Commands.literal("tp").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom -> tpFort(ctx, kingdom)))))
+                        .then(Commands.literal("rebuild").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom -> {
+                            boolean done = FortressManager.rebuild(ctx.getSource().getServer().overworld(), kingdom);
+                            if (done) {
+                                ctx.getSource().sendSuccess(() -> Component.translatable("command.flightsuit.rebuild", kingdom.displayName()), false);
+                            }
+                            return done;
+                        }))))
                         .then(Commands.literal("trust").then(kingdomArgument().then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
                                 .executes(ctx -> withKingdom(ctx, kingdom -> setTrust(ctx, kingdom, IntegerArgumentType.getInteger(ctx, "value")))))))
                         .then(Commands.literal("done").then(kingdomArgument().then(Commands.argument("count", IntegerArgumentType.integer(0, 99))
@@ -121,6 +128,8 @@ public final class WarCommands {
         }
         ServerLevel level = ctx.getSource().getServer().overworld();
         int z = fort.z + FortressBuilder.CLEAR + 12;
+        // Generate the column first: an unloaded chunk's heightmap reads as the bottom of the world.
+        level.getChunk(fort.x >> 4, z >> 4);
         int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, fort.x, z);
         player.teleportTo(level, fort.x + 0.5D, y, z + 0.5D, 180.0F, 0.0F);
         return true;

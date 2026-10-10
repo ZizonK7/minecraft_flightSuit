@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.entity.SuitCompanionEntity;
 import com.pfkfks.flightsuit.registry.ModEntities;
 import com.pfkfks.flightsuit.village.ResidentEntity;
 import com.pfkfks.flightsuit.village.VillageHallBlockEntity;
+import com.pfkfks.flightsuit.village.VillageTuning;
 import com.pfkfks.flightsuit.village.Villages;
 import com.pfkfks.flightsuit.war.ai.FollowCommanderGoal;
 import com.pfkfks.flightsuit.war.ai.GeneralGuardGoal;
@@ -157,7 +158,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         if (getGeneral().isLeader()) {
             restrictTo(FortressBuilder.throne(home), 4);
         } else {
-            restrictTo(home, 16);
+            restrictTo(home, FortressBuilder.patrolRadius());
         }
         bossBar.setVisible(false);
         return this;
@@ -295,7 +296,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         if (this.following) {
             restrictTo(BlockPos.ZERO, -1);
         } else if (hallPos != null) {
-            restrictTo(hallPos, 32);
+            restrictTo(hallPos, VillageTuning.RADIUS);
         }
     }
 
@@ -347,7 +348,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         setHealth(getMaxHealth());
         setTarget(null);
         bossBar.setVisible(false);
-        restrictTo(hallPos, 32);
+        restrictTo(hallPos, VillageTuning.RADIUS);
         setCustomName(Component.translatable("general.flightsuit.ally", getGeneral().displayName()).withStyle(ChatFormatting.GOLD));
         playSound(SoundEvents.PLAYER_LEVELUP, 1.0F, 0.8F);
     }
@@ -392,9 +393,67 @@ public class GeneralEntity extends Monster implements RaidMember {
             return;
         }
         if (!canFight()) {
+            if (isPassenger()) {
+                stopRiding();
+            }
             return;
         }
+        if (role == WarRole.GARRISON && getGeneral().isLeader()) {
+            tickThrone();
+        }
         tickSkills();
+    }
+
+    /**
+     * The ruler sits on the throne while all is quiet, gets up to fight (or when hit), and goes back to sit
+     * down once it has been quiet for a while.
+     */
+    private void tickThrone() {
+        if (home == null) {
+            return;
+        }
+        boolean disturbed = getTarget() != null || tickCount - getLastHurtByMobTimestamp() < 200 && getLastHurtByMob() != null;
+        if (isPassenger()) {
+            if (disturbed) {
+                stopRiding();
+            }
+            return;
+        }
+        if (disturbed || tickCount % 20 != 0) {
+            return;
+        }
+        BlockPos seat = FortressBuilder.throneSeat(home);
+        if (position().distanceToSqr(Vec3.atBottomCenterOf(seat)) < 2.5D * 2.5D) {
+            sitOnThrone();
+        } else if (getNavigation().isDone()) {
+            getNavigation().moveTo(seat.getX() + 0.5D, seat.getY(), seat.getZ() + 0.5D, 0.8D);
+        }
+    }
+
+    /** Sits down on the throne (if it's still there). */
+    public void sitOnThrone() {
+        if (home == null || isPassenger() || !(level() instanceof ServerLevel server)) {
+            return;
+        }
+        BlockPos seat = FortressBuilder.throneSeat(home);
+        if (!(server.getBlockState(seat).getBlock() instanceof net.minecraft.world.level.block.StairBlock)) {
+            return;
+        }
+        com.pfkfks.flightsuit.entity.SeatEntity chair = com.pfkfks.flightsuit.entity.SeatEntity.at(server,
+                new Vec3(seat.getX() + 0.5D, seat.getY() + 0.5D, seat.getZ() + 0.5D), FortressBuilder.THRONE_YAW);
+        if (server.addFreshEntity(chair)) {
+            getNavigation().stop();
+            startRiding(chair, true);
+            setYRot(FortressBuilder.THRONE_YAW);
+            setYBodyRot(FortressBuilder.THRONE_YAW);
+            setYHeadRot(FortressBuilder.THRONE_YAW);
+        }
+    }
+
+    @Override
+    public double getMyRidingOffset() {
+        // On a seat the hips rest on its top (legs forward), like a player sitting in a boat.
+        return getVehicle() instanceof com.pfkfks.flightsuit.entity.SeatEntity ? -0.6D : super.getMyRidingOffset();
     }
 
     private void tickSkills() {
@@ -780,7 +839,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         bossBar.setName(getDisplayName());
         bossBar.setVisible(canFight() && !isRecruited());
         if (isRecruited() && hallPos != null && !following) {
-            restrictTo(hallPos, 32);
+            restrictTo(hallPos, VillageTuning.RADIUS);
         }
     }
 }

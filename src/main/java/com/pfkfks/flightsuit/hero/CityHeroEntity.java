@@ -89,7 +89,7 @@ public class CityHeroEntity extends PathfinderMob {
         CityHeroEntity hero = new CityHeroEntity(ModEntities.CITY_HERO.get(), level);
         hero.entityData.set(TYPE, type.ordinal());
         hero.home = home.immutable();
-        hero.restrictTo(home, type == HeroType.CAPTAIN || type == HeroType.IRON_MAN ? 10 : 26);
+        hero.restrictTo(home, hero.homeRadius());
         hero.setItemSlot(EquipmentSlot.MAINHAND, type.held());
         // The shield goes in the off hand, like Captain carries it.
         if (type == HeroType.CAPTAIN) {
@@ -148,6 +148,26 @@ public class CityHeroEntity extends PathfinderMob {
 
     public @Nullable BlockPos getHome() {
         return home;
+    }
+
+    /** Captain and Iron Man keep to the HQ lobby; the others walk the whole city. */
+    private int homeRadius() {
+        HeroType type = getHeroType();
+        return type == HeroType.CAPTAIN || type == HeroType.IRON_MAN ? 10 : HeroCityBuilder.EDGE - 6;
+    }
+
+    /**
+     * During an invasion everyone - Captain and Iron Man too - may go anywhere in the city, and heads for the
+     * nearest invader when there's nobody to fight close by.
+     */
+    public void setOnAlert(boolean alert, @Nullable LivingEntity nearestInvader) {
+        if (home == null) {
+            return;
+        }
+        restrictTo(home, alert ? HeroCityBuilder.EDGE + 4 : homeRadius());
+        if (alert && nearestInvader != null && getTarget() == null) {
+            getNavigation().moveTo(nearestInvader, getHeroType().ranged() ? 1.0D : 1.15D);
+        }
     }
 
     @Override

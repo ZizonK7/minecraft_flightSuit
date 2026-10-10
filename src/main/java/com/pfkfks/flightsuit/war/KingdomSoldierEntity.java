@@ -148,7 +148,7 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
         role = WarRole.GARRISON;
         home = fortCenter.immutable();
         hallPos = null;
-        restrictTo(home, 18);
+        restrictTo(home, FortressBuilder.patrolRadius());
         return this;
     }
 
@@ -197,7 +197,7 @@ public class KingdomSoldierEntity extends Monster implements RangedAttackMob, Ra
     protected void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(0, new YieldedGoal(this, this::hasYielded));
-        goalSelector.addGoal(2, new RangedBowAttackGoal<>(this, 1.0D, 30, 16.0F) {
+        goalSelector.addGoal(2, new RangedBowAttackGoal<KingdomSoldierEntity>(this, 1.0D, 30, 16.0F) {
             @Override
             public boolean canUse() {
                 return getSoldierType() == Type.ARCHER && !hasYielded() && super.canUse();

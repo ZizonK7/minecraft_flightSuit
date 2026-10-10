@@ -16,7 +16,12 @@ public enum ThanosForce {
     CORVUS_GLAIVE("corvus_glaive", Role.BOSS, 280.0D, 5.0D, 0.33D, 1.05F, InfinityStone.MIND),
     CULL_OBSIDIAN("cull_obsidian", Role.BOSS, 460.0D, 6.0D, 0.27D, 1.4F, InfinityStone.POWER),
     THANOS("thanos", Role.FINAL, 1200.0D, 16.0D, 0.30D, 1.35F, null),
-    RED_SKULL("red_skull", Role.NPC, 40.0D, 0.0D, 0.2D, 1.0F, InfinityStone.SOUL);
+    RED_SKULL("red_skull", Role.NPC, 40.0D, 0.0D, 0.2D, 1.0F, InfinityStone.SOUL),
+    // Hero City's invaders (after the M13 test). Added last: the type is saved by its ordinal.
+    /** Keeps its distance and fires energy bolts. */
+    CHITAURI_GUNNER("chitauri_gunner", Role.MINION, 26.0D, 3.0D, 0.30D, 1.0F, null),
+    /** Big, slow, smashes the ground; leads the last wave. */
+    CHITAURI_BRUTE("chitauri_brute", Role.MINION, 120.0D, 12.0D, 0.25D, 1.4F, null);
 
     public enum Role { MINION, BOSS, FINAL, NPC }
 
@@ -67,6 +72,10 @@ public enum ThanosForce {
     /** The stone this one guards on Titan (Red Skull: the Soul Stone). */
     public @Nullable InfinityStone stone() {
         return stone;
+    }
+
+    public boolean isChitauri() {
+        return this == CHITAURI || this == CHITAURI_GUNNER || this == CHITAURI_BRUTE;
     }
 
     public boolean isBlackOrder() {

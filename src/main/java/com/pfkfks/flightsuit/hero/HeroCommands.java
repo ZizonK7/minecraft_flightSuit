@@ -53,6 +53,12 @@ public final class HeroCommands {
                 .then(Commands.literal("hero")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("tp").executes(HeroCommands::tp))
+                        .then(Commands.literal("rebuild").executes(ctx -> {
+                            HeroCity.rebuild(ctx.getSource().getServer().overworld());
+                            ctx.getSource().sendSuccess(() -> Component.translatable("command.flightsuit.rebuild",
+                                    Component.translatable("hero.flightsuit.city")), false);
+                            return 1;
+                        }))
                         .then(Commands.literal("trust").then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
                                 .executes(ctx -> trust(ctx, IntegerArgumentType.getInteger(ctx, "value")))))
                         .then(Commands.literal("request").then(Commands.argument("type", StringArgumentType.word())
@@ -65,6 +71,8 @@ public final class HeroCommands {
         ServerLevel level = ctx.getSource().getServer().overworld();
         BlockPos site = HeroCity.site(level);
         int z = site.getZ() + HeroCityBuilder.EDGE + 8;
+        // Generate the column first: an unloaded chunk's heightmap reads as the bottom of the world.
+        level.getChunk(site.getX() >> 4, z >> 4);
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, site.getX(), z);
         player.teleportTo(level, site.getX() + 0.5D, y, z + 0.5D, 180.0F, 0.0F);
         return 1;

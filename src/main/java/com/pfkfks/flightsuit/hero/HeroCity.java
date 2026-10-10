@@ -11,7 +11,7 @@ import com.pfkfks.flightsuit.village.ResidentEntity;
 import com.pfkfks.flightsuit.village.ResidentJob;
 import com.pfkfks.flightsuit.village.VillageHallBlockEntity;
 import com.pfkfks.flightsuit.village.Villages;
-import com.pfkfks.flightsuit.war.FortressBuilder;
+import com.pfkfks.flightsuit.war.StructureJob;
 import com.pfkfks.flightsuit.war.FortressManager;
 import com.pfkfks.flightsuit.war.WarData;
 import com.pfkfks.flightsuit.war.WarTuning;
@@ -20,6 +20,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.Direction;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.ClickEvent;
@@ -49,8 +53,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.TickEvent;
@@ -81,8 +83,9 @@ public final class HeroCity {
     private static final TicketType<ChunkPos> STORM_TICKET =
             TicketType.create("flightsuit_hero_storm", Comparator.comparingLong(ChunkPos::toLong), 100);
 
-    private static @Nullable HeroCityBuilder job;
-    private static int jobIndex;
+    private static @Nullable StructureJob job;
+    private static @Nullable BlockPos portalAt;
+    private static long portalUntil;
     private static long tickingSince = -1L;
     private static int losses;
     private static long lastLossAt;
@@ -93,7 +96,7 @@ public final class HeroCity {
     @SubscribeEvent
     public static void onStopped(ServerStoppedEvent event) {
         job = null;
-        jobIndex = 0;
+        portalAt = null;
         tickingSince = -1L;
         losses = 0;
         lastLossAt = 0L;
@@ -123,6 +126,10 @@ public final class HeroCity {
                 anyoneNear = true;
             }
         }
+        if (data.built && data.layout < HeroCityBuilder.LAYOUT && anyoneNear && data.storm == null) {
+            // Built from an older, smaller plan: put it up again from the current one, where it stands.
+            rebuild(level);
+        }
         if (!data.built) {
             if (anyoneNear && job == null) {
                 startBuild(level, data);
@@ -135,6 +142,7 @@ public final class HeroCity {
         if (data.storm != null) {
             tickStorm(level, data);
         }
+        tickPortal(level);
         if (level.getGameTime() % 100 == 10) {
             tickRequests(level, data, day);
         }
@@ -171,49 +179,52 @@ public final class HeroCity {
         return new BlockPos(data.x, data.y, data.z);
     }
 
-    private static void startBuild(ServerLevel level, HeroData data) {
-        int[] heights = new int[9];
-        int i = 0;
-        for (int dx = -20; dx <= 20; dx += 20) {
-            for (int dz = -20; dz <= 20; dz += 20) {
-                heights[i++] = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, data.x + dx, data.z + dz) - 1;
-            }
-        }
-        Arrays.sort(heights);
-        data.y = Math.max(heights[4], level.getSeaLevel());
+    /**
+     * "/flightsuit hero rebuild": puts the city up again from its plan the next time someone comes near (an older,
+     * smaller one is cleared away) - on the same ground level, since the old towers would read as hills.
+     */
+    public static void rebuild(ServerLevel level) {
+        HeroData data = HeroData.get(level.getServer());
+        job = null;
+        data.built = false;
         data.setDirty();
-        job = HeroCityBuilder.plan(data.center());
-        jobIndex = 0;
+    }
+
+    private static void startBuild(ServerLevel level, HeroData data) {
+        // y is still 0 if it was never built (it's at least sea level once it is); a rebuild keeps its ground.
+        if (data.y == 0) {
+            int[] heights = new int[25];
+            int i = 0;
+            for (int dx = -40; dx <= 40; dx += 20) {
+                for (int dz = -40; dz <= 40; dz += 20) {
+                    // Generate the column first: an unloaded chunk's heightmap reads as the bottom of the world.
+                    level.getChunk((data.x + dx) >> 4, (data.z + dz) >> 4);
+                    heights[i++] = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, data.x + dx, data.z + dz) - 1;
+                }
+            }
+            Arrays.sort(heights);
+            data.y = Math.max(heights[12], level.getSeaLevel());
+            data.setDirty();
+        }
+        job = HeroCityBuilder.plan(data.center()).job();
     }
 
     private static void tickBuild(ServerLevel level, HeroData data) {
         if (job == null) {
             return;
         }
-        List<FortressBuilder.Placement> placements = job.placements();
-        int end = Math.min(placements.size(), jobIndex + BUILD_PER_TICK);
-        for (; jobIndex < end; jobIndex++) {
-            FortressBuilder.Placement placement = placements.get(jobIndex);
-            if (placement.fillOnly()) {
-                BlockState current = level.getBlockState(placement.pos());
-                if (!current.isAir() && !current.canBeReplaced() && current.getFluidState().isEmpty()) {
-                    continue;
-                }
-            }
-            level.setBlock(placement.pos(), placement.state(), Block.UPDATE_CLIENTS);
-        }
-        if (jobIndex >= placements.size()) {
-            stockVault(level, job.vault());
+        if (job.tick(level, BUILD_PER_TICK)) {
+            stockVault(level, vault(data));
             job = null;
             data.built = true;
+            data.layout = HeroCityBuilder.LAYOUT;
             data.setDirty();
         }
     }
 
     /** The two vault chests in the HQ lobby (HeroCityBuilder.headquarters). */
     private static List<BlockPos> vault(HeroData data) {
-        BlockPos center = data.center();
-        return List.of(center.offset(-2, 1, -4), center.offset(2, 1, -4));
+        return HeroCityBuilder.vault(data.center());
     }
 
     /** The vault stays shut while the city stands - it's theirs - and opens once the city has fallen. */
@@ -257,7 +268,7 @@ public final class HeroCity {
     // ---------------------------------------------------------------- people
 
     private static AABB area(HeroData data) {
-        return new AABB(data.center()).inflate(HeroCityBuilder.EDGE + 12, 40.0D, HeroCityBuilder.EDGE + 12);
+        return new AABB(data.center()).inflate(HeroCityBuilder.EDGE + 12, 64.0D, HeroCityBuilder.EDGE + 12);
     }
 
     private static void maintain(ServerLevel level, HeroData data, long day) {
@@ -308,14 +319,21 @@ public final class HeroCity {
         }
         // Out on the open roads (never inside a tower - Hulk wouldn't fit back through its doors).
         int headroom = type == HeroType.HULK ? 4 : 2;
-        for (int tries = 0; tries < 12; tries++) {
-            int along = 7 + random.nextInt(17);
-            int across = random.nextInt(5) - 2;
-            BlockPos pos = switch (random.nextInt(3)) {
-                case 0 -> center.offset(across, 1, along);
-                case 1 -> center.offset(along, 1, across);
-                default -> center.offset(-along, 1, across);
-            };
+        int reach = HeroCityBuilder.streetReach();
+        for (int tries = 0; tries < 16; tries++) {
+            int dx = random.nextInt(reach * 2 + 1) - reach;
+            int dz = random.nextInt(reach * 2 + 1) - reach;
+            // Snap one coordinate onto an avenue or a grid street.
+            int[] lines = {0, 36, -36};
+            if (random.nextBoolean()) {
+                dx = lines[random.nextInt(lines.length)] + random.nextInt(5) - 2;
+            } else {
+                dz = lines[random.nextInt(lines.length)] + random.nextInt(5) - 2;
+            }
+            if (!HeroCityBuilder.isStreet(dx, dz)) {
+                continue;
+            }
+            BlockPos pos = center.offset(dx, 1, dz);
             boolean clear = level.canSeeSky(pos);
             for (int up = 0; up < headroom && clear; up++) {
                 clear = level.getBlockState(pos.above(up)).isAir();
@@ -324,7 +342,7 @@ public final class HeroCity {
                 return pos;
             }
         }
-        return center.offset(0, 1, 9);
+        return center.offset(0, 1, 14);
     }
 
     // ---------------------------------------------------------------- standing
@@ -827,7 +845,7 @@ public final class HeroCity {
 
     // ---------------------------------------------------------------- villain attacks
 
-    /** Three waves of villains (illager gangs - later the Chitauri, DESIGN 4-16) storm the city. */
+    /** Three waves of the Chitauri (DESIGN 4-13, 4-16) storm the city. */
     private static void tickStorm(ServerLevel level, HeroData data) {
         HeroData.Storm storm = data.storm;
         if (storm == null) {
@@ -849,7 +867,11 @@ public final class HeroCity {
         if (!level.isPositionEntityTicking(data.center())) {
             return;
         }
-        int fighting = level.getEntitiesOfClass(Mob.class, area(data).inflate(8.0D), mob -> mob.isAlive() && isVillain(mob)).size();
+        List<Mob> invaders = level.getEntitiesOfClass(Mob.class, area(data).inflate(8.0D), mob -> mob.isAlive() && isVillain(mob));
+        int fighting = invaders.size();
+        if (now % 40 == 0) {
+            rallyHeroes(level, data, invaders);
+        }
         if (storm.wave < 3 && (storm.wave == 0 || fighting <= Math.max(1, storm.lastWave / 3) || now - storm.waveAt > WarTuning.WAVE_TIMEOUT)) {
             villainWave(level, data, storm);
         } else if (storm.wave >= 3 && fighting == 0) {
@@ -862,76 +884,103 @@ public final class HeroCity {
         }
     }
 
+    /**
+     * A wave of the Chitauri invasion (after the M13 test - the illager gangs felt like any other raid): a portal
+     * tears open in the sky over one of the avenues, lightning strikes under it, and the wave drops out of it
+     * onto the road - foot soldiers, gunners who keep their distance, and on the last wave a brute (two once
+     * the herald has begun, DESIGN 4-16 전조, when they're also more numerous).
+     */
     private static void villainWave(ServerLevel level, HeroData data, HeroData.Storm storm) {
         storm.wave++;
         storm.waveAt = level.getGameTime();
         RandomSource random = level.random;
-        double angle = random.nextDouble() * Math.PI * 2.0D;
-        int bx = data.x + Mth.floor(Math.cos(angle) * (HeroCityBuilder.EDGE + 6));
-        int bz = data.z + Mth.floor(Math.sin(angle) * (HeroCityBuilder.EDGE + 6));
-        List<EntityType<? extends Mob>> roster = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            roster.add(i % 2 == 0 ? EntityType.PILLAGER : EntityType.VINDICATOR);
+        boolean herald = com.pfkfks.flightsuit.thanos.ThanosSaga.heraldActive(level.getServer());
+        // Over an avenue, part way out: they land on open road, not on a roof.
+        Direction side = Direction.from2DDataValue(random.nextInt(4));
+        int out = 26 + random.nextInt(20);
+        int px = data.x + side.getStepX() * out;
+        int pz = data.z + side.getStepZ() * out;
+        int portalY = data.y + 34;
+        portalAt = new BlockPos(px, portalY, pz);
+        portalUntil = level.getGameTime() + 20L * 12;
+        LightningBolt flash = EntityType.LIGHTNING_BOLT.create(level);
+        if (flash != null) {
+            flash.moveTo(px + 0.5D, data.y + 1, pz + 0.5D);
+            flash.setVisualOnly(true);
+            level.addFreshEntity(flash);
         }
-        if (storm.wave >= 2) {
-            roster.add(EntityType.PILLAGER);
-            roster.add(EntityType.EVOKER);
+        level.playSound(null, portalAt, SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 6.0F, 0.7F);
+        List<com.pfkfks.flightsuit.thanos.ThanosForce> roster = new ArrayList<>();
+        int soldiers = herald ? 8 : 6;
+        for (int i = 0; i < soldiers; i++) {
+            roster.add(com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI);
+        }
+        for (int i = 0; i < storm.wave + 1; i++) {
+            roster.add(com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI_GUNNER);
         }
         if (storm.wave == 3) {
-            roster.add(EntityType.RAVAGER);
-            roster.add(EntityType.EVOKER);
+            roster.add(com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI_BRUTE);
+            if (herald) {
+                roster.add(com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI_BRUTE);
+            }
         }
         int spawned = 0;
-        // The herald (DESIGN 4-16 전조): Chitauri among the villains.
-        if (storm.wave >= 2 && com.pfkfks.flightsuit.thanos.ThanosSaga.heraldActive(level.getServer())) {
-            for (int i = 0; i < storm.wave * 2 - 2; i++) {
-                int x = bx + random.nextInt(9) - 4;
-                int z = bz + random.nextInt(9) - 4;
-                BlockPos at = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
-                com.pfkfks.flightsuit.thanos.ThanosForceEntity chitauri = com.pfkfks.flightsuit.thanos.ThanosForceEntity.create(level,
-                        com.pfkfks.flightsuit.thanos.ThanosForce.CHITAURI, at, 0);
-                chitauri.moveTo(x + 0.5D, at.getY(), z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
-                chitauri.addTag(VILLAIN_TAG);
-                arm(chitauri, data.center());
-                if (level.addFreshEntity(chitauri)) {
-                    spawned++;
-                }
-            }
-            if (storm.wave == 2 && storm.player != null) {
-                ServerPlayer watcher = level.getServer().getPlayerList().getPlayer(storm.player);
-                if (watcher != null) {
-                    watcher.sendSystemMessage(HeroType.CAPTAIN.line("chitauri"));
-                }
-            }
-        }
-        for (EntityType<? extends Mob> type : roster) {
-            Mob mob = type.create(level);
-            if (mob == null) {
-                continue;
-            }
-            int x = bx + random.nextInt(9) - 4;
-            int z = bz + random.nextInt(9) - 4;
-            mob.moveTo(x + 0.5D, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
-            if (type == EntityType.PILLAGER) {
-                mob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
-            } else if (type == EntityType.VINDICATOR) {
-                mob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
-            }
-            mob.addTag(VILLAIN_TAG);
-            mob.setPersistenceRequired();
-            arm(mob, data.center());
-            if (level.addFreshEntity(mob)) {
+        for (com.pfkfks.flightsuit.thanos.ThanosForce type : roster) {
+            // Spread along the avenue (seven wide), up to eight blocks either way of the portal.
+            int along = random.nextInt(17) - 8;
+            int across = random.nextInt(5) - 2;
+            int x = px + (side.getStepX() != 0 ? along : across);
+            int z = pz + (side.getStepZ() != 0 ? along : across);
+            com.pfkfks.flightsuit.thanos.ThanosForceEntity chitauri = com.pfkfks.flightsuit.thanos.ThanosForceEntity.create(level,
+                    type, new BlockPos(x, data.y + 1, z), 0);
+            chitauri.moveTo(x + 0.5D, portalY - random.nextInt(4), z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+            chitauri.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 20 * 15, 0, false, false));
+            chitauri.addTag(VILLAIN_TAG);
+            arm(chitauri, data.center());
+            if (level.addFreshEntity(chitauri)) {
                 spawned++;
             }
         }
         storm.lastWave = spawned;
         data.setDirty();
-        level.playSound(null, new BlockPos(bx, data.y, bz), SoundEvents.BELL_BLOCK, SoundSource.HOSTILE, 3.0F, 0.6F);
         if (storm.player != null) {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(storm.player);
             if (player != null) {
                 player.sendSystemMessage(Component.translatable("hero.flightsuit.villain_wave", storm.wave).withStyle(ChatFormatting.RED));
+                if (storm.wave == 1) {
+                    player.sendSystemMessage(HeroType.CAPTAIN.line("portal"));
+                } else if (storm.wave == 3 && herald) {
+                    player.sendSystemMessage(HeroType.CAPTAIN.line("chitauri"));
+                }
             }
+        }
+    }
+
+    /** The portal's swirl in the sky while a wave is coming through (just for show, not saved). */
+    private static void tickPortal(ServerLevel level) {
+        if (portalAt == null) {
+            return;
+        }
+        long now = level.getGameTime();
+        if (now > portalUntil) {
+            portalAt = null;
+            return;
+        }
+        if (now % 4 != 0) {
+            return;
+        }
+        double turn = (now % 80) / 80.0D * Math.PI * 2.0D;
+        for (int i = 0; i < 24; i++) {
+            double angle = turn + i * Math.PI * 2.0D / 24.0D;
+            double r = 5.0D + (i % 3) * 0.6D;
+            level.sendParticles(i % 2 == 0 ? ParticleTypes.REVERSE_PORTAL : ParticleTypes.SOUL_FIRE_FLAME,
+                    portalAt.getX() + 0.5D + Math.cos(angle) * r, portalAt.getY() + 2.0D, portalAt.getZ() + 0.5D + Math.sin(angle) * r,
+                    2, 0.1D, 0.1D, 0.1D, 0.01D);
+        }
+        level.sendParticles(ParticleTypes.PORTAL, portalAt.getX() + 0.5D, portalAt.getY() + 2.0D, portalAt.getZ() + 0.5D,
+                30, 2.5D, 0.3D, 2.5D, 0.5D);
+        if (now % 40 == 0) {
+            level.playSound(null, portalAt, SoundEvents.PORTAL_AMBIENT, SoundSource.HOSTILE, 4.0F, 0.6F);
         }
     }
 
@@ -958,7 +1007,25 @@ public final class HeroCity {
         arm(mob, data.center());
     }
 
+    /** Every hero in the city is on alert and goes for the nearest invader (or stands down when there are none). */
+    private static void rallyHeroes(ServerLevel level, HeroData data, List<Mob> invaders) {
+        for (CityHeroEntity hero : level.getEntitiesOfClass(CityHeroEntity.class, area(data))) {
+            Mob nearest = null;
+            double best = Double.MAX_VALUE;
+            for (Mob invader : invaders) {
+                double dist = invader.distanceToSqr(hero);
+                // Not the ones still drifting down out of the portal.
+                if (dist < best && invader.onGround()) {
+                    nearest = invader;
+                    best = dist;
+                }
+            }
+            hero.setOnAlert(!invaders.isEmpty(), nearest);
+        }
+    }
+
     private static void clearVillains(ServerLevel level, HeroData data) {
+        rallyHeroes(level, data, List.of());
         for (Mob mob : level.getEntitiesOfClass(Mob.class, area(data).inflate(8.0D), HeroCity::isVillain)) {
             level.sendParticles(ParticleTypes.POOF, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 8, 0.3D, 0.5D, 0.3D, 0.02D);
             mob.discard();

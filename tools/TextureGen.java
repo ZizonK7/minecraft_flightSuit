@@ -53,6 +53,7 @@ public class TextureGen {
         write(card(0xFFF6F4EE, GOLD, RED), new File(entity, "card_blanche.png"));
         write(card(0xFF1A1620, 0xFF8A4FD8, 0xFFF6F4EE), new File(entity, "card_noir.png"));
         write(masterSword(), new File(item, "master_sword.png"));
+        write(mjolnir(), new File(item, "mjolnir.png"));
         write(hallSide(false), new File(block, "village_hall_side.png"));
         write(hallSide(true), new File(block, "village_hall_front.png"));
         write(hallTop(), new File(block, "village_hall_top.png"));
@@ -187,6 +188,47 @@ public class TextureGen {
         px(img, 1, 14, GOLD);
         px(img, 2, 14, GOLD_DARK);
         px(img, 1, 13, GOLD_DARK);
+        return img;
+    }
+
+    /**
+     * Thor's Mjolnir (display item): drawn in coordinates along the diagonal (u up the handle, v across it), so
+     * the head sits square across the end of a handle that runs from the bottom left - steel head with a darker
+     * rim and a rune, a leather-wrapped grip, a steel pommel.
+     */
+    static BufferedImage mjolnir() {
+        BufferedImage img = img(16, 16);
+        int edge = 0xFF262A32, steel = 0xFFB4BCC8, shade = 0xFF7C8594, light = 0xFFE4E9F0, rune = 0xFF56607A;
+        int grip = 0xFF7A4A2C, gripDark = 0xFF4A2A16, band = 0xFFA4ACB8;
+        double r2 = Math.sqrt(2.0D);
+        double handleV = 16.0D / r2;
+        double headU = 4.6D;
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double u = (x - y) / r2;
+                double v = (x + y + 1) / r2;
+                double du = u - headU;
+                double dv = v - handleV;
+                if (Math.abs(du) <= 2.2D && Math.abs(dv) <= 4.3D) {
+                    boolean rim = Math.abs(du) > 1.5D || Math.abs(dv) > 3.6D;
+                    int c = rim ? edge : du > 0.6D ? light : du < -0.6D ? shade : steel;
+                    if (!rim && Math.abs(dv) < 0.8D && Math.abs(du) < 0.8D) {
+                        c = rune;
+                    }
+                    px(img, x, y, c);
+                } else if (Math.abs(dv) <= 0.75D && u >= -9.6D && u < headU - 2.2D) {
+                    int c;
+                    if (u > headU - 3.2D) {
+                        c = band;
+                    } else if (u < -8.4D) {
+                        c = band;
+                    } else {
+                        c = ((int) Math.floor(u * 1.4D)) % 2 == 0 ? grip : gripDark;
+                    }
+                    px(img, x, y, c);
+                }
+            }
+        }
         return img;
     }
 

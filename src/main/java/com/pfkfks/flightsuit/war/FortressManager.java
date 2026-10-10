@@ -30,8 +30,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.TickEvent;
@@ -62,13 +60,7 @@ public final class FortressManager {
     private static final TicketType<ChunkPos> BATTLE_TICKET =
             TicketType.create("flightsuit_battle", Comparator.comparingLong(ChunkPos::toLong), 100);
 
-    private static final class BuildJob {
-        final FortressBuilder plan;
-        int index;
-
-        BuildJob(FortressBuilder plan) {
-            this.plan = plan;
-        }
+    private record BuildJob(FortressBuilder plan, StructureJob work) {
     }
 
     private record Surrender(UUID player, long at) {
@@ -139,18 +131,43 @@ public final class FortressManager {
 
     // ---------------------------------------------------------------- building
 
+    /**
+     * "/flightsuit fort rebuild": puts the fortress up again from its plan the next time someone comes near (an
+     * older, smaller one is cleared away) - on the same ground level, since the old walls would read as hills.
+     */
+    public static boolean rebuild(ServerLevel level, Kingdom kingdom) {
+        WarData data = WarData.get(level.getServer());
+        FortRecord fort = data.fort(kingdom);
+        if (fort == null) {
+            return false;
+        }
+        JOBS.remove(kingdom);
+        fort.built = false;
+        data.setDirty();
+        return true;
+    }
+
     private static void startBuild(ServerLevel level, WarData data, FortRecord fort) {
-        int[] heights = new int[9];
+        if (fort.y != -1000) {
+            // Rebuilding where it stood.
+            FortressBuilder plan = FortressBuilder.plan(fort.kingdom, new BlockPos(fort.x, fort.y, fort.z));
+            JOBS.put(fort.kingdom, new BuildJob(plan, plan.job()));
+            return;
+        }
+        int[] heights = new int[25];
         int i = 0;
-        for (int dx = -16; dx <= 16; dx += 16) {
-            for (int dz = -16; dz <= 16; dz += 16) {
+        for (int dx = -32; dx <= 32; dx += 16) {
+            for (int dz = -32; dz <= 32; dz += 16) {
+                // Generate the column first: an unloaded chunk's heightmap reads as the bottom of the world.
+                level.getChunk((fort.x + dx) >> 4, (fort.z + dz) >> 4);
                 heights[i++] = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, fort.x + dx, fort.z + dz) - 1;
             }
         }
         Arrays.sort(heights);
-        fort.y = Math.max(heights[4], level.getSeaLevel());
+        fort.y = Math.max(heights[12], level.getSeaLevel());
         data.setDirty();
-        JOBS.put(fort.kingdom, new BuildJob(FortressBuilder.plan(fort.kingdom, new BlockPos(fort.x, fort.y, fort.z))));
+        FortressBuilder plan = FortressBuilder.plan(fort.kingdom, new BlockPos(fort.x, fort.y, fort.z));
+        JOBS.put(fort.kingdom, new BuildJob(plan, plan.job()));
     }
 
     private static void tickBuilds(ServerLevel level) {
@@ -160,20 +177,8 @@ public final class FortressManager {
         WarData data = null;
         for (Kingdom kingdom : new ArrayList<>(JOBS.keySet())) {
             BuildJob job = JOBS.get(kingdom);
-            List<FortressBuilder.Placement> placements = job.plan.placements();
-            int end = Math.min(placements.size(), job.index + BUILD_PER_TICK);
-            for (; job.index < end; job.index++) {
-                FortressBuilder.Placement placement = placements.get(job.index);
-                if (placement.fillOnly()) {
-                    BlockState current = level.getBlockState(placement.pos());
-                    if (!current.isAir() && !current.canBeReplaced() && current.getFluidState().isEmpty()) {
-                        continue;
-                    }
-                }
-                level.setBlock(placement.pos(), placement.state(), Block.UPDATE_CLIENTS);
-            }
-            if (job.index >= placements.size()) {
-                stockChests(level, kingdom, job.plan.chests());
+            if (job.work().tick(level, BUILD_PER_TICK)) {
+                stockChests(level, kingdom, job.plan().chests());
                 JOBS.remove(kingdom);
                 if (data == null) {
                     data = WarData.get(level.getServer());
@@ -181,6 +186,7 @@ public final class FortressManager {
                 FortRecord fort = data.fort(kingdom);
                 if (fort != null) {
                     fort.built = true;
+                    fort.layout = FortressBuilder.LAYOUT;
                     data.setDirty();
                 }
             }
@@ -228,6 +234,10 @@ public final class FortressManager {
                 if (distSqr < 144.0D * 144.0D) {
                     anyoneNear = true;
                 }
+            }
+            if (fort.built && fort.layout < FortressBuilder.LAYOUT && anyoneNear && data.battleAt(fort.kingdom) == null) {
+                // Built from an older, smaller plan: put it up again from the current one, where it stands.
+                rebuild(level, fort.kingdom);
             }
             if (!fort.built) {
                 if (anyoneNear && !JOBS.containsKey(fort.kingdom)) {
@@ -310,20 +320,30 @@ public final class FortressManager {
                 BlockPos spot = general.isLeader() ? FortressBuilder.throne(center)
                         : FortressBuilder.palaceSteps(center).offset(random.nextInt(9) - 4, 0, random.nextInt(3));
                 entity.moveTo(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D, 180.0F, 0.0F);
-                level.addFreshEntity(entity);
+                if (level.addFreshEntity(entity) && general.isLeader()) {
+                    entity.sitOnThrone();
+                }
             }
         }
     }
 
-    /** Open ground in the courtyard (between the palace steps and the storehouse, clear of the barracks). */
+    /** Somewhere on the town's roads or its square (open ground, never inside a building). */
     private static BlockPos courtyardSpot(ServerLevel level, BlockPos center, RandomSource random) {
+        int reach = FortressBuilder.WALL - 4;
         for (int tries = 0; tries < 12; tries++) {
-            BlockPos pos = center.offset(random.nextInt(17) - 8, 1, random.nextInt(15) - 4);
+            int along = random.nextInt(reach * 2 + 1) - reach;
+            int across = random.nextInt(5) - 2;
+            boolean northSouth = random.nextBoolean();
+            if (northSouth && along < -14) {
+                // The north road runs into the palace compound - keep them in the town.
+                continue;
+            }
+            BlockPos pos = northSouth ? center.offset(across, 1, along) : center.offset(along, 1, across);
             if (level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir()) {
                 return pos;
             }
         }
-        return center.offset(0, 1, 2);
+        return center.offset(6, 1, 2);
     }
 
     // ---------------------------------------------------------------- losses and the fall

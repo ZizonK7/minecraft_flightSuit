@@ -12,6 +12,7 @@
 
 ## 환경 제약
 
+- 사용자 PC(로컬 세션)에서는 `./gradlew build`와 `./gradlew runServer`(서버 부팅 확인, `run/eula.txt`는 사용자가 동의함)가 된다. git은 `-c safe.directory=<repo>`가 필요 (저장소 소유자가 다른 Windows 계정).
 - 클라우드 세션에서는 `maven.minecraftforge.net`, Mojang, kosmx 메이븐이 네트워크 정책에 막혀 **Gradle 빌드가 안 된다**. 그래서:
   - 기존 코드에 이미 쓰인 API 패턴을 최대한 따른다.
   - 문법은 JDK 파서로만 확인한다 (스크래치패드의 `ParseOnly.java`, `javax.tools`로 `JavacTask.parse()`만 실행).
@@ -23,6 +24,7 @@
 | 패키지 | 내용 |
 |---|---|
 | `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert) |
+| `war/StructureJob` | 큰 건물(성채·히어로 시티) 건설: 부지 정리(기둥 단위) → 배치 목록. 설계 버전(`FortressBuilder.LAYOUT`, `HeroCityBuilder.LAYOUT`)이 저장된 것보다 새로우면 가까이 갈 때 같은 높이에 다시 지음 |
 | `block/` | 슈트 스테이션, 전력 블록, 스테이션 창고(StationStorageBlock/Entity), 보안 센서(SecuritySensorBlock/Entity) |
 | `energy/` | 무선 전력망(PowerGrid, 반경 8), 수치(PowerTuning) |
 | `village/` | 마을 회관(VillageHallBlockEntity: 게시판·창고·경보·아침·수업·출생), 주민(ResidentEntity, 직업 ResidentJob), 건축(VillageWorks/Blueprint/Construction), 피해 장부(DamageLedger), 불 감시(FireWatch), AI(`village/ai`) |
@@ -32,7 +34,7 @@
 | `planet/dbz/` | 드래곤볼 지구: DbzCharacter, DbzFighterEntity(저장 안 함, 역할 NPC/ALLY/BOSS/MINION), DbzLandmarks, DbzEarth(볼거리 건설·NPC 유지·크레이터 전투·밤 재배맨), ScouterItem, SenzuBeanItem, DragonBalls(7개 위치·레이더·신룡·소원 `/shenron`), DragonBallBlock/Item, DragonRadarItem. 스토리 진행은 `planet/PlanetStory` (`/planet`) |
 | `thanos/` | 타노스 사가: InfinityStone(+Item), ThanosForce/ThanosForceEntity(Monster, 저장 안 함, 레이드 태그 `RAID_TAG`), TitanSites, ThanosSaga(타이탄 관리·스톤 기록·레드 스컬·타임 스톤·전조), ThanosRaid(최종전) |
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
-| `entity/` | 동료 슈트, 원격 몸, 미사일·카드 |
+| `entity/` | 동료 슈트, 원격 몸, 미사일·카드, 좌석(SeatEntity: 지도자가 왕좌에 앉음, 저장 안 함) |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면 |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
 
@@ -49,8 +51,8 @@
 ## 진행 상태 (2026-10-10)
 
 - M1~M9: 사용자 인게임 테스트 통과 (M9 마지막 수정 일부 재확인 필요, DESIGN.md 참고).
-- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **구현, 인게임 테스트 전**.
-- 다음: 로드맵 끝. 사용자 테스트 피드백 반영이 우선.
+- M8 추가분 (원격 블록 파괴 + 스테이션 창고), M10 (삼국지 습격), M11 (가족·교육), M12 (성채·외교·원정), M13 (히어로 시티), M14 (배트맨 일당·보안 센서), M15 (우주선·드래곤볼 지구·사이어인 편·드래곤볼), M16 (타이탄·인피니티 스톤·타노스 최종전·Mark 50): **2026-10-10 사용자 인게임 테스트 통과** (차원을 넘는 원격 조종만 확인 전). M13까지의 피드백(성채·도시 확장, 치타우리 침공, 아군 장수, 왕좌, 묠니르, tp)도 반영·테스트 통과.
+- 다음: 테스트 피드백 반영이 우선.
 
 ## 테스트할 때 쓰는 명령 (치트 필요)
 

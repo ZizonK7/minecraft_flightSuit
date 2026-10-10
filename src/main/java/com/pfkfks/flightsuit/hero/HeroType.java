@@ -6,19 +6,21 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.function.Supplier;
+
 /**
  * Who lives in Hero City (DESIGN.md 4-13, M13). Seven heroes - Captain leads, Iron Man helps with the suits -
  * and S.H.I.E.L.D. agents as the city's guards. Each hero has one signature move (CityHeroEntity.customServerAiStep).
  */
 public enum HeroType {
-    CAPTAIN("captain", 160.0D, 9.0D, 0.32D, 1.0F, Items.SHIELD, false),
+    CAPTAIN("captain", 160.0D, 9.0D, 0.32D, 1.0F, () -> Items.SHIELD, false),
     IRON_MAN("iron_man", 150.0D, 8.0D, 0.30D, 1.0F, null, true),
-    THOR("thor", 200.0D, 12.0D, 0.30D, 1.05F, Items.IRON_BLOCK, false),
+    THOR("thor", 200.0D, 12.0D, 0.30D, 1.05F, () -> com.pfkfks.flightsuit.registry.ModItems.MJOLNIR.get(), false),
     HULK("hulk", 360.0D, 16.0D, 0.32D, 1.6F, null, false),
     SPIDER_MAN("spider_man", 110.0D, 7.0D, 0.38D, 0.95F, null, false),
-    BLACK_WIDOW("black_widow", 100.0D, 8.0D, 0.36D, 0.95F, Items.IRON_SWORD, false),
-    HAWKEYE("hawkeye", 100.0D, 6.0D, 0.32D, 1.0F, Items.BOW, true),
-    AGENT("agent", 30.0D, 5.0D, 0.30D, 1.0F, Items.IRON_SWORD, false);
+    BLACK_WIDOW("black_widow", 100.0D, 8.0D, 0.36D, 0.95F, () -> Items.IRON_SWORD, false),
+    HAWKEYE("hawkeye", 100.0D, 6.0D, 0.32D, 1.0F, () -> Items.BOW, true),
+    AGENT("agent", 30.0D, 5.0D, 0.30D, 1.0F, () -> Items.IRON_SWORD, false);
 
     private static final HeroType[] VALUES = values();
 
@@ -27,10 +29,11 @@ public enum HeroType {
     private final double damage;
     private final double speed;
     private final float scale;
-    private final Item held;
+    /** Looked up late: the mod's own items (Mjolnir) aren't registered yet when the enum loads. */
+    private final Supplier<Item> held;
     private final boolean ranged;
 
-    HeroType(String id, double health, double damage, double speed, float scale, Item held, boolean ranged) {
+    HeroType(String id, double health, double damage, double speed, float scale, Supplier<Item> held, boolean ranged) {
         this.id = id;
         this.health = health;
         this.damage = damage;
@@ -62,7 +65,7 @@ public enum HeroType {
     }
 
     public ItemStack held() {
-        return held == null ? ItemStack.EMPTY : new ItemStack(held);
+        return held == null ? ItemStack.EMPTY : new ItemStack(held.get());
     }
 
     /** Fights from a distance (Iron Man's repulsors, Hawkeye's bow). */

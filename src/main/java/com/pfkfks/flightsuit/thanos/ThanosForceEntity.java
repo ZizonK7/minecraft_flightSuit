@@ -101,6 +101,7 @@ public class ThanosForceEntity extends Monster {
             case PROXIMA_MIDNIGHT -> entity.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.TRIDENT));
             case CORVUS_GLAIVE -> entity.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.NETHERITE_SWORD));
             case CULL_OBSIDIAN -> entity.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.NETHERITE_AXE));
+            case CHITAURI_BRUTE -> set(entity, Attributes.KNOCKBACK_RESISTANCE, 1.0D);
             default -> {
             }
         }
@@ -134,7 +135,7 @@ public class ThanosForceEntity extends Monster {
         goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, true) {
             @Override
             public boolean canUse() {
-                return getForce().role() != ThanosForce.Role.NPC && super.canUse();
+                return getForce().role() != ThanosForce.Role.NPC && getForce() != ThanosForce.CHITAURI_GUNNER && super.canUse();
             }
         });
         goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.9D));
@@ -235,6 +236,14 @@ public class ThanosForceEntity extends Monster {
                     blastCooldown = 40 + random.nextInt(20);
                 }
             }
+            case CHITAURI_GUNNER -> gunner(server, target, distance, sees);
+            case CHITAURI_BRUTE -> {
+                if (specialCooldown <= 0 && distance < 4.5D) {
+                    smash(server, 4.5D, 10.0F);
+                    playSound(SoundEvents.RAVAGER_ROAR, 1.5F, 0.7F);
+                    specialCooldown = 100;
+                }
+            }
             case EBONY_MAW -> {
                 if (specialCooldown <= 0 && sees && distance < 18.0D) {
                     // Telekinesis: up into the air, then down hard.
@@ -278,6 +287,29 @@ public class ThanosForceEntity extends Monster {
             default -> {
             }
         }
+    }
+
+    /** A gunner stays at range: closes in until it has a clear shot, backs off when they get close, fires often. */
+    private void gunner(ServerLevel server, LivingEntity target, double distance, boolean sees) {
+        if (blastCooldown <= 0 && sees && distance < 24.0D) {
+            bolt(server, target, 4.0F);
+            blastCooldown = 25 + random.nextInt(15);
+        }
+        if (tickCount % 10 != 0) {
+            return;
+        }
+        if (!sees || distance > 16.0D) {
+            getNavigation().moveTo(target, 1.0D);
+        } else if (distance < 7.0D) {
+            Vec3 away = position().subtract(target.position()).multiply(1.0D, 0.0D, 1.0D);
+            if (away.lengthSqr() > 1.0E-4D) {
+                away = position().add(away.normalize().scale(6.0D));
+                getNavigation().moveTo(away.x, away.y, away.z, 1.2D);
+            }
+        } else {
+            getNavigation().stop();
+        }
+        getLookControl().setLookAt(target, 30.0F, 30.0F);
     }
 
     /** Thanos uses the stones on his gauntlet: Power smash, Space jump, Reality blinding, Time rewind, Mind daze; Soul feeds on his blows. */
@@ -344,7 +376,7 @@ public class ThanosForceEntity extends Monster {
         int points = Math.max(4, (int) (step.length() * 2.0D));
         for (int i = 0; i <= points; i++) {
             Vec3 at = from.add(step.scale(i / (double) points));
-            server.sendParticles(getForce() == ThanosForce.CHITAURI ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.WITCH, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            server.sendParticles(getForce().isChitauri() ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.WITCH, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
         target.hurt(damageSources().mobAttack(this), damage);
         playSound(SoundEvents.FIRECHARGE_USE, 0.8F, 1.7F);
