@@ -8,6 +8,7 @@ import com.pfkfks.flightsuit.suit.EnergyCellItem;
 import com.pfkfks.flightsuit.suit.SuitArmorItem;
 import com.pfkfks.flightsuit.suit.SuitCapsuleItem;
 import com.pfkfks.flightsuit.suit.SuitType;
+import com.pfkfks.flightsuit.suit.SuitWeaponItem;
 import com.pfkfks.flightsuit.thief.BatarangItem;
 import com.pfkfks.flightsuit.thief.GrappleItem;
 import com.pfkfks.flightsuit.thief.SmokeBombItem;
@@ -33,7 +34,7 @@ public final class ModItems {
 
     static {
         for (SuitType type : SuitType.values()) {
-            Rarity rarity = type == SuitType.RYAN_MK1 ? Rarity.UNCOMMON : Rarity.RARE;
+            Rarity rarity = type == SuitType.SCRAP_MK0 ? Rarity.COMMON : type == SuitType.RYAN_MK1 ? Rarity.UNCOMMON : Rarity.RARE;
             Map<EquipmentSlot, RegistryObject<SuitArmorItem>> pieces = new EnumMap<>(EquipmentSlot.class);
             pieces.put(EquipmentSlot.HEAD, piece(type, ArmorItem.Type.HELMET, rarity));
             pieces.put(EquipmentSlot.CHEST, piece(type, ArmorItem.Type.CHESTPLATE, rarity));
@@ -61,12 +62,15 @@ public final class ModItems {
             () -> new CleanerRobotItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<HoverCarCapsuleItem> HOVER_CAR_CAPSULE = ITEMS.register("hover_car_capsule",
             () -> new HoverCarCapsuleItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
-    /** Display only: what the Mark 4 hero swings, drawn in the empty hand (not in the creative tab, no recipe). */
-    public static final RegistryObject<Item> MASTER_SWORD = ITEMS.register("master_sword",
-            () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
-    /** Display only for now: the Mark 5's sword (also drawn sheathed on its back); the sword art comes later. */
-    public static final RegistryObject<Item> TRUNKS_SWORD = ITEMS.register("trunks_sword",
-            () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    /**
+     * M18: the suits' weapons, put in the wearer's hand by the chestplate (SuitWeaponItem - not in the creative tab, no
+     * recipe): the Mark 4's Master Sword, the Mark 5's sword (also drawn sheathed on its back), the Mark 7's staff,
+     * the Mark 6's cannon.
+     */
+    public static final RegistryObject<Item> MASTER_SWORD = weapon(SuitWeaponItem.Kind.MASTER_SWORD);
+    public static final RegistryObject<Item> TRUNKS_SWORD = weapon(SuitWeaponItem.Kind.TRUNKS_SWORD);
+    public static final RegistryObject<Item> BISHOP_STAFF = weapon(SuitWeaponItem.Kind.BISHOP_STAFF);
+    public static final RegistryObject<Item> CANNON = weapon(SuitWeaponItem.Kind.CANNON);
     /** Display only: what Thor carries in Hero City (not in the creative tab, no recipe). */
     public static final RegistryObject<Item> MJOLNIR = ITEMS.register("mjolnir",
             () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
@@ -163,5 +167,9 @@ public final class ModItems {
 
     private static RegistryObject<Item> display(String name) {
         return ITEMS.register(name, () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    }
+
+    private static RegistryObject<Item> weapon(SuitWeaponItem.Kind kind) {
+        return ITEMS.register(kind.id(), () -> new SuitWeaponItem(kind, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     }
 }

@@ -75,7 +75,10 @@ public final class PlanetStory {
         event.getDispatcher().register(Commands.literal("planet").executes(ctx -> {
             objective(ctx.getSource().getPlayerOrException());
             return 1;
-        }).then(Commands.literal("replay")
+        }).then(Commands.literal("buy").then(Commands.literal("hovercar").executes(ctx -> {
+            // M18: the hover car is bought from Bulma for zeni (no recipe in the overworld - the user's call).
+            return buyHoverCar(ctx.getSource().getPlayerOrException()) ? 1 : 0;
+        }))).then(Commands.literal("replay")
                 // M17: watch a cutscene again, on the spot (actors of its own, the story untouched).
                 .then(Commands.argument("id", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                         .suggests((ctx, builder) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
@@ -101,6 +104,52 @@ public final class PlanetStory {
                             .withStyle(ChatFormatting.AQUA));
                     return 1;
                 })));
+    }
+
+    /** What Bulma asks for a hover car capsule (M18). */
+    public static final int HOVER_CAR_PRICE = 500;
+
+    /** "[Buy a hover car capsule]" from Bulma: zeni out of the bag, a charged capsule in; she has to be near. */
+    private static boolean buyHoverCar(ServerPlayer player) {
+        boolean bulmaNear = !player.serverLevel().getEntitiesOfClass(DbzFighterEntity.class, player.getBoundingBox().inflate(8.0D),
+                fighter -> fighter.getCharacter() == DbzCharacter.BULMA && fighter.isAlive()).isEmpty();
+        if (!bulmaNear) {
+            player.sendSystemMessage(Component.translatable("story.flightsuit.bulma_far").withStyle(ChatFormatting.GRAY));
+            return false;
+        }
+        int have = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(ModItems.ZENI.get())) {
+                have += stack.getCount();
+            }
+        }
+        if (have < HOVER_CAR_PRICE) {
+            player.sendSystemMessage(DbzCharacter.BULMA.line("hovercar_short", HOVER_CAR_PRICE, have));
+            return false;
+        }
+        int left = HOVER_CAR_PRICE;
+        for (ItemStack stack : player.getInventory().items) {
+            if (left > 0 && stack.is(ModItems.ZENI.get())) {
+                int take = Math.min(left, stack.getCount());
+                stack.shrink(take);
+                left -= take;
+            }
+        }
+        give(player, com.pfkfks.flightsuit.car.HoverCarCapsuleItem.withEnergy(new ItemStack(ModItems.HOVER_CAR_CAPSULE.get()),
+                com.pfkfks.flightsuit.car.HoverCarEntity.CAPACITY));
+        player.sendSystemMessage(DbzCharacter.BULMA.line("hovercar_sold"));
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_YES, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.1F);
+        return true;
+    }
+
+    /** Bulma's shop line with the [buy] button (after she's been met). */
+    private static void bulmaShop(ServerPlayer player) {
+        player.sendSystemMessage(DbzCharacter.BULMA.line("hovercar_offer", HOVER_CAR_PRICE).copy().append("  ")
+                .append(Component.literal("[").append(Component.translatable("story.flightsuit.button_buy_hovercar", HOVER_CAR_PRICE)).append("]")
+                        .withStyle(style -> style.withColor(ChatFormatting.GOLD).withBold(true)
+                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/planet buy hovercar"))
+                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                        Component.translatable("story.flightsuit.button_buy_hovercar_hint"))))));
     }
 
     public static @Nullable DbzStage dbzStage(ServerPlayer player) {
@@ -325,6 +374,9 @@ public final class PlanetStory {
                         give(player, new ItemStack(ModItems.DRAGON_RADAR.get()));
                         player.sendSystemMessage(who.line("radar"));
                     }
+                }
+                if (dbzStage(player) != null && dbzStage(player).atLeast(DbzStage.MET_BULMA)) {
+                    bulmaShop(player);
                 }
             }
             case GOKU -> {

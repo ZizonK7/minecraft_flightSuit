@@ -156,6 +156,24 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("seat"));
 
+    /** M18: the Cannon Shooter's cannonballs (CannonballEntity). */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.CannonballEntity>> CANNONBALL = ENTITY_TYPES.register("cannonball",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.CannonballEntity>of(com.pfkfks.flightsuit.entity.CannonballEntity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .noSave()
+                    .noSummon()
+                    .clientTrackingRange(8)
+                    .updateInterval(2)
+                    .build("cannonball"));
+
+    /** M18: the Cannon Shooter's monkey (MonkeyEntity) - never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.MonkeyEntity>> MONKEY = ENTITY_TYPES.register("monkey",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.MonkeyEntity>of(com.pfkfks.flightsuit.entity.MonkeyEntity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.8F)
+                    .noSave()
+                    .clientTrackingRange(10)
+                    .build("monkey"));
+
     /** The townsfolk of the fortresses and Hero City (after the M16 test) - never saved. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.town.TownsfolkEntity>> TOWNSFOLK = ENTITY_TYPES.register("townsfolk",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.town.TownsfolkEntity>of(com.pfkfks.flightsuit.town.TownsfolkEntity::new, MobCategory.MISC)

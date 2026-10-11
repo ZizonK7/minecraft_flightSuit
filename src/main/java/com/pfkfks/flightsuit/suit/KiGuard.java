@@ -17,6 +17,9 @@ public final class KiGuard {
         if (SwordArts.cutsKi(victim, from)) {
             return true;
         }
+        if (BishopArts.shellBlocks(victim, shooter, from)) {
+            return true;
+        }
         return victim instanceof com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity fighter && fighter.dodgesBeam(shooter);
     }
 }

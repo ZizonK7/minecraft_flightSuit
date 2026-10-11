@@ -13,8 +13,14 @@ import java.util.Map;
  *        domino-mask faceplate; epaulettes and coat tails stand out on the outer layers
  *   mk4: Hero of Twilight as armour - green cap with a gold brim and drooping tail, triforce chest plate,
  *        chainmail, leather bracers and boots; the Hylian shield and sword hilt ride on the jacket layer's back
+ *   mk0: Scrap Mark 0 (M18) - the cave suit: grey iron plate, copper rivets and pipes, a round boiler door on the
+ *        chest with a coal glow, a slit visor, a chimney stub on the back
+ *   mk6: Cannon Shooter (M18) - white spiky hair under a red bandana, green eyes, a black-and-brown gunner's
+ *        jacket with brass buckles, a bandolier of shells, striped trousers, brown boots
+ *   mk7: Bishop (M18) - long ash-blonde hair under a white mitre with a gold cross, white-and-teal vestments,
+ *        gold trim, a blue gem at the throat, white gloves, dark stockings and white shoes
  *
- * Usage: java tools/SuitSkinGen.java <mk1|mk2|mk3|mk4> <out.png>
+ * Usage: java tools/SuitSkinGen.java <mk0|mk1|mk2|mk3|mk4|mk6|mk7> <out.png>
  *
  * Every face is written as a character map; see the palettes for the letters ('.' = transparent).
  * Front-face columns run from the wearer's right to left (viewer's left to right), side faces run back
@@ -52,6 +58,25 @@ public class SuitSkinGen {
             Map.entry('B', 0xFF2F62C8), Map.entry('A', 0xFFCDD3DC), Map.entry('a', 0xFF8E96A3), Map.entry('R', 0xFFC3383A),
             Map.entry('P', 0xFF4A3DA8), Map.entry('p', 0xFF2D2672));
 
+    private static final Map<Character, Integer> MK0 = Map.ofEntries(
+            Map.entry('G', 0xFF6E7074), Map.entry('g', 0xFF8C8F94), Map.entry('d', 0xFF4A4C50), Map.entry('k', 0xFF2E3034),
+            Map.entry('C', 0xFFC07A3C), Map.entry('c', 0xFFE09A58), Map.entry('b', 0xFF8A5226),
+            Map.entry('F', 0xFFFF9A2A), Map.entry('f', 0xFFFFD36A), Map.entry('K', 0xFF161618),
+            Map.entry('W', 0xFFD8DADC), Map.entry('L', 0xFF5A3A22), Map.entry('l', 0xFF3E2816));
+
+    private static final Map<Character, Integer> MK6 = Map.ofEntries(
+            Map.entry('W', 0xFFF2F2F2), Map.entry('w', 0xFFC8C8CC), Map.entry('R', 0xFFC8312A), Map.entry('r', 0xFF8E1F1A),
+            Map.entry('S', 0xFFE8B98A), Map.entry('s', 0xFFC8976A), Map.entry('E', 0xFF3FB65A), Map.entry('K', 0xFF1C1A1C),
+            Map.entry('B', 0xFF4A3426), Map.entry('b', 0xFF2F2018), Map.entry('J', 0xFF2A2A2E), Map.entry('j', 0xFF3E3E44),
+            Map.entry('Y', 0xFFE2B341), Map.entry('y', 0xFFA87E22), Map.entry('T', 0xFF6B4A32), Map.entry('t', 0xFF4E3524),
+            Map.entry('P', 0xFF8A6A4A), Map.entry('p', 0xFF5E4631), Map.entry('H', 0xFF2E2D34), Map.entry('O', 0xFFD9A05A));
+
+    private static final Map<Character, Integer> MK7 = Map.ofEntries(
+            Map.entry('W', 0xFFF7F6F0), Map.entry('w', 0xFFD9D6CC), Map.entry('T', 0xFF2E8A7E), Map.entry('t', 0xFF1F5F57),
+            Map.entry('Y', 0xFFE2B341), Map.entry('y', 0xFFA87E22), Map.entry('H', 0xFFC9B48E), Map.entry('h', 0xFFA8926C),
+            Map.entry('S', 0xFFF6DCC2), Map.entry('s', 0xFFDDB89A), Map.entry('E', 0xFFD9A52E), Map.entry('K', 0xFF2A2024),
+            Map.entry('B', 0xFF4FB6E8), Map.entry('D', 0xFF34323A), Map.entry('d', 0xFF26242A), Map.entry('G', 0xFFEDEDF2));
+
     private static final BufferedImage SKIN = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
     private static Map<Character, Integer> palette;
 
@@ -72,6 +97,18 @@ public class SuitSkinGen {
             case "mk4" -> {
                 palette = MK4;
                 drawMk4();
+            }
+            case "mk0" -> {
+                palette = MK0;
+                drawMk0();
+            }
+            case "mk6" -> {
+                palette = MK6;
+                drawMk6();
+            }
+            case "mk7" -> {
+                palette = MK7;
+                drawMk7();
             }
             default -> throw new IllegalArgumentException("unknown suit " + args[0]);
         }
@@ -583,6 +620,323 @@ public class SuitSkinGen {
             face(u + 8, v, rows(4, "llll"));
             for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, leg);
             for (int i = 0; i < 4; i++) face(l[2] + 4 * i, l[3] + 4, cuff);
+        }
+    }
+
+    // ---- Mark 0: the scrap suit (M18) ----
+
+    private static void drawMk0() {
+        // Helmet: a riveted iron bucket with a slit visor and a copper seam, a bolt on each side.
+        face(8, 0,
+                "dGGGGGGd",
+                "GgGGGGgG",
+                "GGGCCGGG",
+                "GGCCCCGG",
+                "GGCCCCGG",
+                "GGGCCGGG",
+                "GgGGGGgG",
+                "dGGGGGGd");
+        face(16, 0, rows(8, "dddddddd"));
+        String[] side = {
+                "dGGGGGGd",
+                "GGGGGGGG",
+                "GGcCGGGG",
+                "GCCCCGGG",
+                "GCCCCGGG",
+                "GGcCGGGG",
+                "GGGGGGGG",
+                "dddddddd"};
+        face(0, 8, side);
+        face(16, 8, mirror(side));
+        face(8, 8, // front: the visor slit glows faintly, a copper mouth grille
+                "dGGGGGGd",
+                "GgGGGGgG",
+                "GGGGGGGG",
+                "GKffffKG",
+                "GGGGGGGG",
+                "GGCbCbCG",
+                "GGCbCbCG",
+                "dGGGGGGd");
+        face(24, 8,
+                "dGGGGGGd",
+                "GgGGGGgG",
+                "GGGGGGGG",
+                "GGdGGdGG",
+                "GGdGGdGG",
+                "GGGGGGGG",
+                "GgGGGGgG",
+                "dGGGGGGd");
+        // Hat layer: copper rivets and a pipe along the top.
+        face(40, 0, "........", "..CCCC..", "........");
+        face(40, 8, "g......g", "........", "........", "........", "........", "........", "........", "g......g");
+        face(32, 8, ".......g", "........", "........", "........", "........", "........", "........", ".......g");
+        face(48, 8, "g.......", "........", "........", "........", "........", "........", "........", "g.......");
+
+        // Torso: iron plate, the round boiler door with a coal glow in the middle, copper pipes down the sides.
+        face(20, 16, "dGGGGGGd", "GGGCCGGG", "GGGCCGGG", "dGGGGGGd");
+        face(28, 16, rows(4, "dddddddd"));
+        String[] bodySide = {"CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "CGGd", "dddd", "dddd"};
+        face(16, 20, bodySide);
+        face(28, 20, mirror(bodySide));
+        face(20, 20,
+                "dGgGGgGd",
+                "GGGGGGGG",
+                "GGCCCCGG",
+                "GCbFFbCG",
+                "GCFffFCG",
+                "GCFffFCG",
+                "GCbFFbCG",
+                "GGCCCCGG",
+                "GGGGGGGG",
+                "dGGGGGGd",
+                "LLLLLLLL",
+                "llllllll");
+        face(32, 20, // back: the chimney stub between the shoulders, a copper tank
+                "dGgGGgGd",
+                "GGGkkGGG",
+                "GGGkkGGG",
+                "GCCCCCCG",
+                "GCccccCG",
+                "GCccccCG",
+                "GCccccCG",
+                "GCCCCCCG",
+                "GGGGGGGG",
+                "dGGGGGGd",
+                "LLLLLLLL",
+                "llllllll");
+        // Jacket layer: the chimney stands out of the back, the belt buckle.
+        face(32, 36, "...kk...", "...KK...", "........", "........", "........", "........", "........", "........", "........", "........", "........", "........");
+        face(20, 36, "........", "........", "........", "........", "........", "........", "........", "........", "........", "........", "...CC...", "........");
+
+        // Arms: plate with copper elbow joints and rivets, dark gloves.
+        String[] arm = {"GGGG", "GgGG", "GGGG", "dGGd", "CCCC", "cCcC", "GGGG", "GGgG", "GGGG", "dddd", "kkkk", "kkkk"};
+        for (int[] uv : new int[][]{{40, 16}, {32, 48}}) {
+            int u = uv[0], v = uv[1];
+            face(u + 4, v, rows(4, "GGGG"));
+            face(u + 8, v, rows(4, "kkkk"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, arm);
+        }
+        // Legs: plate thighs, copper knee pipes, heavy iron boots with a copper toe.
+        String[] leg = {"GGGG", "GgGG", "GGGG", "dGGd", "CCCC", "GGGG", "GGGG", "dddd", "dGGd", "GGGG", "GGGG", "CCCC"};
+        for (int[] l : new int[][]{{0, 16}, {16, 48}}) {
+            int u = l[0], v = l[1];
+            face(u + 4, v, rows(4, "GGGG"));
+            face(u + 8, v, rows(4, "dddd"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, leg);
+        }
+    }
+
+    // ---- Mark 6: Cannon Shooter (M18) ----
+
+    private static void drawMk6() {
+        // Helmet: spiky white hair with a red bandana knotted at the back, green eyes, an earring.
+        face(8, 0,
+                "wWWWWWWw",
+                "WWwWWWwW",
+                "WWWWWWWW",
+                "WwWWWWWW",
+                "WWWWWwWW",
+                "WWWWWWWW",
+                "RRRRRRRR",
+                "RrRRRRrR");
+        face(16, 0, rows(8, "KKKKKKKK"));
+        String[] side = {
+                "WWwWWWWW",
+                "WWWWWwWW",
+                "RRRRRRRR",
+                "rRRRRRRR",
+                "SSSSsSSS",
+                "SSSSSSSS",
+                "SYSSSSSS",
+                "SSSsSSSS"};
+        face(0, 8, side);
+        face(16, 8, mirror(side));
+        face(8, 8,
+                "WWwWWwWW",
+                "wWWWWWWw",
+                "RRRRRRRR",
+                "RrRRRRrR",
+                "SEKSSKES",
+                "SSSSSSSS",
+                "SsSKKSsS",
+                "SSSSSSSS");
+        face(24, 8,
+                "WWWwWWWW",
+                "WwWWWWwW",
+                "RRRRRRRR",
+                "RRRrrRRR",
+                "SSRrrRSS",
+                "SSSrrSSS",
+                "SSSSSSSS",
+                "SSSSSSSS");
+        // Hat layer: hair spikes stand up and out, the bandana's tails hang down the back.
+        face(40, 0, "..WWWW..", ".WWWWWW.", "WWWWWWWW");
+        face(40, 8, "W.WWWW.W", "WWWWWWWW", "........", "........", "........", "........", "........", "........");
+        face(32, 8, "WWW.....", "WWWWW...", "........", "........", "........", "........", "........", "........");
+        face(48, 8, ".....WWW", "...WWWWW", "........", "........", "........", "........", "........", "........");
+        face(56, 8, "WW....WW", "WWWWWWWW", "........", "...rr...", "..r..r..", "..r..r..", ".r....r.", "........");
+
+        // Torso: black jacket open over a brown shirt, a brass-buckled bandolier of shells across the chest.
+        face(20, 16, "JJJJJJJJ", "JJSSSSJJ", "JJSSSSJJ", "JJJJJJJJ");
+        face(28, 16, rows(4, "bbbbbbbb"));
+        String[] bodySide = {"JJJJ", "JjJJ", "JJJJ", "JJjJ", "JJJJ", "JJJJ", "JjJJ", "JJJJ", "TTTT", "YYYY", "TTTT", "tttt"};
+        face(16, 20, bodySide);
+        face(28, 20, mirror(bodySide));
+        face(20, 20,
+                "JJRRRRJJ",
+                "JJTTTTJJ",
+                "JOTTTTJJ",
+                "JJOTTTJJ",
+                "JJJOTTJJ",
+                "JJJJOTJJ",
+                "JJJJJOJJ",
+                "JjJJJJjJ",
+                "TTTTTTTT",
+                "YYTYYTYY",
+                "TTTTTTTT",
+                "tttttttt");
+        face(32, 20, // back: the bandolier crosses, a brass plate
+                "JJRRRRJJ",
+                "JJJJJJJJ",
+                "JJJJJOJJ",
+                "JJJJOJJJ",
+                "JJJOJJJJ",
+                "JJOJJJJJ",
+                "JOJJJJJJ",
+                "JjJJJJjJ",
+                "TTTTTTTT",
+                "YYYYYYYY",
+                "TTTTTTTT",
+                "tttttttt");
+        // Jacket layer: the collar flares, the belt pouch.
+        face(20, 36, "JJ....JJ", "........", "........", "........", "........", "........", "........", "........", "........", "...PPP..", "...ppp..", "........");
+        face(32, 36, "JJ....JJ", "........", "........", "........", "........", "........", "........", "........", "........", "........", "........", "........");
+        String[] skirtSide = {"J...", "....", "....", "....", "....", "....", "....", "....", "....", "....", "....", "...."};
+        face(16, 36, skirtSide);
+        face(28, 36, mirror(skirtSide));
+
+        // Arms: black sleeves rolled above brown leather bracers with brass studs, skin at the elbow, gloves.
+        String[] arm = {"JJJJ", "JjJJ", "JJJJ", "JJjJ", "JJJJ", "SSSS", "SSsS", "TTTT", "TYTT", "TTTT", "tttt", "PPPP"};
+        for (int[] uv : new int[][]{{40, 16}, {32, 48}}) {
+            int u = uv[0], v = uv[1];
+            face(u + 4, v, rows(4, "JJJJ"));
+            face(u + 8, v, rows(4, "PPPP"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, arm);
+        }
+        // Legs: striped brown trousers, brown boots with a buckle.
+        String[] leg = {"BbBb", "bBbB", "BbBb", "bBbB", "BbBb", "bBbB", "BbBb", "bBbB", "TTTT", "TYTT", "TTTT", "tttt"};
+        for (int[] l : new int[][]{{0, 16}, {16, 48}}) {
+            int u = l[0], v = l[1];
+            face(u + 4, v, rows(4, "BbBb"));
+            face(u + 8, v, rows(4, "tttt"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, leg);
+        }
+    }
+
+    // ---- Mark 7: Bishop (M18) ----
+
+    private static void drawMk7() {
+        // Helmet: long ash-blonde hair under a white mitre with a gold cross and a blue gem, amber eyes.
+        face(8, 0,
+                "wWWWWWWw",
+                "WWWYYWWW",
+                "WWWYYWWW",
+                "WYYYYYYW",
+                "WWWYYWWW",
+                "WWWYYWWW",
+                "WWWWWWWW",
+                "HHHHHHHH");
+        face(16, 0, rows(8, "HHHHHHHH"));
+        String[] side = {
+                "WWWWWWWW",
+                "WWWWWWWW",
+                "HHHHHHHH",
+                "HhHHHHHH",
+                "HHHHSSSS",
+                "HHHHSSSS",
+                "HHHhSSSS",
+                "HHHHSSSS"};
+        face(0, 8, side);
+        face(16, 8, mirror(side));
+        face(8, 8,
+                "WWWYYWWW",
+                "WWWBBWWW",
+                "HHHHHHHH",
+                "HhHHHHhH",
+                "SEKSSKES",
+                "SSSSSSSS",
+                "SsSSSSsS",
+                "SSSsSSSS");
+        face(24, 8,
+                "WWWWWWWW",
+                "WWWWWWWW",
+                "HHHHHHHH",
+                "HHhHHhHH",
+                "HHHHHHHH",
+                "HhHHHHhH",
+                "HHHHHHHH",
+                "HHHHHhHH");
+        // Hat layer: the mitre rises above the head (gold band), the hair falls long down the back and sides.
+        face(40, 0, "........", "..WWWW..", "..WWWW..");
+        face(40, 8, "..WYYW..", "..WWWW..", "........", "........", "........", "........", "........", "........");
+        face(32, 8, "....WW..", "....WW..", "........", "........", "....HH..", "....HH..", "....HH..", "....HH..");
+        face(48, 8, "..WW....", "..WW....", "........", "........", "..HH....", "..HH....", "..HH....", "..HH....");
+        face(56, 8, "..WWWW..", "..WWWW..", "HHHHHHHH", "HHHHHHHH", "HhHHHHhH", "HHHHHHHH", "HHHhHHHH", "HHHHHHHH");
+
+        // Torso: white vestments with a teal stole and gold trim, a blue gem at the throat, a gold belt.
+        face(20, 16, "WWWWWWWW", "WWWTTWWW", "WWWTTWWW", "WWWWWWWW");
+        face(28, 16, rows(4, "wwwwwwww"));
+        String[] bodySide = {"WWWW", "WwWW", "WWWW", "WWWW", "WwWW", "WWWW", "WWWW", "WWWW", "YYYY", "WWWW", "WWWW", "wwww"};
+        face(16, 20, bodySide);
+        face(28, 20, mirror(bodySide));
+        face(20, 20,
+                "WWWBBWWW",
+                "WTTWWTTW",
+                "WTtWWtTW",
+                "WTTWWTTW",
+                "WTtWWtTW",
+                "WTTWWTTW",
+                "WTYWWYTW",
+                "WWWWWWWW",
+                "YYYEEYYY",
+                "WWWWWWWW",
+                "WWWWWWWW",
+                "wwwwwwww");
+        face(32, 20, // back: the stole continues, a gold cross
+                "WWWWWWWW",
+                "WWWYYWWW",
+                "WWYYYYWW",
+                "WWWYYWWW",
+                "WWWYYWWW",
+                "WWWWWWWW",
+                "WwWWWWwW",
+                "WWWWWWWW",
+                "YYYYYYYY",
+                "WWWWWWWW",
+                "WWWWWWWW",
+                "wwwwwwww");
+        // Jacket layer: the cape's shoulders stand out and the skirt flares.
+        face(20, 36, "TT....TT", "........", "........", "........", "........", "........", "........", "........", "........", "WWWWWWWW", "wWWWWWWw", "wwwwwwww");
+        face(32, 36, "TTTTTTTT", "TTTTTTTT", "tTTTTTTt", "tTTTTTTt", "tTTTTTTt", ".tTTTTt.", ".tTTTTt.", "..tTTt..", "........", "WWWWWWWW", "wWWWWWWw", "wwwwwwww");
+        String[] skirtSide = {"T...", "....", "....", "....", "....", "....", "....", "....", "....", "WWWW", "WWWW", "wwww"};
+        face(16, 36, skirtSide);
+        face(28, 36, mirror(skirtSide));
+
+        // Arms: white sleeves with teal cuffs and gold bands, white gloves.
+        String[] arm = {"WWWW", "WwWW", "WWWW", "WWWW", "WwWW", "WWWW", "WWWW", "YYYY", "TTTT", "TtTT", "GGGG", "GGGG"};
+        for (int[] uv : new int[][]{{40, 16}, {32, 48}}) {
+            int u = uv[0], v = uv[1];
+            face(u + 4, v, rows(4, "WWWW"));
+            face(u + 8, v, rows(4, "GGGG"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, arm);
+        }
+        // Legs: the white skirt over dark stockings, white shoes with a gold buckle.
+        String[] leg = {"WWWW", "WWWW", "WWWW", "wwww", "DDDD", "DdDD", "DDDD", "DDdD", "DDDD", "GGGG", "GYGG", "GGGG"};
+        for (int[] l : new int[][]{{0, 16}, {16, 48}}) {
+            int u = l[0], v = l[1];
+            face(u + 4, v, rows(4, "WWWW"));
+            face(u + 8, v, rows(4, "GGGG"));
+            for (int i = 0; i < 4; i++) face(u + 4 * i, v + 4, leg);
         }
     }
 

@@ -11,6 +11,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 public enum SuitArmorMaterial implements ArmorMaterial {
     // The starter suit (survival balance check after the M16 test): between iron (15) and diamond (20) - it's
     // cheaper than diamond armour and flies; the later Marks are the step up.
+    /** M18 Scrap Mark 0: iron plate over a boiler - iron armour's protection, worn down quickly, mended with iron. */
+    MARK_0("flightsuit:mark_0", 18, 2, 6, 5, 2, 8, 0.0F, 0.0F),
     MARK_1("flightsuit:mark_1", 33, 2, 7, 5, 2, 10, 1.0F, 0.0F),
     /** Stealth: lighter plating, a little less protection. */
     MARK_2("flightsuit:mark_2", 28, 2, 7, 5, 2, 12, 1.0F, 0.0F),
@@ -22,8 +24,10 @@ public enum SuitArmorMaterial implements ArmorMaterial {
     MARK_5("flightsuit:mark_5", 30, 3, 7, 6, 3, 14, 1.5F, 0.0F),
     /** Hulkbuster Mark 44: the heaviest plate there is - and it doesn't get knocked about. */
     MARK_44("flightsuit:mark_44", 45, 4, 10, 8, 4, 10, 4.0F, 0.4F),
-    /** Nanotech Mark 50 (the reward for beating Thanos): the toughest plating, and it repairs itself (NanotechHandler). */
-    MARK_50("flightsuit:mark_50", 40, 4, 9, 7, 4, 15, 3.0F, 0.15F),
+    /** M18 Cannon Shooter Mark 6: a gunner's plate - sturdier than the Mark 1, slower to wear. */
+    MARK_6("flightsuit:mark_6", 34, 3, 8, 6, 3, 12, 2.0F, 0.1F),
+    /** M18 Bishop Mark 7: light vestments - quick, not tough; it keeps itself alive by healing. */
+    MARK_7("flightsuit:mark_7", 28, 2, 7, 5, 2, 18, 1.0F, 0.0F),
     /** EDITH glasses: no protection, zero durability = unbreakable. */
     EDITH("flightsuit:edith", 0, 0, 0, 0, 0, 15, 0.0F, 0.0F);
 

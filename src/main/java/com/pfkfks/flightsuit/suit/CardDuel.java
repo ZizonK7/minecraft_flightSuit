@@ -29,7 +29,7 @@ import java.util.UUID;
 /**
  * Mark 3's C: the phantom pulls the aimed monster into a card duel - a hand of blackjack (the client shows it
  * as a 2D stage the two are dragged into; in the world they stand frozen in a whirl of cards). Win and the
- * monster dies on the spot (a boss loses a big share of its health instead); lose and you're left at one
+ * monster dies on the spot (bosses too, since M18 - the user's call); lose and you're left at one
  * heart with the suit badly worn. The server deals and decides; the client only says what it wants to do.
  *
  * The phantom is a card sharp, so the odds lean their way:
@@ -231,10 +231,11 @@ public final class CardDuel {
             case WIN -> {
                 // The cards come down on it.
                 opponent.invulnerableTime = 0;
-                float damage = duel.boss ? opponent.getMaxHealth() * SuitTuning.DUEL_BOSS_DAMAGE : Float.MAX_VALUE;
-                opponent.hurt(player.damageSources().playerAttack(player), damage);
-                if (!duel.boss && opponent.isAlive()) {
-                    opponent.kill();
+                opponent.hurt(player.damageSources().playerAttack(player), Float.MAX_VALUE);
+                if (opponent.isAlive()) {
+                    // Guards, damage caps and the like: the cards still come down.
+                    opponent.setHealth(0.0F);
+                    opponent.die(player.damageSources().playerAttack(player));
                 }
                 Vec3 at = opponent.getBoundingBox().getCenter();
                 level.sendParticles(ParticleTypes.ENCHANTED_HIT, at.x, at.y, at.z, 40, 0.5D, 0.6D, 0.5D, 0.4D);

@@ -105,60 +105,72 @@ public final class SuitHudOverlay implements IGuiOverlay {
         }
     }
 
-    /** Mark 3 (M17): the stolen card on B - its name and cooldown, or the empty card. */
+    /** The third skill (B): the phantom's stolen card and its cooldown, any other suit's B move. */
     private static Component stolenLine(LocalPlayer player) {
-        if (SuitWeapons.armedClass(player) != SuitClass.PHANTOM) {
+        SuitClass suitClass = SuitWeapons.armedClass(player);
+        if (suitClass == null) {
             return null;
         }
-        if (ClientWeapons.stolen.isEmpty()) {
-            return Component.translatable("hud.flightsuit.weapon.stolen_empty");
+        if (suitClass == SuitClass.PHANTOM) {
+            if (ClientWeapons.stolen.isEmpty()) {
+                return Component.translatable("hud.flightsuit.weapon.stolen_empty");
+            }
+            com.pfkfks.flightsuit.suit.StolenSkill skill = com.pfkfks.flightsuit.suit.StolenSkill.byName(ClientWeapons.stolen);
+            return skill == null ? null : Component.translatable("hud.flightsuit.weapon.stolen",
+                    Component.translatable("skill.flightsuit.stolen." + skill.id()), ready(ClientWeapons.stolenReady));
         }
-        com.pfkfks.flightsuit.suit.StolenSkill skill = com.pfkfks.flightsuit.suit.StolenSkill.byName(ClientWeapons.stolen);
-        return skill == null ? null : Component.translatable("hud.flightsuit.weapon.stolen",
-                Component.translatable("skill.flightsuit.stolen." + skill.id()), ready(ClientWeapons.stolenReady));
+        Component line = Component.translatable("hud.flightsuit.weapon.b." + suitClass.name().toLowerCase(java.util.Locale.ROOT), ready(ClientWeapons.skill3Ready));
+        float buff = ClientWeapons.secondsLeft(ClientWeapons.buffUntil);
+        if (buff > 0.0F) {
+            // Overdrive, the Triforce, x-ray, Heaven's Door: how long it has left.
+            line = line.copy().append(Component.literal(String.format(" ◆%.0fs", buff)));
+        }
+        if (ClientWeapons.armourMode) {
+            line = line.copy().append(" ").append(Component.translatable("hud.flightsuit.weapon.armour_on"));
+        }
+        return line;
     }
 
     /** The ultimate (V): ready / cooldown, or Super Saiyan on / locked out after running dry. */
     private static Component ultimate(SuitClass suitClass) {
-        if (suitClass == SuitClass.SWORDSMAN) {
-            if (ClientWeapons.superSaiyan) {
-                return Component.translatable("hud.flightsuit.weapon.ssj_on");
-            }
-            float locked = ClientWeapons.secondsLeft(ClientWeapons.ssjLockedUntil);
-            return Component.translatable("hud.flightsuit.weapon.ultimate", locked > 0.0F
-                    ? Component.literal(String.format("%.1fs", locked)) : Component.translatable("hud.flightsuit.weapon.ready"));
+        if (suitClass == SuitClass.SWORDSMAN && ClientWeapons.superSaiyan) {
+            return Component.translatable("hud.flightsuit.weapon.ssj_on");
+        }
+        float locked = ClientWeapons.secondsLeft(ClientWeapons.ssjLockedUntil);
+        if (suitClass == SuitClass.SWORDSMAN && locked > 0.0F) {
+            return Component.translatable("hud.flightsuit.weapon.ultimate", Component.literal(String.format("%.0fs", locked)));
         }
         return Component.translatable("hud.flightsuit.weapon.ultimate", ready(ClientWeapons.ultReady));
     }
 
-    /** The class's weapons at a glance: skill cooldowns, the phantom's card gauge and spade buff, the hero's full-health edge. */
+    /** The class's weapons at a glance: X and C cooldowns, the phantom's card gauge and spade buff, the hero's full-health edge, V. */
     private static Component weaponLine(LocalPlayer player) {
         SuitClass suitClass = SuitWeapons.armedClass(player);
         if (suitClass == null) {
             return null;
         }
-        return switch (suitClass) {
-            case STANDARD -> Component.translatable("hud.flightsuit.weapon.missiles", ready(ClientWeapons.skill1Ready),
-                    ready(ClientWeapons.skill2Ready));
-            case STEALTH -> Component.translatable("hud.flightsuit.weapon.cryo", ready(ClientWeapons.skill2Ready));
+        Component line = switch (suitClass) {
+            case SCRAP -> Component.translatable("hud.flightsuit.weapon.scrap", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case STANDARD -> Component.translatable("hud.flightsuit.weapon.missiles", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case STEALTH -> Component.translatable("hud.flightsuit.weapon.cryo", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
             case PHANTOM -> {
                 float spade = ClientWeapons.secondsLeft(ClientWeapons.spadeUntil);
-                Component line = Component.translatable("hud.flightsuit.weapon.cards", ClientWeapons.gauge, SuitTuning.JUDGMENT_GAUGE,
-                        ready(ClientWeapons.skill2Ready)).copy().append(" ").append(ultimate(suitClass));
-                yield spade > 0.0F ? line.copy().append(Component.literal(String.format(" ♠%.0fs", spade))) : line;
+                Component cards = Component.translatable("hud.flightsuit.weapon.cards", ClientWeapons.gauge, SuitTuning.JUDGMENT_GAUGE,
+                        ready(ClientWeapons.skill2Ready));
+                yield spade > 0.0F ? cards.copy().append(Component.literal(String.format(" ♠%.0fs", spade))) : cards;
             }
             case HERO -> {
-                Component line = Component.translatable("hud.flightsuit.weapon.hero", ready(ClientWeapons.skill1Ready),
-                        ready(ClientWeapons.skill2Ready));
-                // Full health: the sword looses beams and X becomes the great spin.
-                yield player.getHealth() >= player.getMaxHealth() - 0.01F
-                        ? line.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : line;
+                Component hero = Component.translatable("hud.flightsuit.weapon.hero", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+                // Full health (or the Triforce): the sword looses beams and X becomes the great spin.
+                yield player.getHealth() >= player.getMaxHealth() - 0.01F || ClientWeapons.secondsLeft(ClientWeapons.buffUntil) > 0.0F
+                        ? hero.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : hero;
             }
-            case HULKBUSTER -> Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready),
-                    ready(ClientWeapons.skill2Ready));
-            case SWORDSMAN -> Component.translatable("hud.flightsuit.weapon.swordsman", ready(ClientWeapons.skill1Ready),
-                    ready(ClientWeapons.skill2Ready)).copy().append(" ").append(ultimate(suitClass));
+            case HULKBUSTER -> Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case SWORDSMAN -> Component.translatable("hud.flightsuit.weapon.swordsman", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case CANNONEER -> Component.translatable("hud.flightsuit.weapon.cannoneer", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case BISHOP -> Component.translatable("hud.flightsuit.weapon.bishop", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
         };
+        return line.copy().append(" ").append(ultimate(suitClass));
     }
 
     private static Component ready(long readyTick) {

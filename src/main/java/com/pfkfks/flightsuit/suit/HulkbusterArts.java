@@ -25,6 +25,10 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Predicate;
+import com.pfkfks.flightsuit.fx.KiFx;
+import com.pfkfks.flightsuit.network.ShieldStateS2CPacket;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.Blocks;
 
 /**
  * Mark 44, the Hulkbuster (M17): the palm repulsor is gone - it fights with its fists.
@@ -64,9 +68,231 @@ public final class HulkbusterArts {
         }
         tickPiston(player, state);
         tickSlam(player, state);
+        tickArmour(player, state);
+        tickHammer(player, state);
         if (player.tickCount % 2 == 0 && wearsFullSet(player)) {
             shoveSmallMobs(player);
         }
+    }
+
+    // ---------------------------------------------------------------- armour mode (Z held, M18)
+
+    /** Dug in: rooted, most of what hits it shrugged off, and a shockwave when it lets go. */
+    static void setArmourMode(ServerPlayer player, SuitWeapons.State state, boolean on) {
+        if (state.armourMode == on) {
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        if (on && SuitEnergy.available(player, EquipmentSlot.CHEST) < SuitTuning.ARMOUR_MODE_DRAIN * 10) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.armourMode = on;
+        SuitWeapons.sendStatus(player, state);
+        if (on) {
+            level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 1.0F, 0.6F);
+            level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 0.6F, 0.7F);
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.HULK_SLAM, 0));
+            ModNetwork.sendToTrackingAndSelf(player, new ShieldStateS2CPacket(player.getId(), true));
+            player.displayClientMessage(Component.translatable("message.flightsuit.armour_on"), true);
+        } else {
+            ModNetwork.sendToTrackingAndSelf(player, new ShieldStateS2CPacket(player.getId(), false));
+            // Letting go: the plates slam back and the ground jumps.
+            int hit = slam(level, player, SuitTuning.ARMOUR_MODE_WAVE_RADIUS, SuitTuning.ARMOUR_MODE_WAVE_DAMAGE,
+                    entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                            && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
+            KiFx.burst(level, player.position().add(0.0D, 0.2D, 0.0D), KiFx.RED, (float) SuitTuning.ARMOUR_MODE_WAVE_RADIUS, 10, KiFx.RING);
+            level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 1.0F, 0.6F);
+            level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.7F, 1.2F);
+            if (hit > 0) {
+                player.displayClientMessage(Component.translatable("message.flightsuit.armour_wave", hit), true);
+            }
+        }
+    }
+
+    private static void tickArmour(ServerPlayer player, SuitWeapons.State state) {
+        if (!state.armourMode) {
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.ARMOUR_MODE_DRAIN)) {
+            setArmourMode(player, state, false);
+            return;
+        }
+        player.setDeltaMovement(0.0D, Math.min(0.0D, player.getDeltaMovement().y), 0.0D);
+        player.hurtMarked = true;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 6, false, false));
+        if (player.getAbilities().flying) {
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+        }
+        if (player.tickCount % 10 == 0) {
+            ServerLevel level = player.serverLevel();
+            level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0D, player.getZ(), 3, 0.5D, 0.6D, 0.5D, 0.01D);
+        }
+    }
+
+    /** True while dug in (SuitServerEvents keeps it on the ground, the damage hook shrugs hits off). */
+    public static boolean inArmourMode(ServerPlayer player) {
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        return state != null && state.armourMode;
+    }
+
+    // ---------------------------------------------------------------- jackhammer (V, M18)
+
+    /** Grabs the aimed foe and pounds it ten times where it stands - the boss-killer. */
+    static void jackhammer(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.ultReady || state.hammerTarget != null || state.pistonTarget != null) {
+            SuitWeapons.cooldownMessage(player, state.ultReady - now);
+            return;
+        }
+        LivingEntity target = SuitWeapons.aim(player, SuitTuning.JACKHAMMER_RANGE).target();
+        if (target == null) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.no_target"), true);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.JACKHAMMER_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.ultReady = now + SuitTuning.JACKHAMMER_COOLDOWN_TICKS;
+        state.hammerTarget = target;
+        state.hammerHits = 0;
+        state.hammerTicks = 0;
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        level.playSound(null, player.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 1.0F, 0.4F);
+        level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_PLACE, SoundSource.PLAYERS, 0.8F, 0.5F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.jackhammer", target.getDisplayName()), true);
+    }
+
+    private static void tickHammer(ServerPlayer player, SuitWeapons.State state) {
+        LivingEntity target = state.hammerTarget;
+        if (target == null) {
+            return;
+        }
+        if (!target.isAlive() || target.level() != player.level() || target.distanceTo(player) > SuitTuning.JACKHAMMER_RANGE + 4.0D) {
+            state.hammerTarget = null;
+            return;
+        }
+        state.hammerTicks++;
+        ServerLevel level = player.serverLevel();
+        // Both rooted: the wearer braced, the victim held in front of the fists (big things stay where they are).
+        player.setDeltaMovement(0.0D, Math.min(0.0D, player.getDeltaMovement().y), 0.0D);
+        player.hurtMarked = true;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 6, false, false));
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+        double reach = player.getBbWidth() / 2.0D + target.getBbWidth() / 2.0D + 0.6D;
+        if (target.getBbWidth() < 2.5D) {
+            Vec3 want = player.position().add(face.scale(reach));
+            Vec3 pull = want.subtract(target.position());
+            target.setDeltaMovement(pull.scale(0.5D).add(0.0D, 0.02D, 0.0D));
+            target.hurtMarked = true;
+        }
+        if (!Stasis.hold(level, target, 8, false)) {
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 8, 6, false, false));
+        }
+        if (state.hammerTicks % SuitTuning.JACKHAMMER_INTERVAL != 0) {
+            return;
+        }
+        state.hammerHits++;
+        boolean last = state.hammerHits >= SuitTuning.JACKHAMMER_HITS;
+        boolean left = state.hammerHits % 2 == 0;
+        player.swing(left ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND, true);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, left ? SuitAnim.HULK_PUNCH_LEFT : SuitAnim.HULK_PUNCH_RIGHT, 0));
+        float damage = SuitTuning.JACKHAMMER_DAMAGE * (Stasis.isBoss(target) ? SuitTuning.JACKHAMMER_BOSS_MULTIPLIER : 1.0F);
+        target.invulnerableTime = 0;
+        target.hurt(player.damageSources().playerAttack(player), damage);
+        Vec3 at = target.getBoundingBox().getCenter();
+        level.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 12, 0.4D, 0.4D, 0.4D, 0.5D);
+        level.sendParticles(ParticleTypes.CLOUD, at.x, at.y - 0.3D, at.z, 4, 0.3D, 0.1D, 0.3D, 0.08D);
+        level.playSound(null, target.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 1.0F, 1.0F);
+        level.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7F, 1.4F);
+        if (last) {
+            Stasis.release(target);
+            target.knockback(2.0D, -face.x, -face.z);
+            target.setDeltaMovement(target.getDeltaMovement().add(0.0D, 0.6D, 0.0D));
+            target.hurtMarked = true;
+            state.wallWatch.put(target, level.getGameTime() + SuitTuning.WALL_SLAM_TICKS);
+            KiFx.burst(level, at, KiFx.RED, 2.0F, 12, KiFx.BLAST);
+            level.playSound(null, target.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 0.9F);
+            state.hammerTarget = null;
+        }
+    }
+
+    /** True while the jackhammer pounds (rooted, half damage like the piston punch). */
+    public static boolean isHammering(ServerPlayer player) {
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        return state != null && state.hammerTarget != null;
+    }
+
+    // ---------------------------------------------------------------- block throwing (B, M18)
+
+    /** Rips a 2x2x2 chunk out of the aimed ground and hurls it where the crosshair points. */
+    static void throwBlocks(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.skill3Ready) {
+            SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(look.scale(SuitTuning.THROW_RANGE)),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.throw_no_block"), true);
+            return;
+        }
+        BlockPos base = hit.getBlockPos();
+        java.util.List<BlockPos> chunk = new java.util.ArrayList<>();
+        for (int dx = 0; dx >= -1; dx--) {
+            for (int dy = 0; dy >= -1; dy--) {
+                for (int dz = 0; dz >= -1; dz--) {
+                    BlockPos pos = base.offset(dx, dy, dz);
+                    BlockState block = level.getBlockState(pos);
+                    float hardness = block.getDestroySpeed(level, pos);
+                    if (!block.isAir() && hardness >= 0.0F && hardness <= 20.0F && level.getBlockEntity(pos) == null
+                            && block.getFluidState().isEmpty() && block.isCollisionShapeFullBlock(level, pos) && level.mayInteract(player, pos)) {
+                        chunk.add(pos);
+                    }
+                }
+            }
+        }
+        if (chunk.isEmpty()) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.throw_no_block"), true);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.THROW_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.skill3Ready = now + SuitTuning.THROW_COOLDOWN_TICKS;
+        SuitWeapons.sendStatus(player, state);
+        SuitWeapons.Aim aim = SuitWeapons.aim(player, 48.0D);
+        Vec3 target = aim.target() != null ? aim.target().getBoundingBox().getCenter() : aim.end();
+        for (BlockPos pos : chunk) {
+            BlockState block = level.getBlockState(pos);
+            level.removeBlock(pos, false);
+            FallingBlockEntity falling = FallingBlockEntity.fall(level, pos, block);
+            // Lobbed: toward the target, lifted so it arcs in; it hurts whatever it lands on.
+            Vec3 from = Vec3.atCenterOf(pos);
+            Vec3 dir = target.subtract(from);
+            double distance = dir.horizontalDistance();
+            Vec3 velocity = dir.normalize().scale(SuitTuning.THROW_SPEED).add(0.0D, 0.25D + distance * 0.02D, 0.0D)
+                    .add((level.random.nextDouble() - 0.5D) * 0.15D, 0.0D, (level.random.nextDouble() - 0.5D) * 0.15D);
+            falling.setDeltaMovement(velocity);
+            falling.setHurtsEntities(SuitTuning.THROW_DAMAGE, (int) (SuitTuning.THROW_DAMAGE * 3));
+            falling.time = 1;
+            falling.dropItem = false;
+        }
+        BlockState dust = level.getBlockState(base.below(2));
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, dust.isAir() ? Blocks.DIRT.defaultBlockState() : dust),
+                base.getX(), base.getY(), base.getZ(), 30, 1.0D, 0.6D, 1.0D, 0.1D);
+        level.playSound(null, base, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 1.0F, 0.6F);
+        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 0.6F);
+        player.swing(InteractionHand.MAIN_HAND, true);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.HULK_SLAM, 0));
     }
 
     // ---------------------------------------------------------------- flurry (hold)
@@ -413,8 +639,12 @@ public final class HulkbusterArts {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        if (isPounding(player)) {
+        if (isPounding(player) || isHammering(player)) {
             event.setAmount(event.getAmount() * SuitTuning.PISTON_DAMAGE_TAKEN);
+        }
+        if (inArmourMode(player)) {
+            event.setAmount(event.getAmount() * SuitTuning.ARMOUR_MODE_TAKEN);
+            player.serverLevel().playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.4F, 1.8F);
         }
         if (event.getSource().getDirectEntity() instanceof Projectile && wearsFullSet(player)) {
             event.setAmount(event.getAmount() * SuitTuning.HULKBUSTER_PROJECTILE_TAKEN);

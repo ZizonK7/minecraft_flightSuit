@@ -5,6 +5,8 @@ package com.pfkfks.flightsuit.suit;
  * Copies of the same design are allowed - see DESIGN.md "중복 허용".
  */
 public enum SuitType {
+    /** M18: the scrap suit - iron, copper and a coal boiler (ScrapArts). Cheap enough to be the first suit. */
+    SCRAP_MK0("scrap_mk0", "SCRAP MARK 0", SuitClass.SCRAP, SuitArmorMaterial.MARK_0),
     RYAN_MK1("ryan_mk1", "RYAN MARK 1", SuitClass.STANDARD, SuitArmorMaterial.MARK_1),
     RYAN_MK2("ryan_mk2", "CHOONSIK MARK 2 STEALTH", SuitClass.STEALTH, SuitArmorMaterial.MARK_2),
     PHANTOM_MK3("phantom_mk3", "PHANTOM MARK 3", SuitClass.PHANTOM, SuitArmorMaterial.MARK_3),
@@ -13,8 +15,10 @@ public enum SuitType {
     TRUNKS_MK5("trunks_mk5", "TRUNKS MARK 5", SuitClass.SWORDSMAN, SuitArmorMaterial.MARK_5, 1.0F, true),
     /** Built on the Hulk's frame (HulkbusterModel); a full set makes its wearer 1.5x as big. */
     HULKBUSTER_MK44("hulkbuster_mk44", "HULKBUSTER MARK 44", SuitClass.HULKBUSTER, SuitArmorMaterial.MARK_44, 1.5F, true),
-    /** Won by beating Thanos (DESIGN.md 4-16 최종전 보상); no recipe. */
-    NANO_MK50("nano_mk50", "NANOTECH MARK 50", SuitClass.STANDARD, SuitArmorMaterial.MARK_50);
+    /** M18: the Cannon Shooter (MapleStory) - the area fighter with a cannon in hand and a monkey at heel (CannonArts). */
+    CANNON_MK6("cannon_mk6", "CANNON SHOOTER MARK 6", SuitClass.CANNONEER, SuitArmorMaterial.MARK_6),
+    /** M18: the Bishop (MapleStory) - the support suit with a staff in hand (BishopArts). */
+    BISHOP_MK7("bishop_mk7", "BISHOP MARK 7", SuitClass.BISHOP, SuitArmorMaterial.MARK_7);
 
     private final String id;
     private final String hudName;

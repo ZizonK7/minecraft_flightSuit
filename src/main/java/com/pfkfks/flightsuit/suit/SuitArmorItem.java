@@ -45,7 +45,10 @@ public class SuitArmorItem extends ArmorItem {
     }
 
     public int getEnergyCapacity() {
-        return getType() == Type.CHESTPLATE ? SuitTuning.CHEST_CAPACITY : SuitTuning.PIECE_CAPACITY;
+        if (getType() == Type.CHESTPLATE) {
+            return suitType.suitClass() == SuitClass.SCRAP ? SuitTuning.SCRAP_CHEST_CAPACITY : SuitTuning.CHEST_CAPACITY;
+        }
+        return SuitTuning.PIECE_CAPACITY;
     }
 
     /** A piece worn down to its last durability point: it can't take more and must go back to a station. */
@@ -113,17 +116,18 @@ public class SuitArmorItem extends ArmorItem {
                 .withStyle(isBroken(stack) ? ChatFormatting.RED : left * 5 < max ? ChatFormatting.GOLD : ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.flightsuit.piece." + getType().getName())
                 .withStyle(ChatFormatting.GRAY));
-        if (suitType.suitClass() == SuitClass.STEALTH) {
-            tooltip.add(Component.translatable("tooltip.flightsuit.class.stealth").withStyle(ChatFormatting.DARK_PURPLE));
-        } else if (suitType.suitClass() == SuitClass.PHANTOM) {
-            tooltip.add(Component.translatable("tooltip.flightsuit.class.phantom").withStyle(ChatFormatting.GOLD));
-        } else if (suitType.suitClass() == SuitClass.HERO) {
-            tooltip.add(Component.translatable("tooltip.flightsuit.class.hero").withStyle(ChatFormatting.GREEN));
-        } else if (suitType.suitClass() == SuitClass.SWORDSMAN) {
-            tooltip.add(Component.translatable("tooltip.flightsuit.class.swordsman").withStyle(ChatFormatting.BLUE));
-        } else if (suitType.suitClass() == SuitClass.HULKBUSTER) {
-            tooltip.add(Component.translatable("tooltip.flightsuit.class.hulkbuster").withStyle(ChatFormatting.RED));
-        }
+        ChatFormatting colour = switch (suitType.suitClass()) {
+            case SCRAP -> ChatFormatting.GRAY;
+            case STANDARD -> ChatFormatting.AQUA;
+            case STEALTH -> ChatFormatting.DARK_PURPLE;
+            case PHANTOM -> ChatFormatting.GOLD;
+            case HERO -> ChatFormatting.GREEN;
+            case SWORDSMAN -> ChatFormatting.BLUE;
+            case HULKBUSTER -> ChatFormatting.RED;
+            case CANNONEER -> ChatFormatting.YELLOW;
+            case BISHOP -> ChatFormatting.WHITE;
+        };
+        tooltip.add(Component.translatable("tooltip.flightsuit.class." + suitType.suitClass().name().toLowerCase(java.util.Locale.ROOT)).withStyle(colour));
     }
 
     @Override

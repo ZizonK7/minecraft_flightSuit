@@ -24,6 +24,16 @@ public final class KiDraw extends RenderType {
                     .setDepthTestState(LEQUAL_DEPTH_TEST)
                     .createCompositeState(false));
 
+    /** M18: the same glow drawn through walls (ore sight, x-ray) - no depth test at all. */
+    public static final RenderType GLOW_XRAY = create("flightsuit_ki_glow_xray", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1 << 14,
+            false, false, CompositeState.builder()
+                    .setShaderState(RENDERTYPE_LIGHTNING_SHADER)
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(NO_DEPTH_TEST)
+                    .createCompositeState(false));
+
     private static final int RINGS = 8;
     private static final int SIDES = 14;
 

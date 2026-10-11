@@ -10,7 +10,8 @@ import java.util.function.Supplier;
 /**
  * The local player's skill cooldowns and card gauge, for the suit HUD (times are level game times). Since M17 also
  * the ultimate's cooldown, whether Super Saiyan is on (and how long it's locked out after running dry), and the
- * phantom's stolen skill (its name, "" for none) with its cooldown.
+ * phantom's stolen skill (its name, "" for none) with its cooldown. M18: the third skill's (B) cooldown, the end of
+ * whatever timed buff is on (overdrive, the Triforce, x-ray, Heaven's Door) and the Hulkbuster's armour mode.
  */
 public class WeaponStatusS2CPacket {
     public final long skill1Ready;
@@ -22,9 +23,12 @@ public class WeaponStatusS2CPacket {
     public final long ssjLockedUntil;
     public final String stolen;
     public final long stolenReady;
+    public final long skill3Ready;
+    public final long buffUntil;
+    public final boolean armourMode;
 
     public WeaponStatusS2CPacket(long skill1Ready, long skill2Ready, int gauge, long spadeUntil, long ultReady, boolean superSaiyan,
-                                 long ssjLockedUntil, String stolen, long stolenReady) {
+                                 long ssjLockedUntil, String stolen, long stolenReady, long skill3Ready, long buffUntil, boolean armourMode) {
         this.skill1Ready = skill1Ready;
         this.skill2Ready = skill2Ready;
         this.gauge = gauge;
@@ -34,6 +38,9 @@ public class WeaponStatusS2CPacket {
         this.ssjLockedUntil = ssjLockedUntil;
         this.stolen = stolen;
         this.stolenReady = stolenReady;
+        this.skill3Ready = skill3Ready;
+        this.buffUntil = buffUntil;
+        this.armourMode = armourMode;
     }
 
     public static void encode(WeaponStatusS2CPacket packet, FriendlyByteBuf buf) {
@@ -46,11 +53,14 @@ public class WeaponStatusS2CPacket {
         buf.writeLong(packet.ssjLockedUntil);
         buf.writeUtf(packet.stolen, 64);
         buf.writeLong(packet.stolenReady);
+        buf.writeLong(packet.skill3Ready);
+        buf.writeLong(packet.buffUntil);
+        buf.writeBoolean(packet.armourMode);
     }
 
     public static WeaponStatusS2CPacket decode(FriendlyByteBuf buf) {
         return new WeaponStatusS2CPacket(buf.readLong(), buf.readLong(), buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readBoolean(),
-                buf.readLong(), buf.readUtf(64), buf.readLong());
+                buf.readLong(), buf.readUtf(64), buf.readLong(), buf.readLong(), buf.readLong(), buf.readBoolean());
     }
 
     public static void handle(WeaponStatusS2CPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {

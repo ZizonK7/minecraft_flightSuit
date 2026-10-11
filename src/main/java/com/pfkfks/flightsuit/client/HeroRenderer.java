@@ -93,16 +93,17 @@ public final class HeroRenderer {
         }
     }
 
-    /** Swinging (primary held) or mid spin attack, with nothing in the main hand. */
+    /**
+     * M18: the sword is an item in the hand (SuitWeaponItem), drawn by vanilla - nothing left to draw in an empty
+     * hand. Kept for the spin's flourish on companions that still fight bare-handed.
+     */
     public static boolean isSwordOut(Player player) {
         if (!player.getMainHandItem().isEmpty()) {
             return false;
         }
-        if (SuitWeapons.drawsSword(ClientWeapons.firing(player.getId()))) {
-            return true;
-        }
         Long until = SWORD_UNTIL.get(player.getId());
-        return until != null && until > player.level().getGameTime();
+        return until != null && until > player.level().getGameTime() && SuitWeapons.armedClass(player) == com.pfkfks.flightsuit.suit.SuitClass.HERO
+                && !com.pfkfks.flightsuit.suit.SuitWeaponItem.holding(player);
     }
 
     public static void handleClawshot(ClawshotS2CPacket packet) {

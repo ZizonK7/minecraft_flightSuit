@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "flightsuit:item/scrap_mk0_helmet"
+  }
+}

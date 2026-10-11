@@ -24,7 +24,7 @@
 
 | 패키지 | 내용 |
 |---|---|
-| `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert). M17: 헐크버스터 주먹 `HulkbusterArts`, 트랭크스 검·초사이어인 `SwordArts`, 팬텀 훔치기·템페스트 `PhantomArts`(+`TempestRain`, `CandyShrink`), 훔친 기술 15종 `StolenSkill`(드래곤볼 인물과 공유하는 발사 코드), 날아가는 기탄 `KiShots`, 기탄 막기 판정 `KiGuard`. 수치는 전부 `SuitTuning`. 키 액션 번호는 `SuitWeapons`(ULTIMATE=4, STOLEN_SKILL=5, STEAL=6) |
+| `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert). M17: 헐크버스터 주먹 `HulkbusterArts`, 트랭크스 검·초사이어인 `SwordArts`, 팬텀 훔치기·템페스트 `PhantomArts`(+`TempestRain`, `CandyShrink`), 훔친 기술 15종 `StolenSkill`(드래곤볼 인물과 공유하는 발사 코드), 날아가는 기탄 `KiShots`, 기탄 막기 판정 `KiGuard`. M18: 무기 아이템 `SuitWeaponItem`(검·지팡이·대포, 흉갑을 입으면 손에), 새 기술 클래스 `ScrapArts`(Mark 0)·`MarkArts`(Mark 1·2)·`CannonArts`(Mark 6, 원숭이 `entity/MonkeyEntity`, 포탄 `entity/CannonballEntity`)·`BishopArts`(Mark 7), 광석 표시 `network/OreSightS2CPacket` → `client/OreSightClient`. 수치는 전부 `SuitTuning`. 키 액션 번호는 `SuitWeapons`(ULTIMATE=4, SKILL_3=5(B), STEAL=6, SWING=7 좌클릭) |
 | `war/StructureJob` | 큰 건물(성채·히어로 시티) 건설: 부지 정리(기둥 단위) → 배치 목록. 설계 버전(`FortressBuilder.LAYOUT`, `HeroCityBuilder.LAYOUT`)이 저장된 것보다 새로우면 가까이 갈 때 같은 높이에 다시 지음 |
 | `block/` | 슈트 스테이션, 전력 블록, 스테이션 창고(StationStorageBlock/Entity), 보안 센서(SecuritySensorBlock/Entity) |
 | `energy/` | 무선 전력망(PowerGrid, 반경 8), 수치(PowerTuning) |
@@ -61,7 +61,12 @@
 - JEI: `build.gradle`의 BlameJared 저장소 필터에 `mezz.jei`와 `net.mezzdev.config` 둘 다 있어야 함 (버전 `gradle.properties`의 `jei_version`).
 - 테스트 중 치트(`/time set` 등)로 막힌 상황은 코드로 막지 말고 월드를 넘기는 명령을 알려 줄 것 (사용자 결정).
 
-## 진행 상태 (2026-10-10)
+## 진행 상태 (2026-10-11)
+
+- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업 완료** (로컬 빌드 통과, 인게임 테스트 전) - 무기 아이템, 키 여섯 개 전부, Mark 0·6·7, Mark 50 삭제, 대결 즉사, 슈트 휠 격자, 호버카 구매. 남은 묶음: B 전력 공장, C 살아 있는 마을, D 행성 지형, E 입체 부품(멀티 에이전트).
+- 슈트를 새로 만들 때: `SuitType`·`SuitArmorMaterial`·`SuitClass`(무기 종류 `weapon()`), `tools/SuitSkinGen` 그리기 → `SkinSplitter`, `models/item/<id>_*.json` 5개, 레시피 5개, 번역(item·tip.suit·tooltip.class·hud.weapon·hud.weapon.b), `SuitWeapons.handle`의 switch 9곳, `CompanionCombatGoal`, 안내서 쪽. 미리보기는 `java tools/SkinPreview.java out.png skin.png...`.
+
+## 지난 진행 상태 (2026-10-10)
 
 - **M17과 그 테스트 피드백(기 기술 그림 `fx/KiFx`, 컷신 카메라 가림 방지, 번역 누락): 사용자 인게임 테스트 통과, main에 반영** (결과·Claude 판단은 DESIGN.md 5장 "M17").
 - 재배맨 새 모습(`DbzSkinGen saibaman`, `DbzFighterModel.shape` = 큰 머리·가는 팔다리)도 테스트 통과. 인물별 체형은 `shape()`에 더하면 됨 (모델을 같이 쓰니 모든 값을 매번 설정할 것).

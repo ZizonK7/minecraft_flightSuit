@@ -50,7 +50,8 @@ import java.util.UUID;
  * of the Black Order, then Thanos himself, wielding every stone the player does NOT have. Hero City's heroes
  * come to help an ally (trust 70+). The village is kept loaded throughout (DESIGN 4-15).
  *
- * Win (Thanos beaten, or turned to dust by the Infinity Gauntlet): the Nanotech Mark 50. Lose (still standing
+ * Win (Thanos beaten, or turned to dust by the Infinity Gauntlet): a chest battery upgrade and arc reactors (M18 - the
+ * Nanotech Mark 50 was dropped). Lose (still standing
  * after ten minutes): the snap - half the village's people turn to dust - and he comes back later.
  *
  * The snapped don't come back on their own (user decision after the M16 test, like Endgame): only beating
@@ -349,14 +350,37 @@ public final class ThanosRaid {
         }
     }
 
+    /**
+     * M18 (the Mark 50 is gone): the worn suit chestplate's battery goes up a level (the first suit chestplate in the
+     * bag if none is worn; four more arc reactors when there's nothing to upgrade), plus two arc reactors.
+     */
     private static void reward(ServerPlayer player) {
-        ItemStack capsule = ModItems.capsuleFor(SuitType.NANO_MK50).createFilledCapsule();
-        if (!player.getInventory().add(capsule)) {
-            player.drop(capsule, false);
+        ItemStack chest = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+        if (!(chest.getItem() instanceof com.pfkfks.flightsuit.suit.SuitArmorItem)) {
+            chest = ItemStack.EMPTY;
+            for (ItemStack stack : player.getInventory().items) {
+                if (stack.getItem() instanceof com.pfkfks.flightsuit.suit.SuitArmorItem armor && armor.getEquipmentSlot() == net.minecraft.world.entity.EquipmentSlot.CHEST) {
+                    chest = stack;
+                    break;
+                }
+            }
         }
-        player.sendSystemMessage(Component.translatable("thanos.flightsuit.reward").withStyle(ChatFormatting.GOLD));
+        int reactors = 2;
+        boolean upgraded = false;
+        if (!chest.isEmpty() && com.pfkfks.flightsuit.suit.SuitEnergy.upgradeLevel(chest) < com.pfkfks.flightsuit.suit.SuitEnergy.MAX_UPGRADE) {
+            com.pfkfks.flightsuit.suit.SuitEnergy.setUpgradeLevel(chest, com.pfkfks.flightsuit.suit.SuitEnergy.upgradeLevel(chest) + 1);
+            upgraded = true;
+        } else {
+            reactors += 4;
+        }
+        ItemStack stack = new ItemStack(ModItems.ARC_REACTOR.get(), reactors);
+        if (!player.getInventory().add(stack)) {
+            player.drop(stack, false);
+        }
+        player.sendSystemMessage(Component.translatable(upgraded ? "thanos.flightsuit.reward" : "thanos.flightsuit.reward_reactors", reactors)
+                .withStyle(ChatFormatting.GOLD));
         EdithAlert.send(player, Component.translatable("thanos.flightsuit.edith_won_title").withStyle(ChatFormatting.GOLD),
-                Component.translatable("thanos.flightsuit.reward"), null, null, EdithAlert.CYAN, false);
+                Component.translatable(upgraded ? "thanos.flightsuit.reward" : "thanos.flightsuit.reward_reactors", reactors), null, null, EdithAlert.CYAN, false);
     }
 
     @SubscribeEvent

@@ -11,14 +11,20 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Suit wheel (DESIGN.md 4-1): every reachable suit as a card on a ring, House Party Protocol in the middle.
+ * Suit wheel (DESIGN.md 4-1): every reachable suit as a card, House Party Protocol in the middle.
  * Click = deploy as companion, Shift+click = swap into it, Ctrl+click = remote-pilot it, right click = make
  * that station the main one.
+ *
+ * Up to six suits sit on a ring round the centre; more than that (M18, after the cards overlapped) and they go
+ * in a grid below the centre instead. Each card is three lines: name, where it is, charge and armour - every
+ * line clipped to the card.
  */
 public class SuitWheelScreen extends Screen {
     private static final int CARD_W = 118;
-    private static final int CARD_H = 30;
-    private static final int RING_RADIUS = 96;
+    private static final int CARD_H = 40;
+    private static final int GAP = 6;
+    private static final int RING_RADIUS = 100;
+    private static final int RING_MAX = 6;
     private static final int CENTER_W = 92;
     private static final int CENTER_H = 30;
 
@@ -44,14 +50,49 @@ public class SuitWheelScreen extends Screen {
         return false;
     }
 
+    private boolean ring() {
+        return entries.size() <= RING_MAX;
+    }
+
+    /** Grid: as many columns as fit, centred, starting under the centre panel. */
+    private int columns() {
+        return Math.max(1, Math.min(entries.size(), (width - 20) / (CARD_W + GAP)));
+    }
+
     private int cardX(int i) {
-        double angle = -Math.PI / 2.0D + 2.0D * Math.PI * i / Math.max(1, entries.size());
-        return width / 2 + (int) (Math.cos(angle) * RING_RADIUS * 1.5D) - CARD_W / 2;
+        if (ring()) {
+            double angle = -Math.PI / 2.0D + 2.0D * Math.PI * i / Math.max(1, entries.size());
+            return width / 2 + (int) (Math.cos(angle) * RING_RADIUS * 1.6D) - CARD_W / 2;
+        }
+        int columns = columns();
+        int rowStart = (i / columns) * columns;
+        int inRow = Math.min(columns, entries.size() - rowStart);
+        int rowWidth = inRow * CARD_W + (inRow - 1) * GAP;
+        return width / 2 - rowWidth / 2 + (i % columns) * (CARD_W + GAP);
     }
 
     private int cardY(int i) {
-        double angle = -Math.PI / 2.0D + 2.0D * Math.PI * i / Math.max(1, entries.size());
-        return height / 2 + (int) (Math.sin(angle) * RING_RADIUS) - CARD_H / 2;
+        if (ring()) {
+            double angle = -Math.PI / 2.0D + 2.0D * Math.PI * i / Math.max(1, entries.size());
+            return height / 2 + (int) (Math.sin(angle) * RING_RADIUS) - CARD_H / 2;
+        }
+        int rows = (entries.size() + columns() - 1) / columns();
+        int gridHeight = rows * CARD_H + (rows - 1) * GAP;
+        int top = centerY() + CENTER_H / 2 + 12;
+        // Keep the grid above the hint lines at the bottom.
+        top = Math.min(top, height - 36 - gridHeight);
+        return top + (i / columns()) * (CARD_H + GAP);
+    }
+
+    /** The centre panel: mid-screen for the ring, up near the top when the grid needs the room. */
+    private int centerY() {
+        if (ring()) {
+            return height / 2;
+        }
+        int rows = (entries.size() + columns() - 1) / columns();
+        int gridHeight = rows * CARD_H + (rows - 1) * GAP;
+        int wanted = (height - 36 - gridHeight - 12 - CENTER_H) / 2 + CENTER_H / 2;
+        return Math.max(CENTER_H / 2 + 8, Math.min(height / 2, wanted));
     }
 
     private int hovered(double mouseX, double mouseY) {
@@ -66,14 +107,14 @@ public class SuitWheelScreen extends Screen {
     }
 
     private boolean overCenter(double mouseX, double mouseY) {
-        return Math.abs(mouseX - width / 2.0D) < CENTER_W / 2.0D && Math.abs(mouseY - height / 2.0D) < CENTER_H / 2.0D;
+        return Math.abs(mouseX - width / 2.0D) < CENTER_W / 2.0D && Math.abs(mouseY - centerY()) < CENTER_H / 2.0D;
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         int cx = width / 2;
-        int cy = height / 2;
+        int cy = centerY();
 
         boolean center = overCenter(mouseX, mouseY);
         frame(graphics, cx - CENTER_W / 2, cy - CENTER_H / 2, CENTER_W, CENTER_H, center ? GOLD : 0xFF4A3A10);
@@ -89,23 +130,29 @@ public class SuitWheelScreen extends Screen {
             int x = cardX(i);
             int y = cardY(i);
             frame(graphics, x, y, CARD_W, CARD_H, i == hover ? CYAN : 0xFF24414D);
+            int colour = entry.broken() ? WARN : TEXT;
+            int dim = entry.broken() ? WARN : DIM;
             String name = (entry.main() ? "★ " : "") + entry.name();
-            graphics.drawString(font, font.plainSubstrByWidth(name, CARD_W - 8), x + 4, y + 4, entry.broken() ? WARN : TEXT, false);
-            graphics.drawString(font, detail(entry), x + 4, y + 16, entry.broken() ? WARN : DIM, false);
+            graphics.drawString(font, font.plainSubstrByWidth(name, CARD_W - 8), x + 4, y + 4, colour, false);
+            graphics.drawString(font, clip(where(entry)), x + 4, y + 16, dim, false);
+            graphics.drawString(font, clip(Component.translatable("screen.flightsuit.entry_state", entry.charge(), entry.durability())), x + 4, y + 27, dim, false);
         }
         graphics.drawCenteredString(font, Component.translatable("screen.flightsuit.wheel_hint"), cx, height - 30, DIM);
         graphics.drawCenteredString(font, Component.translatable("screen.flightsuit.wheel_hint_remote"), cx, height - 18, DIM);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    private static Component detail(SuitWheel.Entry entry) {
-        Component where = switch (entry.kind()) {
+    private String clip(Component text) {
+        return font.plainSubstrByWidth(text.getString(), CARD_W - 8);
+    }
+
+    private static Component where(SuitWheel.Entry entry) {
+        return switch (entry.kind()) {
             case SuitWheel.STATION -> Component.translatable("screen.flightsuit.source_station", entry.distance());
             case SuitWheel.COMPANION -> Component.translatable("screen.flightsuit.source_companion", entry.distance());
             case SuitWheel.FAR_STATION -> Component.translatable("screen.flightsuit.source_far");
             default -> Component.translatable("screen.flightsuit.source_capsule");
         };
-        return Component.translatable("screen.flightsuit.entry_detail", where, entry.charge(), entry.durability());
     }
 
     private static void frame(GuiGraphics graphics, int x, int y, int w, int h, int border) {

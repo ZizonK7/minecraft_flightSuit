@@ -45,16 +45,15 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * What a suit fires, by class (M8 weapons):
- * - primary, held right click with an empty hand: a continuous stream - Mark 1 repulsor beam, Mark 2 cryo
- *   beam (slows, then freezes the target stock-still - Stasis), Mark 3 card stream (PhantomCards);
- * - skill 1 (X): Mark 1 micro-missile salvo from the shoulders; Mark 3 Judgment Draw;
- * - skill 2 (C): Mark 1 unibeam, Mark 2 cryo nova (SuitSkills); Mark 3 card duel (CardDuel);
- * - Mark 4 swings the Master Sword instead, with a spin attack and a clawshot (HeroArts);
- * - M17: Mark 44 punches (HulkbusterArts), Mark 5 cuts (SwordArts), Mark 3 steals skills (PhantomArts); the
- *   ultimate key (V) fires the phantom's Tempest or turns Trunks Super Saiyan, B uses the phantom's stolen skill.
- * The client only says when the trigger goes down and up and which skill key was pressed; energy, cooldowns,
- * aiming and damage all live here.
+ * What a suit fires, by class (M8 weapons, the full six-key line-up since M18 - DESIGN.md 5차 피드백 역할표):
+ * - primary, held right click: a continuous stream from an empty hand (Mark 0/1 repulsor, Mark 2 cryo beam, Mark 3
+ *   cards, Mark 44 fists) or the weapon's stance from the weapon in hand (Mark 4 shield up, Mark 5 charging a ki
+ *   slash, Mark 6 cannon fire, Mark 7 heal beam / holy arrows);
+ * - left click with a weapon in hand (SWING): Mark 4 and Mark 5 cut;
+ * - X / C: skills 1 and 2, V the ultimate, B the third skill (the phantom's stolen skill) - one each per class, see
+ *   ScrapArts, MarkArts, PhantomCards/PhantomArts, HeroArts, HulkbusterArts, SwordArts, CannonArts, BishopArts.
+ * The client only says when the trigger goes down and up and which key was pressed; energy, cooldowns, aiming and
+ * damage all live here and in the arts.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class SuitWeapons {
@@ -64,28 +63,37 @@ public final class SuitWeapons {
     public static final byte SKILL_2 = 3;
     /** M17: the ultimate key (V). */
     public static final byte ULTIMATE = 4;
-    /** M17: the phantom's stolen skill (B). */
-    public static final byte STOLEN_SKILL = 5;
+    /** M17 the phantom's stolen skill (B); M18 every suit's third skill. */
+    public static final byte SKILL_3 = 5;
     /** M17: the phantom stealing (Z held, PhantomAimClient). */
     public static final byte STEAL = 6;
+    /** M18: a left click with the suit's weapon in hand (WeaponInput) - the sword suits cut. */
+    public static final byte SWING = 7;
 
     /** What a player's primary is firing (synced for the beam visual and the aimed arm). */
     public static final byte FIRE_NONE = 0;
     public static final byte FIRE_REPULSOR = 1;
     public static final byte FIRE_CRYO = 2;
     public static final byte FIRE_CARDS = 3;
-    public static final byte FIRE_SWORD = 4;
     /** M17: the Hulkbuster's flurry of punches. */
     public static final byte FIRE_PUNCH = 5;
-    /** M17: Trunks' three-step combo. */
-    public static final byte FIRE_SLASH = 6;
+    /** M18 Mark 4: the Hylian shield raised (right click held with the Master Sword in hand). */
+    public static final byte FIRE_SHIELD = 7;
+    /** M18 Mark 5: charging a ki slash. */
+    public static final byte FIRE_CHARGE = 8;
+    /** M18 Mark 7: the staff's beam - healing an ally or shooting holy arrows at a foe. */
+    public static final byte FIRE_HOLY = 9;
+    /** M18 Mark 6: the cannon firing. */
+    public static final byte FIRE_CANNON = 10;
 
-    /** Per-player weapon state (package-private: PhantomCards and CardDuel keep their gauge and cooldown here). */
+    /** Per-player weapon state (package-private: the arts keep their gauges and cooldowns here). */
     static final class State {
         byte firing = FIRE_NONE;
         int firingTicks;
         long skill1Ready;
         long skill2Ready;
+        /** M18: the third skill's (B) cooldown. */
+        long skill3Ready;
         // Mark 2: unbroken exposure of one target to the cryo beam.
         LivingEntity frostTarget;
         int frostTicks;
@@ -98,6 +106,7 @@ public final class SuitWeapons {
         long spadeUntil;
         // Mark 4 (HeroArts).
         int swings;
+        long lastSwing;
         final List<HeroArts.SwordBeam> swordBeams = new ArrayList<>();
         int spinTicks;
         double spinRadius;
@@ -107,6 +116,9 @@ public final class SuitWeapons {
         double hookTravelled;
         LivingEntity hookMob;
         int hookTicks;
+        /** M18: the Triforce's power until this tick; the gale boomerang in flight. */
+        long triforceUntil;
+        final List<HeroArts.Boomerang> boomerangs = new ArrayList<>();
         // Mark 1 unibeam charging; Mark 3 shadow step (SuitSkills): cooldown, and the step under way.
         int unibeamCharge;
         long stepReady;
@@ -129,6 +141,11 @@ public final class SuitWeapons {
         int pistonTicks;
         byte slamPhase;
         int slamTicks;
+        /** M18 Mark 44: armour mode (Z held); the jackhammer's victim and count. */
+        boolean armourMode;
+        LivingEntity hammerTarget;
+        int hammerHits;
+        int hammerTicks;
         // M17 Mark 5 (SwordArts).
         int comboStep;
         long lastCut;
@@ -142,6 +159,9 @@ public final class SuitWeapons {
         final java.util.Set<LivingEntity> flashHit = new java.util.HashSet<>();
         boolean superSaiyan;
         long ssjLockedUntil;
+        /** M18 Mark 5: the ki slash charging (right click held); the ki volley's shots left. */
+        int chargeTicks;
+        int volleyLeft;
         // M17 Mark 3 (PhantomArts): stealing, and the stolen skill's cooldown and charge.
         long stealReady;
         int stealTicks;
@@ -149,6 +169,26 @@ public final class SuitWeapons {
         long stolenReady;
         StolenSkill chargingSkill;
         int skillCharge;
+        // M18 Mark 0 (ScrapArts): the flamethrower burning, the rocket jump waiting to land, overdrive until.
+        int flameTicks;
+        boolean rocketArmed;
+        long overdriveUntil;
+        // M18 Mark 1 (MarkArts): the full burst's targets still to shoot.
+        final Deque<LivingEntity> burst = new ArrayDeque<>();
+        int burstTicks;
+        /** M18 Mark 2: x-ray mode until this tick. */
+        long xrayUntil;
+        // M18 Mark 6 (CannonArts): the monkey rush sweeping forward.
+        int rushTicks;
+        Vec3 rushPos = Vec3.ZERO;
+        Vec3 rushDir = Vec3.ZERO;
+        final java.util.Set<LivingEntity> rushHit = new java.util.HashSet<>();
+        // M18 Mark 7 (BishopArts): the Holy Magic Shell's window, Genesis falling, Heaven's Door on allies until.
+        long shellUntil;
+        long shellRaised;
+        int genesisLeft;
+        int genesisTicks;
+        long doorUntil;
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -180,22 +220,23 @@ public final class SuitWeapons {
         return entity == owner
                 || entity instanceof SuitCompanionEntity companion && companion.isOwnedBy(owner)
                 || entity instanceof RemoteBodyEntity body && owner.getUUID().equals(body.getOwnerId())
-                || entity instanceof CardEntity || entity instanceof MissileEntity;
+                || entity instanceof CardEntity || entity instanceof MissileEntity
+                || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner);
     }
 
-    /** Beams (repulsor, cryo) hum while they fire; cards and the sword make their own sounds. */
+    /** Beams (repulsor, cryo, the bishop's staff) hum while they fire and are drawn as a ribbon by the clients. */
     public static boolean isBeam(byte kind) {
-        return kind == FIRE_REPULSOR || kind == FIRE_CRYO;
+        return kind == FIRE_REPULSOR || kind == FIRE_CRYO || kind == FIRE_HOLY;
     }
 
-    /** Firing that holds the right arm out aimed (beams, cards) - not the sword or the fists. */
+    /** Firing that holds the right arm out aimed (beams, cards, the staff, the cannon) - not the fists. */
     public static boolean aimsArm(byte kind) {
-        return kind == FIRE_REPULSOR || kind == FIRE_CRYO || kind == FIRE_CARDS;
+        return kind == FIRE_REPULSOR || kind == FIRE_CRYO || kind == FIRE_CARDS || kind == FIRE_HOLY || kind == FIRE_CANNON;
     }
 
-    /** A blade in the hand while it fires (the Master Sword, Trunks' sword). */
-    public static boolean drawsSword(byte kind) {
-        return kind == FIRE_SWORD || kind == FIRE_SLASH;
+    /** The primary's energy and damage multiplier while the scrap suit's overdrive is on. */
+    static float overdrive(State state, ServerPlayer player) {
+        return state.overdriveUntil > player.level().getGameTime() ? SuitTuning.OVERDRIVE_DAMAGE : 1.0F;
     }
 
     // ---------------------------------------------------------------- input
@@ -212,52 +253,66 @@ public final class SuitWeapons {
         }
         switch (action) {
             case PRIMARY_START -> start(player, state, suitClass);
-            case SKILL_1 -> {
-                if (suitClass == SuitClass.STANDARD) {
-                    fireMissiles(player, state);
-                } else if (suitClass == SuitClass.PHANTOM) {
-                    PhantomCards.judgmentDraw(player, state);
-                } else if (suitClass == SuitClass.HERO) {
-                    HeroArts.spinAttack(player, state);
-                } else if (suitClass == SuitClass.HULKBUSTER) {
-                    HulkbusterArts.pistonPunch(player, state);
+            case SWING -> {
+                if (!SuitWeaponItem.holding(player)) {
+                    return;
+                }
+                if (suitClass == SuitClass.HERO) {
+                    HeroArts.swing(player, state);
                 } else if (suitClass == SuitClass.SWORDSMAN) {
-                    SwordArts.burningAttack(player, state);
-                } else {
-                    player.displayClientMessage(Component.translatable("message.flightsuit.no_skill"), true);
+                    SwordArts.swing(player, state);
+                }
+            }
+            case SKILL_1 -> {
+                switch (suitClass) {
+                    case SCRAP -> ScrapArts.flamethrower(player, state);
+                    case STANDARD -> fireMissiles(player, state);
+                    case STEALTH -> MarkArts.drill(player, state);
+                    case PHANTOM -> PhantomCards.judgmentDraw(player, state);
+                    case HERO -> HeroArts.spinAttack(player, state);
+                    case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
+                    case SWORDSMAN -> SwordArts.burningAttack(player, state);
+                    case CANNONEER -> CannonArts.militia(player, state);
+                    case BISHOP -> BishopArts.angelRay(player, state);
                 }
             }
             case SKILL_2 -> {
-                if (suitClass == SuitClass.STANDARD) {
-                    SuitSkills.startUnibeam(player, state);
-                } else if (suitClass == SuitClass.STEALTH) {
-                    SuitSkills.cryoNova(player, state);
-                } else if (suitClass == SuitClass.PHANTOM) {
-                    CardDuel.challenge(player, state);
-                } else if (suitClass == SuitClass.HERO) {
-                    HeroArts.clawshot(player, state);
-                } else if (suitClass == SuitClass.HULKBUSTER) {
-                    HulkbusterArts.groundSlam(player, state);
-                } else if (suitClass == SuitClass.SWORDSMAN) {
-                    SwordArts.flashSlash(player, state);
-                } else {
-                    player.displayClientMessage(Component.translatable("message.flightsuit.no_skill"), true);
+                switch (suitClass) {
+                    case SCRAP -> ScrapArts.rocketJump(player, state);
+                    case STANDARD -> SuitSkills.startUnibeam(player, state);
+                    case STEALTH -> SuitSkills.cryoNova(player, state);
+                    case PHANTOM -> CardDuel.challenge(player, state);
+                    case HERO -> HeroArts.clawshot(player, state);
+                    case HULKBUSTER -> HulkbusterArts.groundSlam(player, state);
+                    case SWORDSMAN -> SwordArts.flashSlash(player, state);
+                    case CANNONEER -> CannonArts.rollingCannon(player, state);
+                    case BISHOP -> BishopArts.chains(player, state);
                 }
             }
             case ULTIMATE -> {
-                if (suitClass == SuitClass.PHANTOM) {
-                    PhantomArts.tempest(player, state);
-                } else if (suitClass == SuitClass.SWORDSMAN) {
-                    SwordArts.toggleSuperSaiyan(player, state);
-                } else {
-                    player.displayClientMessage(Component.translatable("message.flightsuit.no_ultimate"), true);
+                switch (suitClass) {
+                    case SCRAP -> ScrapArts.overdrive(player, state);
+                    case STANDARD -> MarkArts.fullBurst(player, state);
+                    case STEALTH -> MarkArts.xray(player, state);
+                    case PHANTOM -> PhantomArts.tempest(player, state);
+                    case HERO -> HeroArts.triforce(player, state);
+                    case HULKBUSTER -> HulkbusterArts.jackhammer(player, state);
+                    case SWORDSMAN -> SwordArts.toggleSuperSaiyan(player, state);
+                    case CANNONEER -> CannonArts.giantCannonball(player, state);
+                    case BISHOP -> BishopArts.genesis(player, state);
                 }
             }
-            case STOLEN_SKILL -> {
-                if (suitClass == SuitClass.PHANTOM) {
-                    PhantomArts.useStolen(player, state);
-                } else {
-                    player.displayClientMessage(Component.translatable("message.flightsuit.no_stolen"), true);
+            case SKILL_3 -> {
+                switch (suitClass) {
+                    case SCRAP -> ScrapArts.flare(player, state);
+                    case STANDARD -> MarkArts.scan(player, state);
+                    case STEALTH -> MarkArts.lightOrb(player, state);
+                    case PHANTOM -> PhantomArts.useStolen(player, state);
+                    case HERO -> HeroArts.boomerang(player, state);
+                    case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
+                    case SWORDSMAN -> SwordArts.volley(player, state);
+                    case CANNONEER -> CannonArts.monkeyRush(player, state);
+                    case BISHOP -> BishopArts.heavensDoor(player, state);
                 }
             }
             case STEAL -> {
@@ -274,6 +329,10 @@ public final class SuitWeapons {
         if (state.firing != FIRE_NONE) {
             return;
         }
+        // The weapon suits fire from the weapon, the others from an empty hand (the client checks too).
+        if (!suitClass.handsFree() && !SuitWeaponItem.holding(player)) {
+            return;
+        }
         if (SuitEnergy.available(player, EquipmentSlot.CHEST) <= 0 && !player.getAbilities().instabuild) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
@@ -281,18 +340,25 @@ public final class SuitWeapons {
         state.firing = switch (suitClass) {
             case STEALTH -> FIRE_CRYO;
             case PHANTOM -> FIRE_CARDS;
-            case HERO -> FIRE_SWORD;
+            case HERO -> FIRE_SHIELD;
             case HULKBUSTER -> FIRE_PUNCH;
-            case SWORDSMAN -> FIRE_SLASH;
+            case SWORDSMAN -> FIRE_CHARGE;
+            case CANNONEER -> FIRE_CANNON;
+            case BISHOP -> FIRE_HOLY;
             default -> FIRE_REPULSOR;
         };
         state.firingTicks = 0;
         state.frostTarget = null;
         state.frostTicks = 0;
+        state.chargeTicks = 0;
         ModNetwork.sendToTrackingAndSelf(player, new BeamStateS2CPacket(player.getId(), state.firing));
         if (isBeam(state.firing)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6F,
-                    state.firing == FIRE_CRYO ? 1.9F : 1.6F);
+                    state.firing == FIRE_CRYO ? 1.9F : state.firing == FIRE_HOLY ? 1.4F : 1.6F);
+        } else if (state.firing == FIRE_SHIELD) {
+            HeroArts.raiseShield(player);
+        } else if (state.firing == FIRE_CHARGE) {
+            SwordArts.startCharge(player, state);
         }
     }
 
@@ -306,6 +372,10 @@ public final class SuitWeapons {
         ModNetwork.sendToTrackingAndSelf(player, new BeamStateS2CPacket(player.getId(), FIRE_NONE));
         if (isBeam(was)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.4F, 1.8F);
+        } else if (was == FIRE_SHIELD) {
+            HeroArts.lowerShield(player);
+        } else if (was == FIRE_CHARGE) {
+            SwordArts.releaseCharge(player, state);
         }
     }
 
@@ -318,20 +388,19 @@ public final class SuitWeapons {
         }
         SuitClass suitClass = armedClass(player);
         if (state.firing != FIRE_NONE) {
-            if (suitClass == null || SuitUpManager.isSuitingUp(player) || !player.isAlive()) {
+            if (suitClass == null || SuitUpManager.isSuitingUp(player) || !player.isAlive()
+                    || !suitClass.handsFree() && !SuitWeaponItem.holding(player)) {
                 stop(player, state);
             } else {
                 state.firingTicks++;
-                if (state.firing == FIRE_CARDS) {
-                    PhantomCards.tickStream(player, state);
-                } else if (state.firing == FIRE_SWORD) {
-                    HeroArts.tickSword(player, state);
-                } else if (state.firing == FIRE_PUNCH) {
-                    HulkbusterArts.tickFlurry(player, state);
-                } else if (state.firing == FIRE_SLASH) {
-                    SwordArts.tickCombo(player, state);
-                } else {
-                    tickBeam(player, state, state.firing == FIRE_CRYO);
+                switch (state.firing) {
+                    case FIRE_CARDS -> PhantomCards.tickStream(player, state);
+                    case FIRE_PUNCH -> HulkbusterArts.tickFlurry(player, state);
+                    case FIRE_SHIELD -> HeroArts.tickShield(player, state);
+                    case FIRE_CHARGE -> SwordArts.tickCharge(player, state);
+                    case FIRE_HOLY -> BishopArts.tickHoly(player, state);
+                    case FIRE_CANNON -> CannonArts.tickCannon(player, state);
+                    default -> tickBeam(player, state, state.firing == FIRE_CRYO);
                 }
             }
         }
@@ -347,6 +416,10 @@ public final class SuitWeapons {
         HulkbusterArts.tick(player, state, suitClass);
         SwordArts.tick(player, state, suitClass);
         PhantomArts.tick(player, state, suitClass);
+        ScrapArts.tick(player, state, suitClass);
+        MarkArts.tick(player, state, suitClass);
+        CannonArts.tick(player, state, suitClass);
+        BishopArts.tick(player, state, suitClass);
         CardDuel.tick(player);
     }
 
@@ -355,6 +428,14 @@ public final class SuitWeapons {
 
     /** Where the wearer's crosshair lands (blocks and living entities, own side excluded). */
     public static Aim aim(ServerPlayer player, double range) {
+        return aim(player, range, false);
+    }
+
+    /**
+     * Where the wearer's crosshair lands.
+     * @param allies true to land on the wearer's own side too (the bishop heals whoever it looks at)
+     */
+    public static Aim aim(ServerPlayer player, double range, boolean allies) {
         ServerLevel level = player.serverLevel();
         Vec3 eye = player.getEyePosition();
         Vec3 far = eye.add(player.getLookAngle().scale(range));
@@ -362,11 +443,11 @@ public final class SuitWeapons {
         Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, eye, end, new AABB(eye, end).inflate(1.0D),
                 entity -> entity instanceof LivingEntity && entity.isAlive() && !entity.isSpectator() && entity.isPickable()
-                        && !isFriendly(player, entity));
+                        && entity != player && (allies || !isFriendly(player, entity)));
         return hit == null ? new Aim(end, null) : new Aim(hit.getLocation(), (LivingEntity) hit.getEntity());
     }
 
-    /** Mark 1 / Mark 2 beam: drains every tick, hits every few ticks (straight through the hurt cooldown). */
+    /** Mark 0 / 1 / 2 beam: drains every tick, hits every few ticks (straight through the hurt cooldown). */
     private static void tickBeam(ServerPlayer player, State state, boolean cryo) {
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BEAM_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
@@ -383,7 +464,10 @@ public final class SuitWeapons {
         if (state.firingTicks % SuitTuning.BEAM_HIT_INTERVAL == 0 && aim.target() != null) {
             LivingEntity target = aim.target();
             target.invulnerableTime = 0;
-            target.hurt(player.damageSources().playerAttack(player), cryo ? SuitTuning.CRYO_BEAM_DAMAGE : SuitTuning.BEAM_DAMAGE);
+            float damage = cryo ? SuitTuning.CRYO_BEAM_DAMAGE
+                    : armedClass(player) == SuitClass.SCRAP ? SuitTuning.SCRAP_BEAM_DAMAGE * overdrive(state, player)
+                    : SuitTuning.BEAM_DAMAGE;
+            target.hurt(player.damageSources().playerAttack(player), damage);
             if (cryo) {
                 chill(level, target, state);
             } else {
@@ -413,22 +497,30 @@ public final class SuitWeapons {
     // ---------------------------------------------------------------- Mark 1 missiles
 
     /** X on Mark 1: lock up to six hostiles in front, then the pods fire one missile every other tick. */
-    private static void fireMissiles(ServerPlayer player, State state) {
+    static void fireMissiles(ServerPlayer player, State state) {
+        fireMissiles(player, state, false);
+    }
+
+    /** @param free true for the full burst's salvo (no cooldown, no cost - the burst paid) */
+    static void fireMissiles(ServerPlayer player, State state, boolean free) {
         long now = player.level().getGameTime();
-        if (now < state.skill1Ready || !state.salvo.isEmpty()) {
+        if (!free && (now < state.skill1Ready || !state.salvo.isEmpty())) {
             player.displayClientMessage(Component.translatable("message.flightsuit.skill_cooldown",
                     String.format("%.1f", (state.skill1Ready - now) / 20.0F)), true);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.MISSILE_COST)) {
+        if (!free && !SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.MISSILE_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill1Ready = now + SuitTuning.MISSILE_COOLDOWN_TICKS;
-        sendStatus(player, state);
+        if (!free) {
+            state.skill1Ready = now + SuitTuning.MISSILE_COOLDOWN_TICKS;
+            sendStatus(player, state);
+        }
         List<LivingEntity> targets = lockTargets(player);
         state.salvoAim = aim(player, 64.0D).end();
         state.salvoFired = 0;
+        state.salvo.clear();
         for (int i = 0; i < SuitTuning.MISSILE_COUNT; i++) {
             // Null = no lock: that missile goes for the aim point (and whatever blocks are there).
             state.salvo.add(targets.isEmpty() ? null : targets.get(i % targets.size()));
@@ -440,7 +532,7 @@ public final class SuitWeapons {
                 : Component.translatable("message.flightsuit.missiles_locked", targets.size()), true);
     }
 
-    private static List<LivingEntity> lockTargets(ServerPlayer player) {
+    static List<LivingEntity> lockTargets(ServerPlayer player) {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
         double cos = Math.cos(Math.toRadians(SuitTuning.MISSILE_LOCK_ANGLE_DEG));
@@ -478,11 +570,17 @@ public final class SuitWeapons {
 
     // ---------------------------------------------------------------- status
 
+    /** The buff the HUD shows a timer for (overdrive, the Triforce, x-ray, Heaven's Door), whichever is on. */
+    private static long buffUntil(State state) {
+        return Math.max(Math.max(state.overdriveUntil, state.triforceUntil), Math.max(state.xrayUntil, state.doorUntil));
+    }
+
     static void sendStatus(ServerPlayer player, State state) {
         StolenSkill stolen = PhantomArts.stolen(player);
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready, state.gauge, state.spadeUntil, state.ultReady,
-                        state.superSaiyan, state.ssjLockedUntil, stolen == null ? "" : stolen.name(), state.stolenReady));
+                        state.superSaiyan, state.ssjLockedUntil, stolen == null ? "" : stolen.name(), state.stolenReady,
+                        state.skill3Ready, buffUntil(state), state.armourMode));
     }
 
     /** The HUD status straight after joining (the stolen card is kept across sessions). */
@@ -527,6 +625,7 @@ public final class SuitWeapons {
     public static void onAttack(LivingAttackEvent event) {
         HeroArts.hylianShield(event);
         SwordArts.onAttack(event);
+        BishopArts.onAttack(event);
         if (event.getSource().getDirectEntity() instanceof MissileEntity missile && missile.getOwner() instanceof ServerPlayer owner
                 && isFriendly(owner, event.getEntity())) {
             event.setCanceled(true);
@@ -537,6 +636,7 @@ public final class SuitWeapons {
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
         HulkbusterArts.onHurt(event);
+        BishopArts.onHurt(event);
         if (event.getSource().getEntity() instanceof ServerPlayer player && !(event.getSource().getDirectEntity() instanceof CardEntity)
                 && armedClass(player) == SuitClass.PHANTOM && !isFriendly(player, event.getEntity())) {
             PhantomCards.carteNoir(player, state(player), event.getEntity());
@@ -547,7 +647,7 @@ public final class SuitWeapons {
         STATES.remove(playerId);
     }
 
-    /** Dropping a Super Saiyan state that's still on (logging out): the speed boost goes with it. */
+    /** Dropping states that are still on (logging out): Super Saiyan's speed boost, the card platform, armour mode. */
     public static void endUltimates(ServerPlayer player) {
         State state = STATES.get(player.getUUID());
         if (state != null && state.superSaiyan) {
@@ -555,6 +655,7 @@ public final class SuitWeapons {
         }
         if (state != null) {
             SuitSkills.endCardPlatform(player, state);
+            HulkbusterArts.setArmourMode(player, state, false);
         }
     }
 }

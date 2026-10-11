@@ -78,8 +78,6 @@ public final class SuitTuning {
     public static final double DUEL_RANGE = 24.0D;
     /** No move for this long and you stand on what you have. */
     public static final int DUEL_TIMEOUT_TICKS = 600;
-    /** Bosses don't just die: they lose this share of their max health. */
-    public static final float DUEL_BOSS_DAMAGE = 0.3F;
     /** Losing also costs every worn suit piece this share of its durability. */
     public static final float DUEL_LOSS_WEAR = 0.3F;
 
@@ -217,6 +215,181 @@ public final class SuitTuning {
     public static final int CARD_PLATFORM_FALL_TICKS = 40;
     /** Looking at the sky: how far down from the end of the look to search for ground. */
     public static final int SHADOW_STEP_GROUND_SEARCH = 8;
+
+    // ---------------------------------------------------------------- M18: the full line-up (DESIGN.md 5차 피드백)
+
+    // Scrap Mark 0 (ScrapArts): a coal boiler for a battery, a weak repulsor, a flamethrower (X), a rocket jump (C),
+    // overdrive (V), a flare (B).
+    public static final int SCRAP_CHEST_CAPACITY = 8_000;
+    /** FE a lump of coal (or charcoal) is worth in the boiler; a coal block is nine. */
+    public static final int SCRAP_COAL_ENERGY = 2_000;
+    public static final float SCRAP_FLIGHT_FACTOR = 0.55F;
+    public static final float SCRAP_BEAM_DAMAGE = 2.0F;
+    public static final int FLAME_COST = 600;
+    public static final int FLAME_COOLDOWN_TICKS = 100;
+    public static final int FLAME_TICKS = 24;
+    public static final double FLAME_REACH = 5.0D;
+    public static final double FLAME_ARC_DEG = 50.0D;
+    public static final float FLAME_DAMAGE = 1.5F;
+    public static final int FLAME_BURN_SECONDS = 4;
+    public static final int ROCKET_JUMP_COST = 500;
+    public static final int ROCKET_JUMP_COOLDOWN_TICKS = 80;
+    public static final double ROCKET_JUMP_UP = 1.1D;
+    public static final double ROCKET_JUMP_FORWARD = 0.45D;
+    public static final double ROCKET_LAND_RADIUS = 3.0D;
+    public static final float ROCKET_LAND_DAMAGE = 4.0F;
+    public static final int OVERDRIVE_COST = 4_000;
+    public static final int OVERDRIVE_TICKS = 160;
+    public static final int OVERDRIVE_COOLDOWN_TICKS = 600;
+    public static final float OVERDRIVE_FLIGHT = 1.5F;
+    public static final float OVERDRIVE_DAMAGE = 2.0F;
+    public static final int FLARE_COST = 300;
+    public static final int FLARE_COOLDOWN_TICKS = 600;
+    public static final int FLARE_TICKS = 1_200;
+    public static final double FLARE_RADIUS = 24.0D;
+    public static final int FLARE_HEIGHT = 12;
+
+    // Mark 1 (MarkArts): the full burst (V) and the EDITH scan (B).
+    public static final int FULL_BURST_COST = 5_000;
+    public static final int FULL_BURST_COOLDOWN_TICKS = 900;
+    public static final double FULL_BURST_RANGE = 24.0D;
+    public static final int FULL_BURST_TARGETS = 12;
+    /** Ticks between the repulsor shots at the next target. */
+    public static final int FULL_BURST_INTERVAL = 3;
+    public static final float FULL_BURST_DAMAGE = 9.0F;
+    public static final int SCAN_COST = 800;
+    public static final int SCAN_COOLDOWN_TICKS = 300;
+    public static final double SCAN_RADIUS = 32.0D;
+    public static final int SCAN_TICKS = 200;
+    public static final int SCAN_ORE_RADIUS = 16;
+
+    // Mark 2 (MarkArts): the mining laser (X), x-ray (V), the light orb (B).
+    public static final int DRILL_COST_PER_BLOCK = 40;
+    public static final int DRILL_COOLDOWN_TICKS = 30;
+    public static final int DRILL_LENGTH = 6;
+    /** Blocks harder than this (stone 1.5, obsidian 50) the drill leaves alone. */
+    public static final float DRILL_MAX_HARDNESS = 30.0F;
+    public static final int XRAY_COST = 2_500;
+    public static final int XRAY_COOLDOWN_TICKS = 600;
+    public static final int XRAY_TICKS = 300;
+    public static final int XRAY_RADIUS = 32;
+    public static final int ORB_COST = 200;
+    public static final int ORB_COOLDOWN_TICKS = 40;
+    public static final int ORB_TICKS = 1_200;
+    public static final double ORB_RANGE = 24.0D;
+
+    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B).
+    public static final int HYLIAN_HOLD_DRAIN = 4;
+    public static final int TRIFORCE_COST = 4_000;
+    public static final int TRIFORCE_TICKS = 200;
+    public static final int TRIFORCE_COOLDOWN_TICKS = 1_200;
+    public static final float TRIFORCE_MULTIPLIER = 1.5F;
+    public static final int BOOMERANG_COST = 700;
+    public static final int BOOMERANG_COOLDOWN_TICKS = 100;
+    public static final double BOOMERANG_RANGE = 16.0D;
+    public static final double BOOMERANG_SPEED = 1.2D;
+    public static final float BOOMERANG_DAMAGE = 5.0F;
+    public static final int BOOMERANG_STUN_TICKS = 25;
+
+    // Mark 5 (SwordArts, M18): the charged ki slash (right click held) and the ki volley (B).
+    public static final int CHARGE_SLASH_TICKS = 16;
+    public static final int CHARGE_SLASH_COST = 1_500;
+    public static final float CHARGE_SLASH_MULTIPLIER = 2.5F;
+    public static final float CHARGE_WAVE_DAMAGE = 12.0F;
+    public static final double CHARGE_WAVE_RANGE = 24.0D;
+    public static final int VOLLEY_COST = 1_000;
+    public static final int VOLLEY_COOLDOWN_TICKS = 120;
+    public static final int VOLLEY_SHOTS = 5;
+    public static final int VOLLEY_INTERVAL = 3;
+    public static final float VOLLEY_DAMAGE = 4.0F;
+
+    // Mark 44 (HulkbusterArts, M18): armour mode (Z held), the jackhammer (V), block throwing (B).
+    public static final int ARMOUR_MODE_DRAIN = 30;
+    public static final float ARMOUR_MODE_TAKEN = 0.3F;
+    public static final double ARMOUR_MODE_WAVE_RADIUS = 5.0D;
+    public static final float ARMOUR_MODE_WAVE_DAMAGE = 8.0F;
+    public static final int JACKHAMMER_COST = 5_000;
+    public static final int JACKHAMMER_COOLDOWN_TICKS = 900;
+    public static final double JACKHAMMER_RANGE = 6.0D;
+    public static final int JACKHAMMER_HITS = 10;
+    public static final int JACKHAMMER_INTERVAL = 3;
+    public static final float JACKHAMMER_DAMAGE = 9.0F;
+    public static final float JACKHAMMER_BOSS_MULTIPLIER = 1.5F;
+    public static final int THROW_COST = 1_200;
+    public static final int THROW_COOLDOWN_TICKS = 240;
+    public static final double THROW_RANGE = 6.0D;
+    public static final double THROW_SPEED = 1.3D;
+    public static final float THROW_DAMAGE = 6.0F;
+
+    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey militia (X), the rolling
+    // cannon (C), the big huge gigantic cannonball (V), the monkey rush (B).
+    public static final int CANNON_INTERVAL = 12;
+    public static final int CANNON_COST = 250;
+    public static final double CANNON_SPEED = 1.6D;
+    public static final double CANNON_RADIUS = 3.0D;
+    public static final float CANNON_DAMAGE = 8.0F;
+    public static final double CANNON_RECOIL = 0.25D;
+    public static final int RECOIL_JUMP_COST = 500;
+    public static final int RECOIL_JUMP_COOLDOWN_TICKS = 40;
+    public static final double RECOIL_JUMP_POWER = 1.1D;
+    public static final int MILITIA_COST = 1_500;
+    public static final int MILITIA_COOLDOWN_TICKS = 400;
+    public static final int MILITIA_COUNT = 3;
+    public static final int MILITIA_TICKS = 200;
+    public static final int MILITIA_INTERVAL = 15;
+    public static final float MILITIA_DAMAGE = 3.0F;
+    public static final double MILITIA_RANGE = 16.0D;
+    public static final int ROLLING_COST = 1_200;
+    public static final int ROLLING_COOLDOWN_TICKS = 160;
+    public static final int ROLLING_SHOTS = 3;
+    public static final double ROLLING_SPREAD_DEG = 15.0D;
+    public static final int BHGC_COST = 6_000;
+    public static final int BHGC_COOLDOWN_TICKS = 1_200;
+    public static final double BHGC_SPEED = 0.6D;
+    public static final double BHGC_RANGE = 32.0D;
+    public static final double BHGC_RADIUS = 4.0D;
+    public static final float BHGC_DAMAGE = 20.0F;
+    public static final double BHGC_BLAST_RADIUS = 8.0D;
+    public static final float BHGC_BLAST_DAMAGE = 24.0F;
+    public static final int RUSH_COST = 1_000;
+    public static final int RUSH_COOLDOWN_TICKS = 240;
+    public static final int RUSH_TICKS = 12;
+    public static final double RUSH_WIDTH = 1.6D;
+    public static final float RUSH_DAMAGE = 6.0F;
+
+    // Mark 7 Bishop (BishopArts): heal beam / holy arrow (right click), Holy Magic Shell (Z), Angel Ray (X), chains
+    // of light (C), Genesis (V), Heaven's Door (B).
+    public static final int HOLY_COST = 30;
+    public static final float HEAL_PER_HIT = 2.0F;
+    public static final float HOLY_ARROW_DAMAGE = 3.0F;
+    public static final int SHELL_COST = 600;
+    public static final int SHELL_COOLDOWN_TICKS = 120;
+    public static final int SHELL_TICKS = 40;
+    /** Within this many ticks of raising the shell a blocked shot goes back where it came from. */
+    public static final int SHELL_REFLECT_TICKS = 8;
+    public static final int ANGEL_RAY_COST = 1_200;
+    public static final int ANGEL_RAY_COOLDOWN_TICKS = 100;
+    public static final double ANGEL_RAY_RANGE = 24.0D;
+    public static final double ANGEL_RAY_WIDTH = 1.2D;
+    public static final float ANGEL_RAY_DAMAGE = 10.0F;
+    public static final float ANGEL_RAY_HEAL = 6.0F;
+    public static final int CHAINS_COST = 1_500;
+    public static final int CHAINS_COOLDOWN_TICKS = 240;
+    public static final double CHAINS_RANGE = 20.0D;
+    public static final int CHAINS_TICKS = 60;
+    public static final int CHAINS_BOSS_TICKS = 20;
+    public static final int GENESIS_COST = 7_000;
+    public static final int GENESIS_COOLDOWN_TICKS = 1_800;
+    public static final double GENESIS_RADIUS = 16.0D;
+    public static final int GENESIS_PILLARS = 10;
+    public static final int GENESIS_INTERVAL = 4;
+    public static final float GENESIS_DAMAGE = 14.0F;
+    public static final int DOOR_COST = 2_500;
+    public static final int DOOR_COOLDOWN_TICKS = 800;
+    public static final double DOOR_RADIUS = 12.0D;
+    public static final int DOOR_TICKS = 300;
+    /** The health it hands back: the sample from this many ticks before the killing blow. */
+    public static final int DOOR_REWIND_TICKS = 60;
 
     // Stealth active camouflage (full set, while sneaking).
     public static final int CLOAK_COST = 6;

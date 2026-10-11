@@ -65,6 +65,9 @@ public final class SuitServerEvents {
         RemoteLink.tick(player);
         SuitWeapons.tick(player);
         CounterHandler.tick(player);
+        if (player.tickCount % 10 == 0) {
+            SuitWeaponItem.sync(player);
+        }
 
         WornSuit worn = WornSuit.of(player);
         CompoundTag data = player.getPersistentData();
@@ -131,13 +134,14 @@ public final class SuitServerEvents {
 
     private static float flyingSpeed(ServerPlayer player, WornSuit worn) {
         float speed = SuitTuning.SUIT_FLYING_SPEED;
-        if (worn.fullSet() && WornSuit.primaryType(player).suitClass() == SuitClass.HULKBUSTER) {
-            speed *= SuitTuning.HULKBUSTER_FLIGHT_FACTOR;
+        if (worn.fullSet()) {
+            speed *= WornSuit.primaryType(player).suitClass().flightFactor();
         }
         SuitWeapons.State state = SuitWeapons.existing(player);
         if (state != null && state.superSaiyan) {
             speed *= SuitTuning.SSJ_MULTIPLIER;
         }
+        speed *= ScrapArts.flightFactor(player);
         return speed;
     }
 

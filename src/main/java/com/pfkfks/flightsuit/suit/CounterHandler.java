@@ -65,6 +65,30 @@ public final class CounterHandler {
             setShield(player, false);
             return;
         }
+        // M18: the classes whose Z is their own move.
+        if (suitClass == SuitClass.CANNONEER) {
+            if (action == PRESS) {
+                CannonArts.recoilJump(player, SuitWeapons.state(player));
+            }
+            setShield(player, false);
+            return;
+        }
+        if (suitClass == SuitClass.BISHOP) {
+            if (action == PRESS) {
+                BishopArts.shell(player, SuitWeapons.state(player));
+            }
+            setShield(player, false);
+            return;
+        }
+        if (suitClass == SuitClass.HULKBUSTER) {
+            // Tap: the parry as ever; held: armour mode instead of the nano shield.
+            switch (action) {
+                case PRESS -> openParry(player);
+                case SHIELD_ON -> HulkbusterArts.setArmourMode(player, SuitWeapons.state(player), true);
+                default -> HulkbusterArts.setArmourMode(player, SuitWeapons.state(player), false);
+            }
+            return;
+        }
         switch (action) {
             case PRESS -> openParry(player);
             case SHIELD_ON -> setShield(player, true);

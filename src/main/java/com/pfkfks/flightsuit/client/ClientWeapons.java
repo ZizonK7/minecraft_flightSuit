@@ -55,6 +55,10 @@ public final class ClientWeapons {
     public static long ssjLockedUntil;
     public static String stolen = "";
     public static long stolenReady;
+    /** M18: the third skill's (B) cooldown, the timed buff's end, the Hulkbuster's armour mode. */
+    public static long skill3Ready;
+    public static long buffUntil;
+    public static boolean armourMode;
 
     private ClientWeapons() {
     }
@@ -68,10 +72,6 @@ public final class ClientWeapons {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level != null && minecraft.level.getEntity(packet.entityId) instanceof net.minecraft.client.player.AbstractClientPlayer player) {
             SuitAnimator.setAiming(player, SuitWeapons.aimsArm(packet.kind));
-            if (packet.kind == SuitWeapons.FIRE_NONE && FIRING_BEFORE.getOrDefault(packet.entityId, SuitWeapons.FIRE_NONE) == SuitWeapons.FIRE_SLASH) {
-                // Trunks: the sword goes back on his back a moment after the last cut.
-                HeroRenderer.showSword(packet.entityId, com.pfkfks.flightsuit.suit.SuitTuning.SWORD_SHEATHE_TICKS);
-            }
         }
         FIRING_BEFORE.put(packet.entityId, packet.kind);
     }
@@ -86,6 +86,9 @@ public final class ClientWeapons {
         ssjLockedUntil = packet.ssjLockedUntil;
         stolen = packet.stolen;
         stolenReady = packet.stolenReady;
+        skill3Ready = packet.skill3Ready;
+        buffUntil = packet.buffUntil;
+        armourMode = packet.armourMode;
     }
 
     /** What a player's primary is firing right now (FIRE_NONE if nothing). */
@@ -110,6 +113,9 @@ public final class ClientWeapons {
         ssjLockedUntil = 0L;
         stolen = "";
         stolenReady = 0L;
+        skill3Ready = 0L;
+        buffUntil = 0L;
+        armourMode = false;
         FIRING_BEFORE.clear();
         com.pfkfks.flightsuit.suit.SwordArts.GOLDEN.clear();
         com.pfkfks.flightsuit.suit.CandyShrink.CLIENT.clear();
@@ -126,13 +132,16 @@ public final class ClientWeapons {
         Vec3 eye = player.getEyePosition(partialTick);
         Vec3 look = player.getViewVector(partialTick);
         Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
-        Vec3 palm = eye.add(look.scale(0.55D)).add(right.scale(0.33D)).add(0.0D, -0.28D, 0.0D);
+        Vec3 palm = FIRING.getOrDefault(player.getId(), SuitWeapons.FIRE_NONE) == SuitWeapons.FIRE_HOLY
+                ? eye.add(look.scale(0.8D)).add(right.scale(0.3D)).add(0.0D, 0.1D, 0.0D)
+                : eye.add(look.scale(0.55D)).add(right.scale(0.33D)).add(0.0D, -0.28D, 0.0D);
         Vec3 far = eye.add(look.scale(SuitTuning.BEAM_RANGE));
         BlockHitResult block = player.level().clip(new ClipContext(eye, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(player.level(), player, eye, end, new AABB(eye, end).inflate(1.0D),
                 entity -> entity instanceof LivingEntity && !entity.isSpectator() && entity.isPickable()
-                        && !(entity instanceof SuitCompanionEntity) && !(entity instanceof RemoteBodyEntity));
+                        && (FIRING.getOrDefault(player.getId(), SuitWeapons.FIRE_NONE) == SuitWeapons.FIRE_HOLY
+                        || !(entity instanceof SuitCompanionEntity) && !(entity instanceof RemoteBodyEntity)));
         return new Beam(palm, hit == null ? end : hit.getLocation());
     }
 
@@ -144,7 +153,11 @@ public final class ClientWeapons {
             }
             Beam beam = beamOf(player, 1.0F);
             Vec3 end = beam.to();
-            if (entry.getValue() == SuitWeapons.FIRE_CRYO) {
+            if (entry.getValue() == SuitWeapons.FIRE_HOLY) {
+                // Motes of light drifting up where the staff's beam lands.
+                level.addParticle(ParticleTypes.END_ROD, end.x, end.y, end.z, (level.random.nextDouble() - 0.5D) * 0.05D,
+                        0.04D + level.random.nextDouble() * 0.04D, (level.random.nextDouble() - 0.5D) * 0.05D);
+            } else if (entry.getValue() == SuitWeapons.FIRE_CRYO) {
                 level.addParticle(ParticleTypes.SNOWFLAKE, end.x, end.y, end.z, (level.random.nextDouble() - 0.5D) * 0.2D,
                         level.random.nextDouble() * 0.1D, (level.random.nextDouble() - 0.5D) * 0.2D);
                 Vec3 along = beam.from().lerp(end, level.random.nextDouble());
@@ -187,9 +200,10 @@ public final class ClientWeapons {
             Beam beam = beamOf(player, partialTick);
             float flicker = 1.0F + 0.15F * (float) Math.sin(time * 1.7F + entry.getKey());
             boolean cryo = kind == SuitWeapons.FIRE_CRYO;
-            int r = cryo ? 170 : 95;
-            int g = cryo ? 230 : 227;
-            int b = 255;
+            boolean holy = kind == SuitWeapons.FIRE_HOLY;
+            int r = holy ? 255 : cryo ? 170 : 95;
+            int g = holy ? 236 : cryo ? 230 : 227;
+            int b = holy ? 150 : 255;
             // Soft glow, colored body, white-hot core.
             ribbon(consumer, pose, beam, 0.17F * flicker, r, g, b, 70);
             ribbon(consumer, pose, beam, 0.08F * flicker, r, g, b, 160);

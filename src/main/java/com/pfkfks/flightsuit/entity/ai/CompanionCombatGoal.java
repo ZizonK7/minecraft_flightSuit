@@ -130,6 +130,14 @@ public class CompanionCombatGoal extends Goal {
             swordsmanFight(target, distance);
             return;
         }
+        if (suitClass == SuitClass.CANNONEER) {
+            cannoneerFight(target, distance);
+            return;
+        }
+        if (suitClass == SuitClass.BISHOP) {
+            bishopFight(target, distance);
+            return;
+        }
         if (suit.isGrounded()) {
             swordFight(target, distance);
             return;
@@ -168,7 +176,8 @@ public class CompanionCombatGoal extends Goal {
             } else {
                 Vec3 palm = suit.palmPosition();
                 Vec3 aim = target.getBoundingBox().getCenter().subtract(palm).normalize();
-                RepulsorHandler.blast((ServerLevel) suit.level(), suit, palm, aim, FIRE_RANGE, COMPANION_REPULSOR_DAMAGE,
+                RepulsorHandler.blast((ServerLevel) suit.level(), suit, palm, aim, FIRE_RANGE,
+                        suitClass == SuitClass.SCRAP ? COMPANION_REPULSOR_DAMAGE * 0.5F : COMPANION_REPULSOR_DAMAGE,
                         entity -> entity != suit && !(entity instanceof SuitCompanionEntity) && !(entity instanceof RemoteBodyEntity)
                                 && entity != suit.getOwner());
             }
@@ -423,6 +432,110 @@ public class CompanionCombatGoal extends Goal {
             Vec3 look = target.getBoundingBox().getCenter().subtract(suit.getEyePosition());
             com.pfkfks.flightsuit.suit.SwordArts.cut(level(), suit, look.normalize(), step, 0.8F * power, suit::isFoe);
             meleeCooldown = CUT_EVERY;
+        }
+    }
+
+    // ---------------------------------------------------------------- Mark 6 (M18)
+
+    /** Keeps its distance and lobs cannonballs; the rolling fan when three or more crowd the target. */
+    private void cannoneerFight(LivingEntity target, double distance) {
+        if (fireCooldown > 0) {
+            fireCooldown--;
+        }
+        Vec3 away = suit.position().subtract(target.position());
+        if (away.horizontalDistanceSqr() < 0.01D) {
+            away = new Vec3(1.0D, 0.0D, 0.0D);
+        }
+        Vec3 spot = target.position().add(new Vec3(away.x, 0.0D, away.z).normalize().scale(STANDOFF + 3.0D)).add(0.0D, 2.0D, 0.0D);
+        if (distance > 3.0D) {
+            suit.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, distance > 16.0D ? 3.0D : 1.4D);
+        }
+        boolean sees = suit.getSensing().hasLineOfSight(target);
+        if (!sees || distance > FIRE_RANGE + 8.0D) {
+            return;
+        }
+        Vec3 muzzle = suit.getEyePosition().add(suit.getLookAngle().scale(0.8D));
+        Vec3 dir = target.getBoundingBox().getCenter().subtract(muzzle).normalize().add(0.0D, 0.03D + distance * 0.003D, 0.0D).normalize();
+        if (skillCooldown <= 0 && foesWithin(6.0D).size() >= 3 && suit.drain(SuitTuning.ROLLING_COST)) {
+            for (int i = -1; i <= 1; i++) {
+                com.pfkfks.flightsuit.entity.CannonballEntity.fire(level(), suit, muzzle, dir.yRot((float) Math.toRadians(i * SuitTuning.ROLLING_SPREAD_DEG))
+                        .scale(SuitTuning.CANNON_SPEED), SuitTuning.CANNON_DAMAGE * 0.8F, SuitTuning.CANNON_RADIUS);
+            }
+            suit.swing(InteractionHand.MAIN_HAND);
+            suit.markAiming();
+            level().playSound(null, suit.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 0.8F, 1.4F);
+            skillCooldown = 160;
+            return;
+        }
+        if (fireCooldown <= 0 && suit.drain(SuitTuning.CANNON_COST)) {
+            com.pfkfks.flightsuit.entity.CannonballEntity.fire(level(), suit, muzzle, dir.scale(SuitTuning.CANNON_SPEED),
+                    SuitTuning.CANNON_DAMAGE * 0.8F, SuitTuning.CANNON_RADIUS);
+            suit.swing(InteractionHand.MAIN_HAND);
+            suit.markAiming();
+            level().sendParticles(ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, 3, 0.1D, 0.1D, 0.1D, 0.02D);
+            level().playSound(null, suit.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 0.6F, 1.5F);
+            fireCooldown = SuitTuning.CANNON_INTERVAL * 2;
+        }
+    }
+
+    // ---------------------------------------------------------------- Mark 7 (M18)
+
+    /**
+     * Hangs back by its owner: heals whoever on our side is hurt (the owner first), chains a foe that gets close to
+     * them, and shoots holy arrows the rest of the time.
+     */
+    private void bishopFight(LivingEntity target, double distance) {
+        if (fireCooldown > 0) {
+            fireCooldown--;
+        }
+        LivingEntity hurt = null;
+        if (suit.getOwner() instanceof ServerPlayer owner && owner.getHealth() < owner.getMaxHealth() * 0.7F && suit.distanceTo(owner) < 24.0D) {
+            hurt = owner;
+        } else {
+            for (LivingEntity ally : level().getEntitiesOfClass(LivingEntity.class, suit.getBoundingBox().inflate(12.0D),
+                    entity -> entity != suit && entity.isAlive() && entity.getHealth() < entity.getMaxHealth() * 0.6F
+                            && suit.getOwner() instanceof ServerPlayer owner && com.pfkfks.flightsuit.suit.BishopArts.isAlly(owner, entity))) {
+                hurt = ally;
+                break;
+            }
+        }
+        Vec3 anchor = suit.getOwner() != null ? suit.getOwner().position() : suit.position();
+        Vec3 away = anchor.subtract(target.position());
+        if (away.horizontalDistanceSqr() < 0.01D) {
+            away = new Vec3(1.0D, 0.0D, 0.0D);
+        }
+        Vec3 spot = anchor.add(new Vec3(away.x, 0.0D, away.z).normalize().scale(3.0D)).add(0.0D, 2.5D, 0.0D);
+        suit.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, suit.distanceToSqr(spot) > 144.0D ? 2.6D : 1.2D);
+        if (hurt != null && fireCooldown <= 0 && suit.getSensing().hasLineOfSight(hurt) && suit.drain(SuitTuning.HOLY_COST * 10)) {
+            hurt.heal(SuitTuning.HEAL_PER_HIT * 2.0F);
+            Vec3 from = suit.getEyePosition().add(suit.getLookAngle().scale(0.8D));
+            com.pfkfks.flightsuit.fx.KiFx.beam(level(), from, hurt.getBoundingBox().getCenter(), 0xA8FFC0, 0.35F, 8,
+                    com.pfkfks.flightsuit.fx.KiFx.BEAM_THIN, suit, com.pfkfks.flightsuit.fx.KiFx.AT_HANDS, hurt);
+            Vec3 at = hurt.getBoundingBox().getCenter();
+            level().sendParticles(ParticleTypes.HAPPY_VILLAGER, at.x, at.y, at.z, 4, 0.3D, 0.4D, 0.3D, 0.0D);
+            suit.getLookControl().setLookAt(hurt, 60.0F, 60.0F);
+            suit.markAiming();
+            fireCooldown = 10;
+            return;
+        }
+        boolean sees = suit.getSensing().hasLineOfSight(target);
+        if (skillCooldown <= 0 && sees && suit.getOwner() != null && target.distanceTo(suit.getOwner()) < 4.0D && suit.drain(SuitTuning.CHAINS_COST)) {
+            if (!com.pfkfks.flightsuit.suit.Stasis.hold(level(), target, SuitTuning.CHAINS_TICKS / 2, false)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, SuitTuning.CHAINS_TICKS / 2, 6));
+            }
+            Vec3 from = suit.getEyePosition().add(suit.getLookAngle().scale(0.8D));
+            com.pfkfks.flightsuit.fx.KiFx.beam(level(), from, target.getBoundingBox().getCenter(), 0xFFF3B0, 0.18F, SuitTuning.CHAINS_TICKS / 2,
+                    com.pfkfks.flightsuit.fx.KiFx.BEAM_THIN, suit, com.pfkfks.flightsuit.fx.KiFx.AT_HANDS, target);
+            level().playSound(null, target.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.NEUTRAL, 1.0F, 1.2F);
+            skillCooldown = 240;
+            return;
+        }
+        if (fireCooldown <= 0 && sees && distance < FIRE_RANGE && suit.drain(SuitTuning.HOLY_COST * 6)) {
+            Vec3 from = suit.getEyePosition().add(suit.getLookAngle().scale(0.8D));
+            com.pfkfks.flightsuit.suit.KiShots.fire(level(), suit, com.pfkfks.flightsuit.suit.KiShots.Style.KI, from,
+                    target.getBoundingBox().getCenter().subtract(from), 2.0D, FIRE_RANGE + 8.0D, SuitTuning.HOLY_ARROW_DAMAGE * 1.5F, 0.6D, suit::isFoe);
+            suit.markAiming();
+            fireCooldown = 14;
         }
     }
 }

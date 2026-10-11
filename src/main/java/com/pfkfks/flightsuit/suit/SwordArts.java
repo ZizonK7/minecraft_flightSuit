@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import com.pfkfks.flightsuit.fx.KiFx;
 
 /**
  * Mark 5, Trunks (M17): a swordsman who fights on the wing - unlike the hero (Mark 4: on the ground, shield,
@@ -75,23 +76,28 @@ public final class SwordArts {
         tickBurning(player, state);
         tickFlash(player, state);
         tickSuperSaiyan(player, state);
-        if (state.firing == SuitWeapons.FIRE_SLASH) {
+        if (cutting(player, state)) {
             cutProjectiles(player);
         }
+        tickVolley(player, state);
+    }
+
+    /** True for a moment after each cut (M18: the sword's an item, a cut is a click) - when ki and arrows get cut. */
+    static boolean cutting(ServerPlayer player, SuitWeapons.State state) {
+        return player.level().getGameTime() - state.lastCut <= SuitTuning.SLASH_INTERVAL * 2L;
     }
 
     // ---------------------------------------------------------------- three-step combo (hold)
 
-    static void tickCombo(ServerPlayer player, SuitWeapons.State state) {
-        if (state.firingTicks % SuitTuning.SLASH_INTERVAL != 1 || state.flashTicks > 0 || state.burningWindup > 0) {
+    static void swing(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now - state.lastCut < SuitTuning.SLASH_INTERVAL || state.flashTicks > 0 || state.burningWindup > 0) {
             return;
         }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SLASH_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
             return;
         }
-        long now = player.level().getGameTime();
         if (now - state.lastCut > SuitTuning.SLASH_INTERVAL * 3L) {
             // A pause breaks the combo: start over with the cut across.
             state.comboStep = CUT_ACROSS;
@@ -240,7 +246,7 @@ public final class SwordArts {
             return false;
         }
         SuitWeapons.State state = SuitWeapons.existing(player);
-        if (state == null || state.firing != SuitWeapons.FIRE_SLASH) {
+        if (state == null || !cutting(player, state)) {
             return false;
         }
         Vec3 flat = from.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
@@ -488,6 +494,97 @@ public final class SwordArts {
         if (player.tickCount % 2 == 0) {
             aura(player.serverLevel(), player);
         }
+    }
+
+    // ---------------------------------------------------------------- charged ki slash (right click held, M18)
+
+    static void startCharge(ServerPlayer player, SuitWeapons.State state) {
+        state.chargeTicks = 0;
+        KiFx.charge(player.serverLevel(), player, state.superSaiyan ? KiFx.GOLD : KiFx.KI, 0.9F, SuitTuning.CHARGE_SLASH_TICKS, KiFx.AT_HANDS);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.5F, 1.9F);
+    }
+
+    /** Charging: a little power a tick; the blade shivers once it's ready. */
+    static void tickCharge(ServerPlayer player, SuitWeapons.State state) {
+        if (state.chargeTicks < SuitTuning.CHARGE_SLASH_TICKS && !SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.CHARGE_SLASH_COST / SuitTuning.CHARGE_SLASH_TICKS)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
+            return;
+        }
+        state.chargeTicks++;
+        if (state.chargeTicks == SuitTuning.CHARGE_SLASH_TICKS) {
+            player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.8F);
+            KiFx.burst(player.serverLevel(), hands(player), state.superSaiyan ? KiFx.GOLD : KiFx.KI, 0.8F, 8, KiFx.SPARK);
+        }
+    }
+
+    /** Let go: charged, a thrust with the ki behind it and a wave of light that cuts on down the line. */
+    static void releaseCharge(ServerPlayer player, SuitWeapons.State state) {
+        ServerLevel level = player.serverLevel();
+        KiFx.stopCharge(level, player);
+        boolean charged = state.chargeTicks >= SuitTuning.CHARGE_SLASH_TICKS;
+        state.chargeTicks = 0;
+        if (!charged) {
+            return;
+        }
+        long now = level.getGameTime();
+        state.lastCut = now;
+        state.comboStep = CUT_ACROSS;
+        float multiplier = power(state) * SuitTuning.CHARGE_SLASH_MULTIPLIER;
+        if (state.parryBonus) {
+            multiplier *= SuitTuning.PARRY_BONUS;
+            state.parryBonus = false;
+        }
+        player.swing(InteractionHand.MAIN_HAND, true);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SWORD_V, 0));
+        LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.THRUST_REACH).target();
+        cut(level, player, player.getLookAngle(), CUT_DOWN, multiplier,
+                entity -> !SuitWeapons.isFriendly(player, entity) && (entity == aimed || entity instanceof Enemy
+                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)));
+        int colour = state.superSaiyan ? KiFx.GOLD : KiFx.KI;
+        KiShots.fire(level, player, KiShots.Style.DISC, hands(player), player.getLookAngle(), 1.4D, SuitTuning.CHARGE_WAVE_RANGE,
+                SuitTuning.CHARGE_WAVE_DAMAGE * power(state), 1.4D,
+                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
+        KiFx.burst(level, hands(player), colour, 1.2F, 10, KiFx.FLASH);
+        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0F, 0.7F);
+    }
+
+    // ---------------------------------------------------------------- ki volley (B, M18)
+
+    static void volley(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.skill3Ready || state.volleyLeft > 0) {
+            SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.VOLLEY_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.skill3Ready = now + SuitTuning.VOLLEY_COOLDOWN_TICKS;
+        state.volleyLeft = SuitTuning.VOLLEY_SHOTS;
+        SuitWeapons.sendStatus(player, state);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.BURNING_ATTACK, 0));
+    }
+
+    /** One blast every few ticks from alternating palms, at whatever's under the crosshair. */
+    private static void tickVolley(ServerPlayer player, SuitWeapons.State state) {
+        if (state.volleyLeft <= 0 || player.tickCount % SuitTuning.VOLLEY_INTERVAL != 0) {
+            return;
+        }
+        state.volleyLeft--;
+        ServerLevel level = player.serverLevel();
+        Vec3 look = player.getLookAngle();
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
+        int side = state.volleyLeft % 2 == 0 ? 1 : -1;
+        Vec3 palm = player.getEyePosition().add(look.scale(0.5D)).add(right.scale(0.3D * side)).add(0.0D, -0.25D, 0.0D);
+        SuitWeapons.Aim aim = SuitWeapons.aim(player, 40.0D);
+        Vec3 dir = aim.end().subtract(palm).normalize();
+        KiShots.fire(level, player, KiShots.Style.KI, palm, dir, 2.2D, 40.0D, SuitTuning.VOLLEY_DAMAGE * power(state), 0.8D,
+                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity == aim.target())
+                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
+        player.swing(side > 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND, true);
     }
 
     // ---------------------------------------------------------------- damage hooks

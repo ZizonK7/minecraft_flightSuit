@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Code-built models: the box layout, the texture and a preview render of every model that isn't a plain skin.
  *
- * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|weapons|all]
+ * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|monkey|weapons|all]
  *
  * Entity and suit models (hulk, hulkbuster, trunks, shenron): boxes are laid out here in model space (pixels, y
  * down, front is -Z, the usual ModelPart conventions), their UVs are packed automatically, every face is
@@ -54,6 +54,10 @@ public class ModelGen {
         if (all || what.equals("shenron")) {
             Model m = Shenron.build();
             emit(m, "client/ShenronModel.java", "textures/entity/dbz/shenron.png");
+        }
+        if (all || what.equals("monkey")) {
+            Model m = Monkey.build();
+            emit(m, "client/MonkeyModel.java", "textures/entity/monkey.png");
         }
         if (all || what.equals("weapons")) {
             Weapons.buildAll();
@@ -1848,6 +1852,145 @@ public class ModelGen {
         }
     }
 
+    // ================================================================ monkey (M18, the Cannon Shooter's)
+
+    /**
+     * The Cannon Shooter's monkey: a little humanoid (drawn at half size) with a big round head, round ears, a pale
+     * muzzle, long arms, a long tail, in the Maple get-up - red bandana, red vest over brown fur, a blue cap with a
+     * gold band and a button on top.
+     */
+    static final class Monkey {
+        static final int FUR = 0xFF8B5A2B, FUR_DARK = 0xFF66401E, FUR_LIGHT = 0xFFA87440;
+        static final int FACE = 0xFFF2D2B0, FACE_DARK = 0xFFD9B18C, EYE = 0xFF1A1410, EYE_SHINE = 0xFFFFFFFF, NOSE = 0xFF5A3A28;
+        static final int RED = 0xFFC8312A, RED_DARK = 0xFF8E1F1A, BLUE = 0xFF2F5FC8, BLUE_DARK = 0xFF1F3F8A;
+        static final int GOLD = 0xFFE8B83A, PAW = 0xFF3A2416;
+
+        static Model build() {
+            Model m = new Model("monkey", 128, 128);
+            Part head = m.part("head", 0, 0, 0);
+            m.part("hat", 0, 0, 0);
+            Part body = m.part("body", 0, 0, 0);
+            Part rArm = m.part("right_arm", -5, 2, 0).shift(-0.5F, 0, 0);
+            Part lArm = m.part("left_arm", 5, 2, 0).shift(0.5F, 0, 0);
+            Part rLeg = m.part("right_leg", -1.9F, 12, 0);
+            Part lLeg = m.part("left_leg", 1.9F, 12, 0);
+
+            head.box("skull", -4.5F, -8.5F, -4, 9, 8, 8, Monkey::head)
+                    .box("muzzle", -2.5F, -3.5F, -5.5F, 5, 3, 2, Monkey::muzzle)
+                    .box("ear_right", -6.5F, -6.5F, -1, 2, 3, 2, Monkey::ear)
+                    .mirrored("ear_left", -6.5F, -6.5F, -1, 2, 3, 2, Monkey::ear)
+                    .box("cap", -4, -10.5F, -3.5F, 8, 2, 7, Monkey::cap)
+                    .box("cap_brim", -3, -9.2F, -5.5F, 6, 1, 2, Monkey::capDark)
+                    .box("cap_button", -0.5F, -11.3F, -0.5F, 1, 1, 1, Monkey::gold);
+
+            body.box("torso", -4, 0, -2.5F, 8, 11, 5, Monkey::torso)
+                    .box("vest_right", -4.5F, 1, -3, 3, 7, 6, 0.1F, Monkey::vest)
+                    .mirrored("vest_left", -4.5F, 1, -3, 3, 7, 6, Monkey::vest)
+                    .box("belt", -4.2F, 9, -2.7F, 8, 2, 5, 0.1F, Monkey::belt);
+            Part tail = body.child("tail", 0, 9, 2.5F, -0.9F, 0, 0);
+            tail.box("tail_a", -1, -1, 0, 2, 2, 6, Monkey::fur)
+                    .box("tail_b", -1, -5, 5, 2, 5, 2, Monkey::fur)
+                    .box("tail_tip", -1.5F, -7, 4.5F, 3, 2, 3, Monkey::fur);
+
+            arm(rArm, false);
+            arm(lArm, true);
+            leg(rLeg, false);
+            leg(lLeg, true);
+            return m;
+        }
+
+        static void arm(Part arm, boolean left) {
+            Hulk.box(arm, left, "upper_arm", -3, -2, -2, 4, 7, 4, Monkey::fur);
+            Hulk.box(arm, left, "forearm", -3, 5, -2, 4, 6, 4, Monkey::fur);
+            Hulk.box(arm, left, "paw", -3, 11, -2, 4, 2, 4, Monkey::paw);
+        }
+
+        static void leg(Part leg, boolean left) {
+            Hulk.box(leg, left, "thigh", -2, 0, -2, 4, 7, 4, Monkey::fur);
+            Hulk.box(leg, left, "foot", -2, 7, -3, 4, 3, 5, Monkey::paw);
+        }
+
+        static int fur(Px p) {
+            int c = p.noise() < 0.15 ? FUR_LIGHT : (int) Math.floor(p.x * 1.1 + p.y * 0.9 + 40) % 4 == 0 ? FUR_DARK : FUR;
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.78);
+            } else if (p.side()) {
+                c = shade(c, 1.05 - p.fy * 0.1);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        static int head(Px p) {
+            if (p.face == Face.FRONT) {
+                // The pale face: round eyes with a shine, under the cap.
+                boolean eye = p.y > -6.6 && p.y < -4.4 && Math.abs(Math.abs(p.x) - 2.0) < 1.1;
+                if (eye) {
+                    return p.y < -5.8 && Math.abs(p.x) > 1.2 && Math.abs(p.x) < 2.0 ? EYE_SHINE : EYE;
+                }
+                if (p.y > -7.2 && Math.abs(p.x) < 3.4) {
+                    return grain(p, p.y > -1.5 ? FACE_DARK : FACE, 0.04);
+                }
+            }
+            return fur(p);
+        }
+
+        static int muzzle(Px p) {
+            if (p.face == Face.FRONT && p.y < -2.6 && Math.abs(p.x) < 1.0) {
+                return NOSE;
+            }
+            if (p.face == Face.FRONT && p.y > -1.6 && Math.abs(p.x) < 1.6) {
+                return NOSE;
+            }
+            return grain(p, p.face == Face.BOTTOM ? FACE_DARK : FACE, 0.04);
+        }
+
+        static int ear(Px p) {
+            return p.face == Face.FRONT || p.face == Face.RIGHT || p.face == Face.LEFT ? grain(p, FACE_DARK, 0.04) : fur(p);
+        }
+
+        static int cap(Px p) {
+            if (p.face == Face.BOTTOM) {
+                return BLUE_DARK;
+            }
+            // A gold band round the lower half.
+            if (p.side() && p.fy > 0.55) {
+                return GOLD;
+            }
+            return grain(p, p.face == Face.TOP ? BLUE : (int) Math.floor(p.x + p.z + 20) % 3 == 0 ? BLUE_DARK : BLUE, 0.04);
+        }
+
+        static int capDark(Px p) {
+            return grain(p, BLUE_DARK, 0.04);
+        }
+
+        static int gold(Px p) {
+            return GOLD;
+        }
+
+        static int torso(Px p) {
+            // A red bandana knotted at the neck, fur below.
+            if (p.y < 1.6) {
+                return grain(p, p.face == Face.FRONT && Math.abs(p.x) < 1.0 && p.y > 0.6 ? RED_DARK : RED, 0.04);
+            }
+            if (p.face == Face.FRONT && Math.abs(p.x) < 2.0) {
+                return grain(p, FACE_DARK, 0.04);
+            }
+            return fur(p);
+        }
+
+        static int vest(Px p) {
+            return grain(p, p.edge() == 0 ? RED_DARK : RED, 0.04);
+        }
+
+        static int belt(Px p) {
+            return grain(p, p.face == Face.FRONT && Math.abs(p.x) < 1.0 ? GOLD : FUR_DARK, 0.04);
+        }
+
+        static int paw(Px p) {
+            return grain(p, p.face == Face.BOTTOM || p.face == Face.FRONT ? PAW : FUR_DARK, 0.04);
+        }
+    }
+
     // ================================================================ weapons (item models)
 
     static final class Weapons {
@@ -1911,7 +2054,7 @@ public class ModelGen {
         static void buildAll() throws IOException {
             List<W> all = List.of(trunksSword(), masterSword(), mjolnir(), captainShield(), widowBaton(), hawkeyeBow(),
                     shieldPistol(), greenDragonBlade(), serpentSpear(), xiahouBroadsword(), belledSabre(), twinSwords(),
-                    yitianSword(), guDingDao());
+                    yitianSword(), guDingDao(), bishopStaff(), cannon());
             List<BufferedImage> previews = new ArrayList<>();
             for (W w : all) {
                 BufferedImage tex = packAndPaint(w);
@@ -2029,6 +2172,60 @@ public class ModelGen {
             });
             w.rod("tip_a", 1.6, 0.5, 21, 22.5, blade(0.8, false));
             w.rod("tip_b", 0.7, 0.4, 22.5, 23.5, blade(0.35, false));
+            return w;
+        }
+
+        /**
+         * M18 the bishop's staff: a long white shaft bound in gold, a winged gold head cradling a glowing blue-white
+         * orb (the Maple Bishop's), held upright like a sword's hilt but gripped low.
+         */
+        static W bishopStaff() {
+            W w = new W("bishop_staff");
+            w.grip = new double[]{8, 2, 8};
+            w.handScale = 0.95;
+            int ivory = 0xFFF4F1E8, ivoryDark = 0xFFCFC9B8, orb = 0xFFBFF4FF, orbCore = 0xFFFFFFFF, wing = 0xFFF8F8FF;
+            w.rod("ferrule", 1.6, 1.6, -6, -4.5, metal(GOLD));
+            w.rod("shaft", 1.2, 1.2, -4.5, 17, (Paint) p -> {
+                // Gold bindings every few pixels up the ivory shaft.
+                int band = (int) Math.floor(p.y + 6);
+                return band % 6 == 0 ? GOLD : grain(p, p.edge() == 0 ? ivoryDark : ivory, 0.03);
+            });
+            w.rod("collar", 2.4, 2.4, 17, 18.5, metal(GOLD));
+            w.rod("cradle", 1.4, 1.4, 18.5, 21, metal(GOLD_DARK));
+            // Wings sweeping up and out from the collar.
+            w.add("wing_right", 3.4, 18.5, 7.4, 6.6, 24.5, 8.6, flat(wing)).rot("z", 22.5, 6.6, 18.5, 8);
+            w.add("wing_left", 9.4, 18.5, 7.4, 12.6, 24.5, 8.6, flat(wing)).rot("z", -22.5, 9.4, 18.5, 8);
+            w.add("wing_tip_right", 2.6, 23.5, 7.5, 4.6, 27, 8.5, flat(wing)).rot("z", 45, 4.6, 23.5, 8);
+            w.add("wing_tip_left", 11.4, 23.5, 7.5, 13.4, 27, 8.5, flat(wing)).rot("z", -45, 11.4, 23.5, 8);
+            w.rod("orb", 3, 3, 21, 24, (Paint) p -> p.edge() == 0 ? orb : orbCore);
+            w.rod("orb_cap", 1.6, 1.6, 24, 25, metal(GOLD));
+            return w;
+        }
+
+        /**
+         * M18 the cannon: a stout bronze barrel with iron hoops and a flared muzzle, a grip under it and a lit fuse at
+         * the breech - carried on the shoulder, barrel pointing where the gunner looks.
+         */
+        static W cannon() {
+            W w = new W("cannon");
+            w.grip = new double[]{8, 3, 8};
+            w.handScale = 1.0;
+            w.preRoll = 0;
+            int bronze = 0xFF9A6A2E, bronzeDark = 0xFF6B4720, bronzeLight = 0xFFC08A44, iron = 0xFF4A4C52, fuse = 0xFFFFB347;
+            // Upright in model space (+y toward the muzzle); the display transforms lay it along the shoulder.
+            w.rod("breech", 4.4, 4.4, -2, 1, metal(iron));
+            w.rod("knob", 2, 2, -3.5, -2, metal(iron));
+            w.rod("barrel", 4, 4, 1, 14, (Paint) p -> grain(p, p.edge() == 0 ? bronzeDark : bronze, 0.04));
+            w.rod("hoop_a", 4.6, 4.6, 3, 4, metal(iron));
+            w.rod("hoop_b", 4.6, 4.6, 8, 9, metal(iron));
+            w.rod("muzzle", 5, 5, 14, 16.5, (Paint) p -> p.face == Face.TOP ? 0xFF1A1410 : grain(p, bronzeLight, 0.04));
+            w.rod("bore", 3, 3, 16.5, 16.8, flat(0xFF1A1410));
+            w.add("grip", 7, 0, 10, 9, 3, 11.5, wrap(LEATHER, LEATHER_DARK));
+            w.add("fuse", 7.7, 0.5, 5.2, 8.3, 3, 5.8, flat(0xFF3A2416));
+            w.add("fuse_tip", 7.6, 3, 5.1, 8.4, 3.8, 5.9, flat(fuse));
+            // Shouldered: barrel forward and a little up in third person, held out front in first.
+            w.thirdRot = new double[]{-80, 0, 0};
+            w.firstRot = new double[]{-70, 10, 0};
             return w;
         }
 

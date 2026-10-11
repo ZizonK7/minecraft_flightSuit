@@ -29,6 +29,7 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import org.joml.Vector3f;
 
 import java.util.Iterator;
+import com.pfkfks.flightsuit.fx.KiFx;
 
 /**
  * Mark 4, the Hero of Twilight (after Twilight Princess's hero). A swordsman rather than a gunner:
@@ -53,6 +54,24 @@ public final class HeroArts {
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
 
+    /**
+     * M18: the gale boomerang in flight - out along {@code dir} for BOOMERANG_RANGE, then back to the thrower,
+     * stunning whatever it passes (each once per leg).
+     */
+    static final class Boomerang {
+        Vec3 pos;
+        Vec3 dir;
+        double travelled;
+        boolean returning;
+        final java.util.Set<LivingEntity> hit = new java.util.HashSet<>();
+        int fx;
+
+        Boomerang(Vec3 pos, Vec3 dir) {
+            this.pos = pos;
+            this.dir = dir;
+        }
+    }
+
     /** A sword beam in flight. */
     static final class SwordBeam {
         Vec3 pos;
@@ -70,6 +89,16 @@ public final class HeroArts {
 
     static boolean fullHealth(LivingEntity entity) {
         return entity.getHealth() >= entity.getMaxHealth() - 0.01F;
+    }
+
+    /** The sword at its best: full health, or the Triforce's power (V) while it lasts. */
+    static boolean empowered(ServerPlayer player, SuitWeapons.State state) {
+        return fullHealth(player) || state.triforceUntil > player.level().getGameTime();
+    }
+
+    /** The Triforce's damage multiplier while it lasts. */
+    static float power(ServerPlayer player, SuitWeapons.State state) {
+        return state.triforceUntil > player.level().getGameTime() ? SuitTuning.TRIFORCE_MULTIPLIER : 1.0F;
     }
 
     /** The right hand, roughly - where the claw leaves from. */
@@ -92,29 +121,45 @@ public final class HeroArts {
         tickBeams(player, state);
         tickSpin(player, state);
         tickHook(player, state, suitClass);
+        tickBoomerangs(player, state);
+        if (suitClass != SuitClass.HERO) {
+            state.triforceUntil = 0L;
+            return;
+        }
+        long now = player.level().getGameTime();
+        if (state.triforceUntil > 0L && state.triforceUntil <= now) {
+            state.triforceUntil = 0L;
+            SuitWeapons.sendStatus(player, state);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.PLAYERS, 0.8F, 0.8F);
+        } else if (state.triforceUntil > now && player.tickCount % 40 == 0) {
+            KiFx.aura(player.serverLevel(), player, KiFx.GOLD, 45);
+        }
     }
 
-    // ---------------------------------------------------------------- Master Sword
+    // ---------------------------------------------------------------- Master Sword (left click, M18)
 
-    static void tickSword(ServerPlayer player, SuitWeapons.State state) {
-        if (state.firingTicks % SuitTuning.SWORD_INTERVAL != 1) {
+    /** One cut per click (or per SWORD_INTERVAL while the button is held), a sword beam with it at full power. */
+    static void swing(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now - state.lastSwing < SuitTuning.SWORD_INTERVAL || state.spinTicks > 0) {
             return;
         }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SWORD_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
             return;
         }
+        state.lastSwing = now;
         ServerLevel level = player.serverLevel();
         player.swing(InteractionHand.MAIN_HAND, true);
         boolean backhand = state.swings++ % 2 == 1;
-        slash(player, level);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, backhand ? SuitAnim.SWORD_V : SuitAnim.SWORD_H, 0));
+        slash(player, level, SuitTuning.SWORD_DAMAGE * power(player, state));
         Vec3 look = player.getLookAngle();
         Vec3 front = player.getEyePosition().add(look.scale(1.6D)).add(0.0D, -0.3D, 0.0D);
         level.sendParticles(ParticleTypes.SWEEP_ATTACK, front.x, front.y, front.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS,
                 0.8F, backhand ? 1.25F : 1.05F);
-        if (fullHealth(player)) {
+        if (empowered(player, state)) {
             state.swordBeams.add(new SwordBeam(player.getEyePosition().add(look.scale(0.8D)).add(0.0D, -0.2D, 0.0D), look));
             level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS,
                     0.9F, 1.8F);
@@ -122,7 +167,7 @@ public final class HeroArts {
     }
 
     /** One slash: every hostile in the arc in front, plus whatever is right under the crosshair. */
-    private static void slash(ServerPlayer player, ServerLevel level) {
+    private static void slash(ServerPlayer player, ServerLevel level, float damage) {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
         double reach = SuitTuning.SWORD_REACH;
@@ -135,7 +180,144 @@ public final class HeroArts {
                     || !player.hasLineOfSight(target))) {
                 continue;
             }
-            hit(player, target, SuitTuning.SWORD_DAMAGE, 0.4D, look);
+            hit(player, target, damage, 0.4D, look);
+        }
+    }
+
+    // ---------------------------------------------------------------- Hylian shield raised (right click held, M18)
+
+    static void raiseShield(ServerPlayer player) {
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.7F, 1.2F);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+    }
+
+    static void lowerShield(ServerPlayer player) {
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.4F, 0.9F);
+    }
+
+    /** Held up: a slow walk behind it; it costs a little to keep up and falls when the power's gone. */
+    static void tickShield(ServerPlayer player, SuitWeapons.State state) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_HOLD_DRAIN)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
+            return;
+        }
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 2, false, false, false));
+        if (state.firingTicks % 20 == 1) {
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+        }
+    }
+
+    /** True while the hero holds the shield up (SuitWeapons.FIRE_SHIELD). */
+    static boolean shieldUp(ServerPlayer player) {
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        return state != null && state.firing == SuitWeapons.FIRE_SHIELD;
+    }
+
+    // ---------------------------------------------------------------- the Triforce (V, M18)
+
+    /** Ten seconds of the sword at full power whatever the health, and every cut half again as hard. */
+    static void triforce(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.ultReady) {
+            SuitWeapons.cooldownMessage(player, state.ultReady - now);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.TRIFORCE_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.ultReady = now + SuitTuning.TRIFORCE_COOLDOWN_TICKS;
+        state.triforceUntil = now + SuitTuning.TRIFORCE_TICKS;
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        Vec3 hand = player.getEyePosition().add(player.getLookAngle().scale(0.5D)).add(0.0D, -0.3D, 0.0D);
+        KiFx.burst(level, hand, KiFx.GOLD, 1.4F, 16, KiFx.FLASH);
+        KiFx.pillar(level, player, player.position(), KiFx.GOLD, 6.0F, 30);
+        KiFx.aura(level, player, KiFx.GOLD, 45);
+        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.2F);
+        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 1.6F);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SPIN_ATTACK, 0));
+        player.displayClientMessage(Component.translatable("message.flightsuit.triforce_on"), true);
+    }
+
+    // ---------------------------------------------------------------- gale boomerang (B, M18)
+
+    static void boomerang(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.skill3Ready) {
+            SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BOOMERANG_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.skill3Ready = now + SuitTuning.BOOMERANG_COOLDOWN_TICKS;
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        Vec3 look = player.getLookAngle();
+        Vec3 from = player.getEyePosition().add(look.scale(0.6D)).add(0.0D, -0.25D, 0.0D);
+        Boomerang boomerang = new Boomerang(from, look);
+        boomerang.fx = KiFx.shot(level, (byte) KiShots.Style.DISC.ordinal(), 0x7CE8A0, 0.9F, from, look, SuitTuning.BOOMERANG_SPEED,
+                SuitTuning.BOOMERANG_RANGE);
+        state.boomerangs.add(boomerang);
+        player.swing(InteractionHand.OFF_HAND, true);
+        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW, SoundSource.PLAYERS, 1.0F, 1.3F);
+    }
+
+    private static void tickBoomerangs(ServerPlayer player, SuitWeapons.State state) {
+        if (state.boomerangs.isEmpty()) {
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        Iterator<Boomerang> it = state.boomerangs.iterator();
+        while (it.hasNext()) {
+            Boomerang b = it.next();
+            Vec3 from = b.pos;
+            if (b.returning) {
+                // Homes on the hand that threw it.
+                Vec3 hand = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
+                Vec3 toHand = hand.subtract(from);
+                if (toHand.length() < SuitTuning.BOOMERANG_SPEED * 1.2D) {
+                    KiFx.shotEnd(level, b.fx, hand);
+                    level.playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.8F, 1.4F);
+                    it.remove();
+                    continue;
+                }
+                b.dir = toHand.normalize();
+            }
+            Vec3 to = from.add(b.dir.scale(SuitTuning.BOOMERANG_SPEED));
+            BlockHitResult block = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            boolean wall = block.getType() != HitResult.Type.MISS;
+            Vec3 end = wall ? block.getLocation() : to;
+            for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, end).inflate(1.2D),
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player))) {
+                if (!b.hit.add(target)) {
+                    continue;
+                }
+                hit(player, target, SuitTuning.BOOMERANG_DAMAGE * power(player, state), 0.3D, b.dir);
+                HulkbusterArts.stun(level, target, SuitTuning.BOOMERANG_STUN_TICKS);
+                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.8F, 1.6F);
+            }
+            if (!b.returning && b.hit.size() > 0 && from.distanceTo(player.position()) > 2.0D) {
+                // Hits count once out and once back: the way back gets its own list.
+            }
+            b.travelled += end.distanceTo(from);
+            b.pos = end;
+            if (!b.returning && (wall || b.travelled >= SuitTuning.BOOMERANG_RANGE)) {
+                b.returning = true;
+                b.hit.clear();
+                KiFx.shotEnd(level, b.fx, end);
+                Vec3 hand = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
+                b.dir = hand.subtract(end).normalize();
+                b.fx = KiFx.shot(level, (byte) KiShots.Style.DISC.ordinal(), 0x7CE8A0, 0.9F, end, b.dir, SuitTuning.BOOMERANG_SPEED,
+                        SuitTuning.BOOMERANG_RANGE * 2.0D);
+                level.playSound(null, end.x, end.y, end.z, SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 0.8F, 1.2F);
+            } else if (b.returning && wall) {
+                // Stuck behind something on the way back: it just comes to hand.
+                b.pos = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
+            }
         }
     }
 
@@ -200,9 +382,9 @@ public final class HeroArts {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        boolean great = fullHealth(player);
+        boolean great = empowered(player, state);
         double radius = great ? SuitTuning.GREAT_SPIN_RADIUS : SuitTuning.SPIN_RADIUS;
-        float damage = great ? SuitTuning.GREAT_SPIN_DAMAGE : SuitTuning.SPIN_DAMAGE;
+        float damage = (great ? SuitTuning.GREAT_SPIN_DAMAGE : SuitTuning.SPIN_DAMAGE) * power(player, state);
         state.skill1Ready = now + SuitTuning.SPIN_COOLDOWN_TICKS;
         SuitWeapons.sendStatus(player, state);
         state.spinTicks = SPIN_SWEEP_TICKS;
@@ -425,8 +607,36 @@ public final class HeroArts {
 
     /** Projectiles from the front glance off the shield (a little reactor power per block). */
     static void hylianShield(LivingAttackEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || !(event.getSource().getDirectEntity() instanceof Projectile projectile)
-                || projectile.getOwner() == player || SuitWeapons.armedClass(player) != SuitClass.HERO) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.HERO) {
+            return;
+        }
+        boolean raised = shieldUp(player);
+        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile)) {
+            // Up on the arm, the shield only turns projectiles; held up (M18), it stops melee from the front too.
+            if (!raised || event.getSource().getEntity() == null || event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) {
+                return;
+            }
+            Vec3 origin = event.getSource().getSourcePosition();
+            if (origin == null) {
+                return;
+            }
+            Vec3 toSource = origin.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+            Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+            if (toSource.lengthSqr() < 1.0E-4D || toSource.normalize().dot(face) < Math.cos(Math.toRadians(SuitTuning.HYLIAN_BLOCK_ANGLE_DEG))
+                    || !SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_BLOCK_COST * 2)) {
+                return;
+            }
+            event.setCanceled(true);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
+            Vec3 clash = player.getEyePosition().add(face.scale(0.8D)).add(0.0D, -0.3D, 0.0D);
+            player.serverLevel().sendParticles(ParticleTypes.CRIT, clash.x, clash.y, clash.z, 8, 0.2D, 0.2D, 0.2D, 0.3D);
+            if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker.distanceTo(player) < 4.0F) {
+                Vec3 push = attacker.position().subtract(player.position());
+                attacker.knockback(0.5D, -push.x, -push.z);
+            }
+            return;
+        }
+        if (projectile.getOwner() == player) {
             return;
         }
         Vec3 from = projectile.position().subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);

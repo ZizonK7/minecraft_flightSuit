@@ -604,13 +604,15 @@ public class SuitCompanionEntity extends PathfinderMob {
      */
     private void syncSword() {
         SuitClass suitClass = suitClass();
-        net.minecraft.world.item.Item wants = suitClass == SuitClass.HERO ? ModItems.MASTER_SWORD.get()
-                : suitClass == SuitClass.SWORDSMAN && getTarget() != null ? ModItems.TRUNKS_SWORD.get() : null;
+        // M18: every weapon suit carries its weapon (the staff, the cannon too); Trunks only draws his to fight.
+        net.minecraft.world.item.Item wants = suitClass == null ? null
+                : suitClass == SuitClass.SWORDSMAN && getTarget() == null ? null
+                : com.pfkfks.flightsuit.suit.SuitWeaponItem.of(suitClass.weapon());
         ItemStack hand = getMainHandItem();
         if (wants != null && hand.isEmpty()) {
             setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(wants));
         } else if (!hand.isEmpty() && !hand.is(wants == null ? net.minecraft.world.item.Items.AIR : wants)
-                && (hand.is(ModItems.MASTER_SWORD.get()) || hand.is(ModItems.TRUNKS_SWORD.get()))) {
+                && hand.getItem() instanceof com.pfkfks.flightsuit.suit.SuitWeaponItem) {
             setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
     }
