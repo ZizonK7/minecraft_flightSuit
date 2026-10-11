@@ -60,6 +60,7 @@ public final class HulkbusterArts {
 
     static void tick(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
         tickWallSlams(player, state);
+        tickHeld(player, state, suitClass);
         if (suitClass != SuitClass.HULKBUSTER || !player.isAlive()) {
             state.pistonTarget = null;
             state.pistonHits = 0;
@@ -226,10 +227,17 @@ public final class HulkbusterArts {
         return state != null && state.hammerTarget != null;
     }
 
-    // ---------------------------------------------------------------- block throwing (B, M18)
+    // ---------------------------------------------------------------- block throwing (B twice, M18)
 
-    /** Rips a 2x2x2 chunk out of the aimed ground and hurls it where the crosshair points. */
+    /**
+     * B once: rips a 2x2x2 chunk out of the aimed ground and holds it floating over the right shoulder. B again:
+     * hurls it where the crosshair points (it hurts what it lands on). Held too long, it's thrown on its own.
+     */
     static void throwBlocks(ServerPlayer player, SuitWeapons.State state) {
+        if (!state.held.isEmpty()) {
+            hurl(player, state);
+            return;
+        }
         long now = player.level().getGameTime();
         if (now < state.skill3Ready) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
@@ -267,25 +275,18 @@ public final class HulkbusterArts {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill3Ready = now + SuitTuning.THROW_COOLDOWN_TICKS;
-        SuitWeapons.sendStatus(player, state);
-        SuitWeapons.Aim aim = SuitWeapons.aim(player, 48.0D);
-        Vec3 target = aim.target() != null ? aim.target().getBoundingBox().getCenter() : aim.end();
         for (BlockPos pos : chunk) {
             BlockState block = level.getBlockState(pos);
             level.removeBlock(pos, false);
             FallingBlockEntity falling = FallingBlockEntity.fall(level, pos, block);
-            // Lobbed: toward the target, lifted so it arcs in; it hurts whatever it lands on.
-            Vec3 from = Vec3.atCenterOf(pos);
-            Vec3 dir = target.subtract(from);
-            double distance = dir.horizontalDistance();
-            Vec3 velocity = dir.normalize().scale(SuitTuning.THROW_SPEED).add(0.0D, 0.25D + distance * 0.02D, 0.0D)
-                    .add((level.random.nextDouble() - 0.5D) * 0.15D, 0.0D, (level.random.nextDouble() - 0.5D) * 0.15D);
-            falling.setDeltaMovement(velocity);
-            falling.setHurtsEntities(SuitTuning.THROW_DAMAGE, (int) (SuitTuning.THROW_DAMAGE * 3));
+            falling.setNoGravity(true);
+            falling.setDeltaMovement(Vec3.ZERO);
             falling.time = 1;
             falling.dropItem = false;
+            state.held.add(falling);
         }
+        state.heldSince = now;
+        SuitWeapons.sendStatus(player, state);
         BlockState dust = level.getBlockState(base.below(2));
         level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, dust.isAir() ? Blocks.DIRT.defaultBlockState() : dust),
                 base.getX(), base.getY(), base.getZ(), 30, 1.0D, 0.6D, 1.0D, 0.1D);
@@ -293,6 +294,89 @@ public final class HulkbusterArts {
         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 0.6F);
         player.swing(InteractionHand.MAIN_HAND, true);
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.HULK_SLAM, 0));
+        player.displayClientMessage(Component.translatable("message.flightsuit.throw_held"), true);
+    }
+
+    /** Where the held chunk floats: over the right shoulder, a little ahead, bobbing. */
+    private static Vec3 shoulder(ServerPlayer player) {
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+        Vec3 right = new Vec3(-face.z, 0.0D, face.x);
+        double bob = Math.sin(player.tickCount * 0.12D) * 0.06D;
+        return player.position().add(face.scale(0.6D)).add(right.scale(1.1D)).add(0.0D, player.getBbHeight() + 0.9D + bob, 0.0D);
+    }
+
+    /** The chunk rides along until it's thrown; dropped (with gravity, hurting nobody) if the suit comes off. */
+    private static void tickHeld(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
+        if (state.held.isEmpty()) {
+            return;
+        }
+        state.held.removeIf(falling -> falling.isRemoved() || falling.level() != player.level());
+        if (state.held.isEmpty()) {
+            SuitWeapons.sendStatus(player, state);
+            return;
+        }
+        if (suitClass != SuitClass.HULKBUSTER || !player.isAlive()) {
+            for (FallingBlockEntity falling : state.held) {
+                falling.setNoGravity(false);
+                falling.time = 1;
+            }
+            state.held.clear();
+            SuitWeapons.sendStatus(player, state);
+            return;
+        }
+        long now = player.level().getGameTime();
+        if (now - state.heldSince >= SuitTuning.THROW_HOLD_TICKS) {
+            hurl(player, state);
+            return;
+        }
+        Vec3 centre = shoulder(player);
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+        Vec3 right = new Vec3(-face.z, 0.0D, face.x);
+        for (int i = 0; i < state.held.size(); i++) {
+            FallingBlockEntity falling = state.held.get(i);
+            double dx = (i & 1) - 0.5D;
+            double dy = (i >> 1) & 1;
+            double dz = ((i >> 2) & 1) - 0.5D;
+            Vec3 at = centre.add(right.scale(dx)).add(face.scale(dz)).add(0.0D, dy, 0.0D);
+            falling.setPos(at.x, at.y - 0.5D, at.z);
+            falling.setDeltaMovement(Vec3.ZERO);
+            falling.time = 1;
+            falling.fallDistance = 0.0F;
+        }
+        if (player.tickCount % 10 == 0) {
+            BlockState dust = state.held.get(0).getBlockState();
+            Vec3 under = centre.add(0.0D, -0.6D, 0.0D);
+            player.serverLevel().sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, dust), under.x, under.y, under.z, 2, 0.6D, 0.1D, 0.6D, 0.02D);
+        }
+    }
+
+    /** B again: the chunk goes where the crosshair points, arcing in, hurting whatever it lands on. */
+    private static void hurl(ServerPlayer player, SuitWeapons.State state) {
+        ServerLevel level = player.serverLevel();
+        SuitWeapons.Aim aim = SuitWeapons.aim(player, 48.0D);
+        Vec3 target = aim.target() != null ? aim.target().getBoundingBox().getCenter() : aim.end();
+        for (FallingBlockEntity falling : state.held) {
+            if (falling.isRemoved()) {
+                continue;
+            }
+            Vec3 from = falling.position();
+            Vec3 dir = target.subtract(from);
+            double distance = dir.horizontalDistance();
+            Vec3 velocity = dir.normalize().scale(SuitTuning.THROW_SPEED).add(0.0D, 0.2D + distance * 0.02D, 0.0D)
+                    .add((level.random.nextDouble() - 0.5D) * 0.15D, 0.0D, (level.random.nextDouble() - 0.5D) * 0.15D);
+            falling.setNoGravity(false);
+            falling.setDeltaMovement(velocity);
+            falling.hurtMarked = true;
+            falling.setHurtsEntities(SuitTuning.THROW_DAMAGE, (int) (SuitTuning.THROW_DAMAGE * 3));
+            falling.time = 1;
+        }
+        state.held.clear();
+        state.skill3Ready = level.getGameTime() + SuitTuning.THROW_COOLDOWN_TICKS;
+        SuitWeapons.sendStatus(player, state);
+        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 0.5F);
+        level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.4F, 1.6F);
+        player.swing(InteractionHand.MAIN_HAND, true);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.HULK_PUNCH_RIGHT, 0));
     }
 
     // ---------------------------------------------------------------- flurry (hold)

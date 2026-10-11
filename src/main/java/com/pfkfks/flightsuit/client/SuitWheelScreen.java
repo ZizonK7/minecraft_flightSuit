@@ -15,9 +15,9 @@ import java.util.List;
  * Click = deploy as companion, Shift+click = swap into it, Ctrl+click = remote-pilot it, right click = make
  * that station the main one.
  *
- * Up to six suits sit on a ring round the centre; more than that (M18, after the cards overlapped) and they go
- * in a grid below the centre instead. Each card is three lines: name, where it is, charge and armour - every
- * line clipped to the card.
+ * Up to six suits sit on a ring round the centre; more than that (M18, after the cards overlapped), or a window
+ * too small for the ring to clear the hint lines (the first M18 test), and they go in a grid below the centre
+ * instead. Each card is three lines: name, where it is, charge and armour - every line clipped to the card.
  */
 public class SuitWheelScreen extends Screen {
     private static final int CARD_W = 118;
@@ -50,8 +50,13 @@ public class SuitWheelScreen extends Screen {
         return false;
     }
 
+    /** The hint lines at the bottom take this much. */
+    private static final int HINT_H = 40;
+
     private boolean ring() {
-        return entries.size() <= RING_MAX;
+        return entries.size() <= RING_MAX
+                && height >= 2 * (RING_RADIUS + CARD_H / 2) + HINT_H + 8
+                && width >= 2 * ((int) (RING_RADIUS * 1.6D) + CARD_W / 2) + 8;
     }
 
     /** Grid: as many columns as fit, centred, starting under the centre panel. */
@@ -79,8 +84,8 @@ public class SuitWheelScreen extends Screen {
         int rows = (entries.size() + columns() - 1) / columns();
         int gridHeight = rows * CARD_H + (rows - 1) * GAP;
         int top = centerY() + CENTER_H / 2 + 12;
-        // Keep the grid above the hint lines at the bottom.
-        top = Math.min(top, height - 36 - gridHeight);
+        // Keep the grid above the hint lines at the bottom (and on screen).
+        top = Math.max(4, Math.min(top, height - HINT_H - gridHeight));
         return top + (i / columns()) * (CARD_H + GAP);
     }
 
@@ -91,7 +96,7 @@ public class SuitWheelScreen extends Screen {
         }
         int rows = (entries.size() + columns() - 1) / columns();
         int gridHeight = rows * CARD_H + (rows - 1) * GAP;
-        int wanted = (height - 36 - gridHeight - 12 - CENTER_H) / 2 + CENTER_H / 2;
+        int wanted = (height - HINT_H - gridHeight - 12 - CENTER_H) / 2 + CENTER_H / 2;
         return Math.max(CENTER_H / 2 + 8, Math.min(height / 2, wanted));
     }
 

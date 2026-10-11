@@ -119,7 +119,9 @@ public final class SuitHudOverlay implements IGuiOverlay {
             return skill == null ? null : Component.translatable("hud.flightsuit.weapon.stolen",
                     Component.translatable("skill.flightsuit.stolen." + skill.id()), ready(ClientWeapons.stolenReady));
         }
-        Component line = Component.translatable("hud.flightsuit.weapon.b." + suitClass.name().toLowerCase(java.util.Locale.ROOT), ready(ClientWeapons.skill3Ready));
+        Component line = suitClass == SuitClass.HULKBUSTER && ClientWeapons.holding
+                ? Component.translatable("hud.flightsuit.weapon.throw_ready")
+                : Component.translatable("hud.flightsuit.weapon.b." + suitClass.name().toLowerCase(java.util.Locale.ROOT), ready(ClientWeapons.skill3Ready));
         float buff = ClientWeapons.secondsLeft(ClientWeapons.buffUntil);
         if (buff > 0.0F) {
             // Overdrive, the Triforce, x-ray, Heaven's Door: how long it has left.
@@ -161,8 +163,13 @@ public final class SuitHudOverlay implements IGuiOverlay {
             }
             case HERO -> {
                 Component hero = Component.translatable("hud.flightsuit.weapon.hero", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
-                // Full health (or the Triforce): the sword looses beams and X becomes the great spin.
-                yield player.getHealth() >= player.getMaxHealth() - 0.01F || ClientWeapons.secondsLeft(ClientWeapons.buffUntil) > 0.0F
+                // The chain of moves (M18 feedback), and full health / the Triforce / a full chain: sword beams, the great spin.
+                boolean maxed = ClientWeapons.chain >= SuitTuning.CHAIN_MAX;
+                if (ClientWeapons.chain > 0) {
+                    hero = hero.copy().append(Component.translatable(maxed ? "hud.flightsuit.weapon.hero_chain_max" : "hud.flightsuit.weapon.hero_chain",
+                            ClientWeapons.chain));
+                }
+                yield player.getHealth() >= player.getMaxHealth() - 0.01F || ClientWeapons.secondsLeft(ClientWeapons.buffUntil) > 0.0F || maxed
                         ? hero.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : hero;
             }
             case HULKBUSTER -> Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));

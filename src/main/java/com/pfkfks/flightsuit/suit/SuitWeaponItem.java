@@ -181,6 +181,19 @@ public class SuitWeaponItem extends Item {
         }
     }
 
+    /** The cannon is carried in both hands, like a crossbow (the first test: one-handed looked wrong). */
+    @Override
+    public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
+            @Override
+            public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(net.minecraft.world.entity.LivingEntity entity,
+                                                                              net.minecraft.world.InteractionHand hand, ItemStack stack) {
+                return kind == Kind.CANNON && hand == net.minecraft.world.InteractionHand.MAIN_HAND
+                        ? net.minecraft.client.model.HumanoidModel.ArmPose.CROSSBOW_HOLD : null;
+            }
+        });
+    }
+
     /** For the renderers: the chest piece the weapon belongs to is on (otherwise the item is about to vanish anyway). */
     public static boolean worn(Player player) {
         return player.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SuitArmorItem;

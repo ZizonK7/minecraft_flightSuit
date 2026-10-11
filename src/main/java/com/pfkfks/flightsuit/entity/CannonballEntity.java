@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.entity;
 
 import com.pfkfks.flightsuit.fx.KiFx;
 import com.pfkfks.flightsuit.registry.ModEntities;
+import com.pfkfks.flightsuit.suit.SuitTuning;
 import com.pfkfks.flightsuit.suit.SuitWeapons;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -30,7 +31,9 @@ import java.util.Set;
  * M18 Cannon Shooter (CannonArts): an iron ball from the cannon. The ordinary one flies a shallow arc and bursts on
  * the first thing it meets, hurting everything round the burst and shoving it back. The giant one (the ultimate)
  * is five times the size, flies straight and slow, bowls through whatever it meets - each foe hurt once - and
- * bursts big where it stops. Never breaks blocks, never hurts the shooter's side (SuitWeapons.isFriendly).
+ * bursts big where it stops. Whatever a ball strikes head-on takes the hit (the splash is for foes); where it bursts,
+ * soft blocks go too - the giant one cracks stone (never inside the shooter's own village). Never hurts the
+ * shooter's side (SuitWeapons.isFriendly).
  */
 public class CannonballEntity extends ThrowableProjectile {
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(CannonballEntity.class, EntityDataSerializers.FLOAT);
@@ -147,9 +150,21 @@ public class CannonballEntity extends ThrowableProjectile {
         return (living instanceof Enemy || living.getLastHurtByMob() == getOwner()) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(living);
     }
 
+    /** Anyone but the shooter's side: a ball to the face is a ball to the face. */
+    private boolean friendly(Entity entity) {
+        if (entity == getOwner()) {
+            return true;
+        }
+        if (getOwner() instanceof ServerPlayer owner && SuitWeapons.isFriendly(owner, entity)) {
+            return true;
+        }
+        return getOwner() instanceof SuitCompanionEntity companion && entity instanceof LivingEntity living && !companion.isFoe(living);
+    }
+
     @Override
     protected boolean canHitEntity(Entity entity) {
-        return super.canHitEntity(entity) && foe(entity) && !(giant && bowled.contains(entity));
+        return super.canHitEntity(entity) && entity instanceof LivingEntity living && living.isAlive() && !friendly(entity)
+                && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(living) && !(giant && bowled.contains(entity));
     }
 
     @Override
@@ -180,7 +195,11 @@ public class CannonballEntity extends ThrowableProjectile {
         Vec3 at = position();
         double reach = giant ? radius * 2.0D : radius;
         float hit = giant ? damage * 1.2F : damage;
-        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(reach), this::foe)) {
+        Set<LivingEntity> victims = new HashSet<>(level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(reach), this::foe));
+        if (direct instanceof LivingEntity living && living.isAlive()) {
+            victims.add(living);
+        }
+        for (LivingEntity victim : victims) {
             double distance = victim.getBoundingBox().getCenter().distanceTo(at);
             if (distance > reach + victim.getBbWidth() / 2.0D) {
                 continue;
@@ -197,10 +216,39 @@ public class CannonballEntity extends ThrowableProjectile {
             victim.setDeltaMovement(victim.getDeltaMovement().add(0.0D, giant ? 0.5D : 0.3D, 0.0D));
             victim.hurtMarked = true;
         }
+        crater(level, at);
         KiFx.burst(level, at, KiFx.FIRE, (float) reach, giant ? 24 : 14, KiFx.BLAST);
         level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, giant ? 6 : 1, giant ? 1.5D : 0.0D, giant ? 1.0D : 0.0D, giant ? 1.5D : 0.0D, 0.0D);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, giant ? 30 : 10, reach * 0.3D, 0.3D, reach * 0.3D, 0.03D);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, giant ? 2.0F : 1.0F, giant ? 0.6F : 1.1F);
         discard();
+    }
+
+    /** The blocks the burst takes with it: soft ones round an ordinary ball, stone round the giant one. Not in a village of the owner's. */
+    private void crater(ServerLevel level, Vec3 at) {
+        double reach = giant ? SuitTuning.CANNON_BREAK_RADIUS * 2.0D : SuitTuning.CANNON_BREAK_RADIUS;
+        float maxHardness = giant ? SuitTuning.BHGC_BREAK_HARDNESS : SuitTuning.CANNON_BREAK_HARDNESS;
+        net.minecraft.core.BlockPos centre = net.minecraft.core.BlockPos.containing(at);
+        if (com.pfkfks.flightsuit.village.Villages.containing(level, centre) != null) {
+            return;
+        }
+        int r = (int) Math.ceil(reach);
+        int broken = 0;
+        for (net.minecraft.core.BlockPos pos : net.minecraft.core.BlockPos.betweenClosed(centre.offset(-r, -r, -r), centre.offset(r, r, r))) {
+            if (Vec3.atCenterOf(pos).distanceTo(at) > reach) {
+                continue;
+            }
+            net.minecraft.world.level.block.state.BlockState block = level.getBlockState(pos);
+            float hardness = block.getDestroySpeed(level, pos);
+            if (block.isAir() || hardness < 0.0F || hardness > maxHardness || level.getBlockEntity(pos) != null || !block.getFluidState().isEmpty()
+                    || getOwner() instanceof ServerPlayer owner && !level.mayInteract(owner, pos)) {
+                continue;
+            }
+            level.destroyBlock(pos, false, this);
+            broken++;
+        }
+        if (broken > 0) {
+            level.playSound(null, at.x, at.y, at.z, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 1.0F, 0.7F);
+        }
     }
 }

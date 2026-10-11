@@ -85,21 +85,21 @@ public final class SuitTuning {
     /** Ticks between slashes while the button is held. */
     public static final int SWORD_INTERVAL = 6;
     public static final int SWORD_COST = 30;
-    public static final float SWORD_DAMAGE = 6.0F;
+    public static final float SWORD_DAMAGE = 4.5F;
     public static final double SWORD_REACH = 4.0D;
     /** Full width of the slash in front of you. */
     public static final double SWORD_ARC_DEG = 110.0D;
     /** At full health every slash also looses a sword beam that flies straight ahead. */
-    public static final float SWORD_BEAM_DAMAGE = 5.0F;
+    public static final float SWORD_BEAM_DAMAGE = 4.0F;
     public static final double SWORD_BEAM_SPEED = 1.6D;
     public static final double SWORD_BEAM_RANGE = 32.0D;
     public static final int SPIN_COST = 1_000;
     public static final int SPIN_COOLDOWN_TICKS = 80;
     public static final double SPIN_RADIUS = 4.5D;
-    public static final float SPIN_DAMAGE = 10.0F;
+    public static final float SPIN_DAMAGE = 7.0F;
     /** Great spin (at full health): wider and harder. */
     public static final double GREAT_SPIN_RADIUS = 7.0D;
-    public static final float GREAT_SPIN_DAMAGE = 14.0F;
+    public static final float GREAT_SPIN_DAMAGE = 10.0F;
     public static final int CLAW_COST = 300;
     public static final int CLAW_COOLDOWN_TICKS = 20;
     public static final double CLAW_RANGE = 28.0D;
@@ -109,7 +109,7 @@ public final class SuitTuning {
     public static final double CLAW_DRAG_SPEED = 1.1D;
     public static final float CLAW_DAMAGE = 2.0F;
     /** Reeled into a big monster: you land a slash on arrival. */
-    public static final float CLAW_STRIKE_DAMAGE = 8.0F;
+    public static final float CLAW_STRIKE_DAMAGE = 6.0F;
     /** Monsters bigger than this (width x width x height) can't be dragged - the clawshot pulls you to them. */
     public static final double CLAW_DRAG_MAX_VOLUME = 2.0D;
     public static final int CLAW_MAX_REEL_TICKS = 50;
@@ -218,20 +218,26 @@ public final class SuitTuning {
 
     // ---------------------------------------------------------------- M18: the full line-up (DESIGN.md 5차 피드백)
 
-    // Scrap Mark 0 (ScrapArts): a coal boiler for a battery, a weak repulsor, a flamethrower (X), a rocket jump (C),
-    // overdrive (V), a flare (B).
+    // Scrap Mark 0 (ScrapArts): a coal boiler for a battery, the flamethrower (right click held - M18 feedback: no beam
+    // on a scrap suit), the scrap shot (X), a rocket jump (C), overdrive (V), a flare (B).
     public static final int SCRAP_CHEST_CAPACITY = 8_000;
     /** FE a lump of coal (or charcoal) is worth in the boiler; a coal block is nine. */
     public static final int SCRAP_COAL_ENERGY = 2_000;
     public static final float SCRAP_FLIGHT_FACTOR = 0.55F;
-    public static final float SCRAP_BEAM_DAMAGE = 2.0F;
-    public static final int FLAME_COST = 600;
-    public static final int FLAME_COOLDOWN_TICKS = 100;
-    public static final int FLAME_TICKS = 24;
-    public static final double FLAME_REACH = 5.0D;
-    public static final double FLAME_ARC_DEG = 50.0D;
-    public static final float FLAME_DAMAGE = 1.5F;
+    /** The flamethrower: FE a tick while it burns, a hit on everything in the cone every FLAME_HIT_INTERVAL ticks. */
+    public static final int FLAME_DRAIN = 25;
+    public static final int FLAME_HIT_INTERVAL = 4;
+    public static final double FLAME_REACH = 5.5D;
+    public static final double FLAME_ARC_DEG = 40.0D;
+    public static final float FLAME_DAMAGE = 2.0F;
     public static final int FLAME_BURN_SECONDS = 4;
+    /** The scrap shot (X): a fan of hot iron scraps, each pellet a hit of its own, close up. */
+    public static final int SCRAP_SHOT_COST = 500;
+    public static final int SCRAP_SHOT_COOLDOWN_TICKS = 50;
+    public static final int SCRAP_SHOT_PELLETS = 7;
+    public static final double SCRAP_SHOT_RANGE = 9.0D;
+    public static final double SCRAP_SHOT_SPREAD = 0.11D;
+    public static final float SCRAP_SHOT_DAMAGE = 2.5F;
     public static final int ROCKET_JUMP_COST = 500;
     public static final int ROCKET_JUMP_COOLDOWN_TICKS = 80;
     public static final double ROCKET_JUMP_UP = 1.1D;
@@ -257,11 +263,14 @@ public final class SuitTuning {
     /** Ticks between the repulsor shots at the next target. */
     public static final int FULL_BURST_INTERVAL = 3;
     public static final float FULL_BURST_DAMAGE = 9.0F;
-    public static final int SCAN_COST = 800;
-    public static final int SCAN_COOLDOWN_TICKS = 300;
-    public static final double SCAN_RADIUS = 32.0D;
-    public static final int SCAN_TICKS = 200;
-    public static final int SCAN_ORE_RADIUS = 16;
+    /** The shoulder guns (B): for SHOULDER_TICKS, a shot every SHOULDER_INTERVAL at the nearest foe in the cone ahead. */
+    public static final int SHOULDER_COST = 900;
+    public static final int SHOULDER_COOLDOWN_TICKS = 300;
+    public static final int SHOULDER_TICKS = 60;
+    public static final int SHOULDER_INTERVAL = 3;
+    public static final double SHOULDER_RANGE = 20.0D;
+    public static final double SHOULDER_ARC_DEG = 80.0D;
+    public static final float SHOULDER_DAMAGE = 2.5F;
 
     // Mark 2 (MarkArts): the mining laser (X), x-ray (V), the light orb (B).
     public static final int DRILL_COST_PER_BLOCK = 40;
@@ -273,13 +282,26 @@ public final class SuitTuning {
     public static final int XRAY_COOLDOWN_TICKS = 600;
     public static final int XRAY_TICKS = 300;
     public static final int XRAY_RADIUS = 32;
-    public static final int ORB_COST = 200;
-    public static final int ORB_COOLDOWN_TICKS = 40;
-    public static final int ORB_TICKS = 1_200;
-    public static final double ORB_RANGE = 24.0D;
+    /** The flashbang (B): thrown where you look; everything with eyes on it is blinded and loses you for a while. */
+    public static final int FLASHBANG_COST = 500;
+    public static final int FLASHBANG_COOLDOWN_TICKS = 200;
+    public static final double FLASHBANG_RANGE = 20.0D;
+    public static final double FLASHBANG_RADIUS = 7.0D;
+    public static final int FLASHBANG_BLIND_TICKS = 100;
+    public static final int FLASHBANG_STUN_TICKS = 20;
 
-    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B).
+    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B). After the
+    // first test ("어렵고 쎄야 하는데 그냥 쎈데"): the chain - every move that differs from the last within CHAIN_WINDOW
+    // adds a link, each link CHAIN_STEP more damage; a hit taken breaks it - and the perfect guard.
     public static final int HYLIAN_HOLD_DRAIN = 4;
+    public static final int CHAIN_MAX = 5;
+    public static final float CHAIN_STEP = 0.3F;
+    public static final int CHAIN_WINDOW_TICKS = 40;
+    /** The shield raised within this many ticks of the blow: a perfect guard (free, stuns, two links). */
+    public static final int PERFECT_GUARD_TICKS = 6;
+    public static final int PERFECT_GUARD_STUN_TICKS = 25;
+    /** The shield raised but late: this share of a melee blow still lands. */
+    public static final float HYLIAN_LATE_TAKEN = 0.5F;
     public static final int TRIFORCE_COST = 4_000;
     public static final int TRIFORCE_TICKS = 200;
     public static final int TRIFORCE_COOLDOWN_TICKS = 1_200;
@@ -288,7 +310,7 @@ public final class SuitTuning {
     public static final int BOOMERANG_COOLDOWN_TICKS = 100;
     public static final double BOOMERANG_RANGE = 16.0D;
     public static final double BOOMERANG_SPEED = 1.2D;
-    public static final float BOOMERANG_DAMAGE = 5.0F;
+    public static final float BOOMERANG_DAMAGE = 4.0F;
     public static final int BOOMERANG_STUN_TICKS = 25;
 
     // Mark 5 (SwordArts, M18): the charged ki slash (right click held) and the ki volley (B).
@@ -320,6 +342,8 @@ public final class SuitTuning {
     public static final double THROW_RANGE = 6.0D;
     public static final double THROW_SPEED = 1.3D;
     public static final float THROW_DAMAGE = 6.0F;
+    /** How long the ripped-up chunk floats over the shoulder before it's thrown on its own. */
+    public static final int THROW_HOLD_TICKS = 200;
 
     // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey militia (X), the rolling
     // cannon (C), the big huge gigantic cannonball (V), the monkey rush (B).
@@ -329,6 +353,10 @@ public final class SuitTuning {
     public static final double CANNON_RADIUS = 3.0D;
     public static final float CANNON_DAMAGE = 8.0F;
     public static final double CANNON_RECOIL = 0.25D;
+    /** Where a ball bursts, blocks within this radius and up to this hardness go (the giant one: twice the radius, harder). */
+    public static final double CANNON_BREAK_RADIUS = 1.3D;
+    public static final float CANNON_BREAK_HARDNESS = 1.5F;
+    public static final float BHGC_BREAK_HARDNESS = 5.0F;
     public static final int RECOIL_JUMP_COST = 500;
     public static final int RECOIL_JUMP_COOLDOWN_TICKS = 40;
     public static final double RECOIL_JUMP_POWER = 1.1D;

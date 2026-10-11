@@ -26,6 +26,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import org.joml.Vector3f;
 
 import java.util.Iterator;
@@ -38,8 +39,12 @@ import com.pfkfks.flightsuit.fx.KiFx;
  * - spin attack (X): one sweep all the way round; at full health the great spin, wider and harder;
  * - clawshot (C): the claw flies at the crosshair - into a block, it reels you there; into a monster, it drags the
  *   monster to you (a big one pulls you to it instead, and you land a slash on arrival). C again lets go;
- * - Hylian shield (passive): arrows and other projectiles from the front glance off.
- * Sword beams are simulated here (a moving point drawn with particles) rather than spawned as entities.
+ * - Hylian shield (right click held): projectiles from the front glance off; a melee blow met within a few ticks of
+ *   raising it is a perfect guard (free, the attacker staggers, two links), a late one still half lands.
+ * After the first M18 test ("hard but strong" came out just strong): the chain. Every move that differs from the
+ * one before it, within CHAIN_WINDOW_TICKS, adds a link; the sword's damage grows CHAIN_STEP per link (CHAIN_MAX
+ * links: sword beams on every cut). The same move twice adds nothing and lets the window run out; a hit taken
+ * breaks the chain. Sword beams are simulated here (a moving point drawn with particles) rather than spawned.
  */
 public final class HeroArts {
     static final byte HOOK_NONE = 0;
@@ -51,6 +56,12 @@ public final class HeroArts {
     static final byte HOOK_BACK = 4;
 
     private static final int SPIN_SWEEP_TICKS = 8;
+    /** The chain's moves (State.chainLast). */
+    static final byte MOVE_SWING = 1;
+    static final byte MOVE_SPIN = 2;
+    static final byte MOVE_CLAW = 3;
+    static final byte MOVE_BOOMERANG = 4;
+    static final byte MOVE_GUARD = 5;
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
 
@@ -91,14 +102,63 @@ public final class HeroArts {
         return entity.getHealth() >= entity.getMaxHealth() - 0.01F;
     }
 
-    /** The sword at its best: full health, or the Triforce's power (V) while it lasts. */
+    /** The sword at its best: full health, the Triforce's power (V) while it lasts, or the chain at its longest. */
     static boolean empowered(ServerPlayer player, SuitWeapons.State state) {
-        return fullHealth(player) || state.triforceUntil > player.level().getGameTime();
+        return fullHealth(player) || state.triforceUntil > player.level().getGameTime() || state.chain >= SuitTuning.CHAIN_MAX;
     }
 
-    /** The Triforce's damage multiplier while it lasts. */
+    /** The damage multiplier: the chain's links, and the Triforce's power on top while it lasts. */
     static float power(ServerPlayer player, SuitWeapons.State state) {
-        return state.triforceUntil > player.level().getGameTime() ? SuitTuning.TRIFORCE_MULTIPLIER : 1.0F;
+        float chain = 1.0F + SuitTuning.CHAIN_STEP * state.chain;
+        return state.triforceUntil > player.level().getGameTime() ? chain * SuitTuning.TRIFORCE_MULTIPLIER : chain;
+    }
+
+    /**
+     * One move of the chain: a different move from the last within the window adds a link (and the HUD, a flash and
+     * a rising note say so); the same move again adds nothing and leaves the window to run out.
+     */
+    static void link(ServerPlayer player, SuitWeapons.State state, byte move) {
+        long now = player.level().getGameTime();
+        if (now > state.chainUntil) {
+            state.chain = 0;
+            state.chainLast = 0;
+        }
+        if (move == state.chainLast) {
+            return;
+        }
+        state.chainLast = move;
+        state.chainUntil = now + SuitTuning.CHAIN_WINDOW_TICKS;
+        if (state.chain >= SuitTuning.CHAIN_MAX) {
+            return;
+        }
+        state.chain++;
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        boolean max = state.chain >= SuitTuning.CHAIN_MAX;
+        int colour = max ? KiFx.GOLD : state.chain >= 3 ? KiFx.SBC : 0x7CE8A0;
+        KiFx.burst(level, hand(player), colour, 0.35F + 0.12F * state.chain, 6, max ? KiFx.RING : KiFx.SPARK);
+        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.7F, 0.8F + 0.18F * state.chain);
+        if (max) {
+            KiFx.aura(level, player, KiFx.GOLD, 20);
+            level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.9F, 1.5F);
+            player.displayClientMessage(Component.translatable("message.flightsuit.chain_max"), true);
+        }
+    }
+
+    /** A hit taken, or the window run out: the chain falls apart. */
+    static void breakChain(ServerPlayer player, SuitWeapons.State state, boolean hurt) {
+        if (state.chain == 0 && state.chainLast == 0) {
+            return;
+        }
+        boolean had = state.chain > 0;
+        state.chain = 0;
+        state.chainLast = 0;
+        state.chainUntil = 0L;
+        SuitWeapons.sendStatus(player, state);
+        if (had) {
+            player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.PLAYERS, hurt ? 0.9F : 0.5F,
+                    hurt ? 0.7F : 1.1F);
+        }
     }
 
     /** The right hand, roughly - where the claw leaves from. */
@@ -124,9 +184,14 @@ public final class HeroArts {
         tickBoomerangs(player, state);
         if (suitClass != SuitClass.HERO) {
             state.triforceUntil = 0L;
+            state.chain = 0;
+            state.chainLast = 0;
             return;
         }
         long now = player.level().getGameTime();
+        if (state.chain > 0 && now > state.chainUntil) {
+            breakChain(player, state, false);
+        }
         if (state.triforceUntil > 0L && state.triforceUntil <= now) {
             state.triforceUntil = 0L;
             SuitWeapons.sendStatus(player, state);
@@ -149,6 +214,7 @@ public final class HeroArts {
             return;
         }
         state.lastSwing = now;
+        link(player, state, MOVE_SWING);
         ServerLevel level = player.serverLevel();
         player.swing(InteractionHand.MAIN_HAND, true);
         boolean backhand = state.swings++ % 2 == 1;
@@ -186,7 +252,8 @@ public final class HeroArts {
 
     // ---------------------------------------------------------------- Hylian shield raised (right click held, M18)
 
-    static void raiseShield(ServerPlayer player) {
+    static void raiseShield(ServerPlayer player, SuitWeapons.State state) {
+        state.shieldRaisedAt = player.level().getGameTime();
         player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.7F, 1.2F);
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
     }
@@ -254,6 +321,7 @@ public final class HeroArts {
             return;
         }
         state.skill3Ready = now + SuitTuning.BOOMERANG_COOLDOWN_TICKS;
+        link(player, state, MOVE_BOOMERANG);
         SuitWeapons.sendStatus(player, state);
         ServerLevel level = player.serverLevel();
         Vec3 look = player.getLookAngle();
@@ -340,7 +408,7 @@ public final class HeroArts {
             drawBeam(level, from.lerp(end, 0.5D), beam.dir);
             drawBeam(level, end, beam.dir);
             if (hit != null) {
-                hit(player, (LivingEntity) hit.getEntity(), SuitTuning.SWORD_BEAM_DAMAGE, 0.3D, beam.dir);
+                hit(player, (LivingEntity) hit.getEntity(), SuitTuning.SWORD_BEAM_DAMAGE * power(player, state), 0.3D, beam.dir);
                 burst(level, hit.getLocation());
                 it.remove();
                 continue;
@@ -382,6 +450,7 @@ public final class HeroArts {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
+        link(player, state, MOVE_SPIN);
         boolean great = empowered(player, state);
         double radius = great ? SuitTuning.GREAT_SPIN_RADIUS : SuitTuning.SPIN_RADIUS;
         float damage = (great ? SuitTuning.GREAT_SPIN_DAMAGE : SuitTuning.SPIN_DAMAGE) * power(player, state);
@@ -453,6 +522,7 @@ public final class HeroArts {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
+        link(player, state, MOVE_CLAW);
         state.hookPhase = HOOK_OUT;
         state.hookPos = hand(player);
         state.hookDir = player.getLookAngle();
@@ -544,7 +614,7 @@ public final class HeroArts {
             player.hurtMarked = true;
             if (mob != null && dist <= stop) {
                 player.swing(InteractionHand.MAIN_HAND, true);
-                hit(player, mob, SuitTuning.CLAW_STRIKE_DAMAGE, 0.6D, to.normalize());
+                hit(player, mob, SuitTuning.CLAW_STRIKE_DAMAGE * power(player, state), 0.6D, to.normalize());
                 Vec3 at = mob.getBoundingBox().getCenter();
                 player.serverLevel().sendParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
                 player.level().playSound(null, mob.getX(), mob.getY(), mob.getZ(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.0F);
@@ -603,45 +673,61 @@ public final class HeroArts {
         ModNetwork.sendToTrackingAndSelf(player, new ClawshotS2CPacket(player.getId(), active, state.hookPos));
     }
 
-    // ---------------------------------------------------------------- Hylian shield (passive)
+    // ---------------------------------------------------------------- Hylian shield (right click held)
 
-    /** Projectiles from the front glance off the shield (a little reactor power per block). */
+    /** Is the blow coming at the front the shield covers? */
+    private static boolean fromTheFront(ServerPlayer player, Vec3 origin) {
+        Vec3 to = origin.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+        return to.lengthSqr() >= 1.0E-4D && to.normalize().dot(face) >= Math.cos(Math.toRadians(SuitTuning.HYLIAN_BLOCK_ANGLE_DEG));
+    }
+
+    /**
+     * The shield held up: projectiles from the front glance off (a little power each); a melee blow from the front
+     * met within PERFECT_GUARD_TICKS of raising it is a perfect guard - nothing lands, the attacker staggers and
+     * the chain gains two links. Raised earlier than that, the blow still half lands (onHurt).
+     */
     static void hylianShield(LivingAttackEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.HERO) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.HERO || !shieldUp(player)) {
             return;
         }
-        boolean raised = shieldUp(player);
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        if (state == null) {
+            return;
+        }
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
         if (!(event.getSource().getDirectEntity() instanceof Projectile projectile)) {
-            // Up on the arm, the shield only turns projectiles; held up (M18), it stops melee from the front too.
-            if (!raised || event.getSource().getEntity() == null || event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) {
+            if (event.getSource().getEntity() == null || event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) {
                 return;
             }
             Vec3 origin = event.getSource().getSourcePosition();
-            if (origin == null) {
+            if (origin == null || !fromTheFront(player, origin)) {
                 return;
             }
-            Vec3 toSource = origin.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
-            Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
-            if (toSource.lengthSqr() < 1.0E-4D || toSource.normalize().dot(face) < Math.cos(Math.toRadians(SuitTuning.HYLIAN_BLOCK_ANGLE_DEG))
-                    || !SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_BLOCK_COST * 2)) {
+            long now = player.level().getGameTime();
+            if (now - state.shieldRaisedAt > SuitTuning.PERFECT_GUARD_TICKS) {
+                // Late: onHurt takes its share.
                 return;
             }
             event.setCanceled(true);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
+            ServerLevel level = player.serverLevel();
             Vec3 clash = player.getEyePosition().add(face.scale(0.8D)).add(0.0D, -0.3D, 0.0D);
-            player.serverLevel().sendParticles(ParticleTypes.CRIT, clash.x, clash.y, clash.z, 8, 0.2D, 0.2D, 0.2D, 0.3D);
-            if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker.distanceTo(player) < 4.0F) {
+            KiFx.burst(level, clash, KiFx.GOLD, 1.1F, 8, KiFx.FLASH);
+            KiFx.burst(level, clash, KiFx.GOLD, 1.6F, 10, KiFx.RING);
+            level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.3F);
+            level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.9F);
+            if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker.distanceTo(player) < 5.0F) {
                 Vec3 push = attacker.position().subtract(player.position());
-                attacker.knockback(0.5D, -push.x, -push.z);
+                attacker.knockback(0.8D, -push.x, -push.z);
+                HulkbusterArts.stun(level, attacker, SuitTuning.PERFECT_GUARD_STUN_TICKS);
             }
+            link(player, state, MOVE_GUARD);
+            state.chainLast = 0;
+            link(player, state, MOVE_GUARD);
+            player.displayClientMessage(Component.translatable("message.flightsuit.perfect_guard"), true);
             return;
         }
-        if (projectile.getOwner() == player) {
-            return;
-        }
-        Vec3 from = projectile.position().subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
-        Vec3 facing = Vec3.directionFromRotation(0.0F, player.getYRot());
-        if (from.lengthSqr() < 1.0E-4D || from.normalize().dot(facing) < Math.cos(Math.toRadians(SuitTuning.HYLIAN_BLOCK_ANGLE_DEG))) {
+        if (projectile.getOwner() == player || !fromTheFront(player, projectile.position())) {
             return;
         }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_BLOCK_COST)) {
@@ -652,5 +738,26 @@ public final class HeroArts {
                 0.9F + player.getRandom().nextFloat() * 0.2F);
         player.serverLevel().sendParticles(ParticleTypes.CRIT, projectile.getX(), projectile.getY(), projectile.getZ(), 6,
                 0.1D, 0.1D, 0.1D, 0.2D);
+    }
+
+    /** A blow that lands: a late guard halves it (for a little power); whatever gets through breaks the chain. */
+    static void onHurt(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.HERO) {
+            return;
+        }
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        if (state == null) {
+            return;
+        }
+        Vec3 origin = event.getSource().getSourcePosition();
+        if (shieldUp(player) && origin != null && !(event.getSource().getDirectEntity() instanceof Projectile) && fromTheFront(player, origin)
+                && !event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)
+                && SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_BLOCK_COST * 2)) {
+            event.setAmount(event.getAmount() * SuitTuning.HYLIAN_LATE_TAKEN);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 0.8F, 0.7F);
+        }
+        if (event.getAmount() > 0.0F) {
+            breakChain(player, state, true);
+        }
     }
 }

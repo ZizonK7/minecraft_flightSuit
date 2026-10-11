@@ -25,15 +25,15 @@
 
 | 슈트 | 역할 | 우클릭 | Z | X | C | V 궁극기 | B 보조 |
 |---|---|---|---|---|---|---|---|
-| **Mark 0 스크랩** (새, 클래스 `SCRAP`) | 초반 싼 슈트. 철·구리, 석탄 충전, 고쳐 씀 | 리펄서(약함, 피해 2) | 패링(공용) | 화염 방사(앞 5칸 원뿔, 불 붙임) | 로켓 점프(위로 1.2, 착지 충격 피해 4) | 과부하(8초: 비행 속도 1.5배·리펄서 2배, 석탄 2개 분 소모) | 조명탄(하늘로 쏴 60초 주변 빛 + 몹 발광) |
-| **Mark 1 라이언** | 올라운더 | 리펄서 | 패링/실드 | 미사일 | 유니빔 | 전방위 리펄서(24칸 안 적 전부에 차례로 빔 + 미사일 전탄) | 이디스 스캔(32칸 몹·광석 10초 발광 표시) |
-| **Mark 2 춘식이 스텔스** | 잠입·탐험·광질 | 냉동 빔 | 패링/실드(+웅크림 은신) | 광선 드릴(앞 3×3 굴착, 드롭이 인벤토리로) | 빙결 폭발 | 투시 모드(15초: 32칸 안 광석·몹이 벽 너머로 보임) | 발광 구슬(던진 곳에 빛 60초) |
+| **Mark 0 스크랩** (새, 클래스 `SCRAP`) | 초반 싼 슈트. 철·구리, 석탄 충전, 고쳐 씀 | 화염 방사(유지, 앞 5.5칸 원뿔, 불 붙임 - 1차 피드백: 빔 없음) | 패링(공용) | 스크랩 산탄(쇳조각 7발 부채꼴) | 로켓 점프(위로 1.2, 착지 충격 피해 4) | 과부하(8초: 비행 속도 1.5배·리펄서 2배, 석탄 2개 분 소모) | 조명탄(하늘로 쏴 60초 주변 빛 + 몹 발광) |
+| **Mark 1 라이언** | 올라운더 | 리펄서 | 패링/실드 | 미사일 | 유니빔 | 전방위 리펄서(24칸 안 적 전부에 차례로 빔 + 미사일 전탄) | 어깨 기관총(3초 자동 사격 - 1차 피드백: 스캔은 Mark 2와 겹침) |
+| **Mark 2 춘식이 스텔스** | 잠입·탐험·광질 | 냉동 빔 | 패링/실드(+웅크림 은신) | 광선 드릴(앞 3×3 굴착, 드롭이 인벤토리로) | 빙결 폭발 | 투시 모드(15초: 32칸 안 광석·몹이 벽 너머로 보임) | 섬광탄(7칸 안 적 실명·정지·표적 해제 - 1차 피드백: 구슬 용도 불명) |
 | **Mark 3 팬텀** | 일대일 | 카드 | 그림자 걸음/훔치기 | 저지먼트 드로우 | 대결(즉사) | 템페스트 | 훔친 기술 |
-| **Mark 4 황혼의 용사** | 어렵지만 강함 | 좌클릭 검 콤보, 우클릭 방패 들기(앞 피해 막음) | 패링 | 회전 베기 | 클로샷 | 트라이포스의 힘(10초: 체력에 상관없이 검기 + 피해 1.5배) | 질풍 부메랑(앞으로 날아가 적을 멈추고 돌아옴) |
+| **Mark 4 황혼의 용사** | 어렵지만 강함: **체인**(다른 기술을 2초 안에 이으면 +30%씩, 맞으면 끊김), **퍼펙트 가드**(맞기 직전 0.3초) - 1차 피드백 | 좌클릭 검 베기(약함), 우클릭 방패 들기(화살 막음, 근접은 퍼펙트/절반) | 패링 | 회전 베기 | 클로샷 | 트라이포스의 힘(10초: 체력에 상관없이 검기 + 피해 1.5배) | 질풍 부메랑(앞으로 날아가 적을 멈추고 돌아옴) |
 | **Mark 5 트랭크스** | 비행 검사 | 좌클릭 3단 베기, 우클릭 검기 모으기(차징 베기) | 검 패링 | 버닝 어택 | 섬광 베기 | 초사이어인 | 기탄 연사(5발) |
 | **Mark 6 캐논 슈터** (새, 클래스 `CANNONEER`) | 광역 | 대포(포탄 탄도, 반경 3 폭발 8, 반동) | 반동 점프(아래로 쏴서 뒤·위로 튐) | 몽키 밀리샤(원숭이 포탑 3개 10초) | 롤링 캐논(부채꼴 3발) | 빅 휴즈 자이언틱 캐논볼(느린 거대 포탄, 반경 8, 관통) | 몽키 러시(원숭이들이 앞으로 돌진, 직선 피해) |
 | **Mark 7 비숍** (새, 클래스 `BISHOP`) | 서포터 | 아군 조준 힐 빔 / 적 조준 홀리 애로우 | 홀리 매직 쉘(2초 창, 기탄·광선·미사일 막기, 정확하면 반사) | 엔젤 레이(관통 빛, 적 피해·아군 회복) | 빛의 사슬(묶기, 보스 짧게) | 제네시스(빛 폭격 + 아군 완전 회복) | 헤븐즈 도어(아군이 치명타를 맞으면 3초 전 체력으로, 15초 유지) |
-| **Mark 44 헐크버스터** | 보스전 | 연타 | 장갑 모드(Z 유지: 이동 불가·피해 70% 감소·끝나면 충격파) | 피스톤 펀치 | 지면 강타 | 잭해머(조준한 큰 적을 붙잡고 10연타, 보스 피해 1.5배) | 블록 던지기(조준한 블록 덩이를 뽑아 던짐, 반경 2 피해) |
+| **Mark 44 헐크버스터** | 보스전 | 연타 | 장갑 모드(Z 유지: 이동 불가·피해 70% 감소·끝나면 충격파) | 피스톤 펀치 | 지면 강타 | 잭해머(조준한 큰 적을 붙잡고 10연타, 보스 피해 1.5배) | 블록 들기 → 다시 B 던지기(1차 피드백) |
 
 - 캐논 슈터의 원숭이는 풀세트를 입으면 따라다니는 작은 동료 엔티티(`entity/MonkeyEntity`, 저장 안 함, 주인이 벗으면 사라짐). 기술에 쓰이지 않을 때는 어깨 근처를 따라다니며 가끔 소리.
 - 새 슈트 스킨: `tools/SuitSkinGen.java mk0|mk6|mk7` (원본 `docs/reference/cannon_shooter_source.png`, `bishop_source.png`). 미리보기 PNG 확인 뒤 `SkinSplitter`.
@@ -79,4 +79,5 @@ README(조작키·슈트 종류·제작법·전력·마을), DESIGN.md 5장 "M18
 - 묶음 B 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): `block/CableBlock`, `block/PowerPlantBlock(+Entity)`, `PowerGrid.nodesLinked/nodesWithin`, `ResidentJob.ENGINEER` + `village/ai/EngineerWorkGoal` + `VillageWorkday.engineer`, `Blueprint.POWER_PLANT`, 텍스처(`TextureGen power`)·스킨(`ResidentSkinGen engineer`)·리소스·번역·README·안내서.
 - 묶음 C 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): `town/TownAnnex`(봉화·주막·다이너), `SignalSmokeS2CPacket`/`SignalSmokeClient`, 역할 `FORT_INNKEEPER`·`CITY_DINER`(`Place.INN`), `town/Rumours`, `town/VillageRumours`(바닐라 주민 소문 + 지도 제작자 지도), `TownsfolkEntity`(정오 식사·비·잠·인사·심부름), `TownPlan.grow`, 일기토(`GeneralEntity.startSpar`, `Diplomacy.spar`, `/village spar`), 스킨 2종, 번역, README.
 - 묶음 D 완료 (2026-10-11, 서버 부팅으로 데이터팩 로드 확인, 인게임 테스트 전): `worldgen/noise_settings/{dbz_earth,namek,titan}.json`, 바이옴 `dbz_plains/dbz_mesa/dbz_wasteland/titan`, 차원 JSON 교체. README·DESIGN·TEST_PLAN.
+- **1차 테스트 피드백 (묶음 A, 2026-10-11)** 반영 (로컬 빌드 통과, 인게임 테스트 전): 슈트 휠 격자 전환 조건, Mark 0 화염 방사 = 우클릭 유지(클라이언트가 그리는 불꽃 `ClientWeapons.flame`, `FIRE_FLAME`) + `X` 스크랩 산탄, Mark 1 빔 빨강 + `B` 어깨 기관총(`MarkArts.shoulderGuns`), Mark 2 `B` 섬광탄(`MarkArts.flashbang`), Mark 4 체인·퍼펙트 가드(`HeroArts.link`, `onHurt`), Mark 44 들기→던지기(`HulkbusterArts.throwBlocks/tickHeld/hurl`), 대포 두 손(`SuitWeaponItem.initializeClient` 석궁 자세)·정통 피해·블록 파괴(`CannonballEntity.crater`), 케이블·발전소 크리에이티브 탭. 상태 패킷에 `chain`·`holding`.
 - 묶음 E 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): 에이전트 4개(사이어인·나메크인·프리저·셀/부우)가 각자 작업 트리에서 만든 것을 병합. `client/DbzPartsLayer`, `client/parts/{DbzPartsModel,DbzParts,SaiyanParts,NamekianParts,FriezaParts,CellBuuParts}`, `ModelGen parts_*`, 텍스처 `textures/entity/dbz/parts/*.png`, 미리보기 `docs/reference/parts_*_preview.png`. README·DESIGN·TEST_PLAN·CLAUDE.

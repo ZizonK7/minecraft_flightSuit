@@ -41,11 +41,11 @@ public final class CannonArts {
         }
     }
 
-    /** Where the muzzle is: the cannon rides on the right shoulder, pointing where the gunner looks. */
+    /** Where the muzzle is: the cannon is held in both hands in front of the chest (SuitWeaponItem's arm pose), pointing where the gunner looks. */
     static Vec3 muzzle(ServerPlayer player) {
         Vec3 look = player.getLookAngle();
         Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
-        return player.getEyePosition().add(look.scale(0.9D)).add(right.scale(0.4D)).add(0.0D, -0.15D, 0.0D);
+        return player.getEyePosition().add(look.scale(1.1D)).add(right.scale(0.1D)).add(0.0D, -0.35D, 0.0D);
     }
 
     private static void shoot(ServerPlayer player, Vec3 dir, float damage, double radius, boolean recoil) {
@@ -61,7 +61,6 @@ public final class CannonArts {
             player.setDeltaMovement(player.getDeltaMovement().subtract(dir.scale(SuitTuning.CANNON_RECOIL)));
             player.hurtMarked = true;
         }
-        player.swing(InteractionHand.MAIN_HAND, true);
     }
 
     // ---------------------------------------------------------------- cannon fire (right click held)
@@ -80,7 +79,6 @@ public final class CannonArts {
         // A touch of lift so the arc lands about where the crosshair sits.
         dir = dir.add(0.0D, 0.04D + aim.end().distanceTo(muzzle(player)) * 0.002D, 0.0D).normalize();
         shoot(player, dir, SuitTuning.CANNON_DAMAGE, SuitTuning.CANNON_RADIUS, true);
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.MISSILE_LAUNCH, 0));
     }
 
     // ---------------------------------------------------------------- recoil jump (Z)
@@ -156,7 +154,6 @@ public final class CannonArts {
         }
         player.setDeltaMovement(player.getDeltaMovement().subtract(dir.scale(SuitTuning.CANNON_RECOIL * 2.0D)));
         player.hurtMarked = true;
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.MISSILE_LAUNCH, 0));
     }
 
     // ---------------------------------------------------------------- Big Huge Gigantic Cannonball (V)

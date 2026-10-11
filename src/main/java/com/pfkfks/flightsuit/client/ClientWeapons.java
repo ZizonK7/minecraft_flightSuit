@@ -59,6 +59,9 @@ public final class ClientWeapons {
     public static long skill3Ready;
     public static long buffUntil;
     public static boolean armourMode;
+    /** M18 feedback: the hero's chain, and the Hulkbuster holding a chunk of ground to throw. */
+    public static int chain;
+    public static boolean holding;
 
     private ClientWeapons() {
     }
@@ -89,6 +92,8 @@ public final class ClientWeapons {
         skill3Ready = packet.skill3Ready;
         buffUntil = packet.buffUntil;
         armourMode = packet.armourMode;
+        chain = packet.chain;
+        holding = packet.holding;
     }
 
     /** What a player's primary is firing right now (FIRE_NONE if nothing). */
@@ -116,6 +121,8 @@ public final class ClientWeapons {
         skill3Ready = 0L;
         buffUntil = 0L;
         armourMode = false;
+        chain = 0;
+        holding = false;
         FIRING_BEFORE.clear();
         com.pfkfks.flightsuit.suit.SwordArts.GOLDEN.clear();
         com.pfkfks.flightsuit.suit.CandyShrink.CLIENT.clear();
@@ -145,10 +152,32 @@ public final class ClientWeapons {
         return new Beam(palm, hit == null ? end : hit.getLocation());
     }
 
-    /** Impact sparks / frost where each beam lands. */
+    /** The scrap suit's flame: from the right palm, as far as FLAME_REACH or the first wall. */
+    private static Beam flameOf(Player player, float partialTick) {
+        Vec3 eye = player.getEyePosition(partialTick);
+        Vec3 look = player.getViewVector(partialTick);
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
+        Vec3 palm = eye.add(look.scale(0.6D)).add(right.scale(0.35D)).add(0.0D, -0.3D, 0.0D);
+        Vec3 far = palm.add(look.scale(SuitTuning.FLAME_REACH));
+        BlockHitResult block = player.level().clip(new ClipContext(palm, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return new Beam(palm, block.getType() == HitResult.Type.MISS ? far : block.getLocation());
+    }
+
+    /** Impact sparks / frost where each beam lands; soot off the end of a flame. */
     public static void tick(ClientLevel level) {
         for (Map.Entry<Integer, Byte> entry : FIRING.entrySet()) {
-            if (!SuitWeapons.isBeam(entry.getValue()) || !(level.getEntity(entry.getKey()) instanceof Player player)) {
+            if (!(level.getEntity(entry.getKey()) instanceof Player player)) {
+                continue;
+            }
+            if (entry.getValue() == SuitWeapons.FIRE_FLAME) {
+                Beam flame = flameOf(player, 1.0F);
+                Vec3 end = flame.to().add((level.random.nextDouble() - 0.5D) * 0.8D, (level.random.nextDouble() - 0.3D) * 0.6D,
+                        (level.random.nextDouble() - 0.5D) * 0.8D);
+                level.addParticle(level.random.nextInt(3) == 0 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.SMOKE, end.x, end.y, end.z,
+                        0.0D, 0.04D + level.random.nextDouble() * 0.04D, 0.0D);
+                continue;
+            }
+            if (!SuitWeapons.isBeam(entry.getValue())) {
                 continue;
             }
             Beam beam = beamOf(player, 1.0F);
@@ -194,23 +223,135 @@ public final class ClientWeapons {
         for (Map.Entry<Integer, Byte> entry : FIRING.entrySet()) {
             byte kind = entry.getValue();
             Entity entity = level.getEntity(entry.getKey());
-            if (!SuitWeapons.isBeam(kind) || !(entity instanceof Player player)) {
+            if (!(entity instanceof Player player)) {
+                continue;
+            }
+            if (kind == SuitWeapons.FIRE_FLAME) {
+                flame(consumer, pose, player, partialTick, time);
+                continue;
+            }
+            if (!SuitWeapons.isBeam(kind)) {
                 continue;
             }
             Beam beam = beamOf(player, partialTick);
             float flicker = 1.0F + 0.15F * (float) Math.sin(time * 1.7F + entry.getKey());
             boolean cryo = kind == SuitWeapons.FIRE_CRYO;
             boolean holy = kind == SuitWeapons.FIRE_HOLY;
-            int r = holy ? 255 : cryo ? 170 : 95;
-            int g = holy ? 236 : cryo ? 230 : 227;
-            int b = holy ? 150 : 255;
+            // Mark 1's repulsor is red (the first M18 test: it looked the same as Mark 2's cryo beam), the cryo beam ice-blue, the staff gold.
+            boolean red = kind == SuitWeapons.FIRE_REPULSOR && SuitWeapons.armedClass(player) == com.pfkfks.flightsuit.suit.SuitClass.STANDARD;
+            int r = holy ? 255 : red ? 255 : cryo ? 170 : 95;
+            int g = holy ? 236 : red ? 70 : cryo ? 230 : 227;
+            int b = holy ? 150 : red ? 45 : 255;
             // Soft glow, colored body, white-hot core.
             ribbon(consumer, pose, beam, 0.17F * flicker, r, g, b, 70);
             ribbon(consumer, pose, beam, 0.08F * flicker, r, g, b, 160);
-            ribbon(consumer, pose, beam, 0.03F, 255, 255, 255, 230);
+            ribbon(consumer, pose, beam, 0.03F, 255, red ? 235 : 255, red ? 225 : 255, 230);
         }
         poseStack.popPose();
         buffers.endBatch(RenderType.lightning());
+    }
+
+    // ---------------------------------------------------------------- the scrap suit's flame
+
+    /**
+     * A tongue of fire out of the right palm: a few turbulent ribbons, white-hot at the hand, orange along the
+     * middle and dark red where they thin out and die, waves of heat running down them (no particles - drawn, like
+     * the ki effects, DESIGN.md M17 feedback).
+     */
+    private static void flame(VertexConsumer consumer, Matrix4f pose, Player player, float partialTick, float time) {
+        Beam flame = flameOf(player, partialTick);
+        Vec3 look = player.getViewVector(partialTick);
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
+        Vec3 up = right.cross(look).normalize();
+        double reach = flame.to().distanceTo(flame.from());
+        if (reach < 0.3D) {
+            return;
+        }
+        int segments = 10;
+        float seed = player.getId() % 17;
+        for (int tongue = 0; tongue < 4; tongue++) {
+            float phase = seed + tongue * 1.9F;
+            Vec3[] points = new Vec3[segments + 1];
+            float[] widths = new float[segments + 1];
+            int[][] colours = new int[segments + 1][];
+            for (int i = 0; i <= segments; i++) {
+                float t = (float) i / segments;
+                double along = t * reach;
+                double amp = 0.04D + t * 0.5D;
+                double ox = Math.sin(time * 0.9D + phase - along * 2.1D) * amp + Math.sin(time * 0.37D + phase * 2.0D + along * 1.3D) * amp * 0.5D;
+                double oy = Math.cos(time * 0.8D + phase * 1.3D - along * 1.7D) * amp * 0.8D + t * t * 0.3D;
+                points[i] = flame.from().add(look.scale(along)).add(right.scale(ox)).add(up.scale(oy));
+                widths[i] = (0.05F + t * 0.4F) * (0.85F + 0.15F * (float) Math.sin(time * 2.3D + phase + i));
+                colours[i] = flameColour(t);
+            }
+            tongue(consumer, pose, points, widths, colours, 1.0F, 1.0F);
+            tongue(consumer, pose, points, widths, colours, 0.4F, 1.6F);
+        }
+    }
+
+    /** White-yellow at the hand, orange, then dark red fading to nothing. */
+    private static int[] flameColour(float t) {
+        int r;
+        int g;
+        int b;
+        if (t < 0.25F) {
+            float k = t / 0.25F;
+            r = 255;
+            g = (int) (245 - 55 * k);
+            b = (int) (190 - 120 * k);
+        } else if (t < 0.6F) {
+            float k = (t - 0.25F) / 0.35F;
+            r = 255;
+            g = (int) (190 - 80 * k);
+            b = (int) (70 - 40 * k);
+        } else {
+            float k = (t - 0.6F) / 0.4F;
+            r = (int) (255 - 70 * k);
+            g = (int) (110 - 70 * k);
+            b = (int) (30 - 20 * k);
+        }
+        int a = (int) (200 * (1.0F - t * t));
+        return new int[]{r, g, b, a};
+    }
+
+    /** A ribbon along the points (two crossed planes, both faces), the width and colour varying along it. */
+    private static void tongue(VertexConsumer consumer, Matrix4f pose, Vec3[] points, float[] widths, int[][] colours, float widthScale,
+                               float brighten) {
+        for (int i = 0; i < points.length - 1; i++) {
+            Vec3 dir = points[i + 1].subtract(points[i]);
+            if (dir.lengthSqr() < 1.0E-6D) {
+                continue;
+            }
+            dir = dir.normalize();
+            Vec3 u = dir.cross(Math.abs(dir.y) > 0.95D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D)).normalize();
+            Vec3 v = dir.cross(u).normalize();
+            float w0 = widths[i] * widthScale;
+            float w1 = widths[i + 1] * widthScale;
+            int[] c0 = bright(colours[i], brighten);
+            int[] c1 = bright(colours[i + 1], brighten);
+            for (Vec3 side : new Vec3[]{u, v}) {
+                Vec3 a0 = points[i].add(side.scale(w0));
+                Vec3 a1 = points[i].subtract(side.scale(w0));
+                Vec3 b1 = points[i + 1].subtract(side.scale(w1));
+                Vec3 b0 = points[i + 1].add(side.scale(w1));
+                vertex(consumer, pose, a0, c0);
+                vertex(consumer, pose, a1, c0);
+                vertex(consumer, pose, b1, c1);
+                vertex(consumer, pose, b0, c1);
+                vertex(consumer, pose, b0, c1);
+                vertex(consumer, pose, b1, c1);
+                vertex(consumer, pose, a1, c0);
+                vertex(consumer, pose, a0, c0);
+            }
+        }
+    }
+
+    private static int[] bright(int[] c, float k) {
+        return new int[]{Math.min(255, (int) (c[0] * k)), Math.min(255, (int) (c[1] * k)), Math.min(255, (int) (c[2] * k)), c[3]};
+    }
+
+    private static void vertex(VertexConsumer consumer, Matrix4f pose, Vec3 p, int[] c) {
+        consumer.vertex(pose, (float) p.x, (float) p.y, (float) p.z).color(c[0], c[1], c[2], c[3]).endVertex();
     }
 
     /** Two crossed quads along the beam, each drawn both ways round. */

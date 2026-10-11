@@ -17,11 +17,17 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -33,13 +39,14 @@ import java.util.List;
 
 /**
  * Scrap Mark 0 (M18, the user's "a suit like Tony's in the cave"): iron and copper, a coal boiler for a battery.
- * Hold coal and use it to stoke the boiler; the repulsor is weak, and the suit's four moves are a flamethrower (X),
- * a rocket jump that cracks the ground on landing (C), an overdrive that burns coal for speed and punch (V) and a
- * flare that lights the night and marks what's out there (B). Flying, the boiler trails smoke.
+ * Hold coal and use it to stoke the boiler. No beams on a scrap suit (first M18 test): the right hand is a
+ * flamethrower (right click held - the cone is drawn by the clients, client/ClientWeapons), X spits a fan of hot
+ * iron scraps, C is a rocket jump that cracks the ground on landing, V an overdrive that burns coal for speed and
+ * punch, B a flare that lights the night and marks what's out there. Flying, the boiler trails smoke.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class ScrapArts {
-    /** Lights the flare and the light orb set: where, in which level, until when (removed afterwards). */
+    /** Lights the flare set: where, in which level, until when (removed afterwards). */
     private record Light(ServerLevel level, BlockPos pos, long until) {
     }
 
@@ -88,7 +95,6 @@ public final class ScrapArts {
     static void tick(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
         tickLights(player.serverLevel());
         if (suitClass != SuitClass.SCRAP) {
-            state.flameTicks = 0;
             state.rocketArmed = false;
             state.overdriveUntil = 0L;
             return;
@@ -105,7 +111,6 @@ public final class ScrapArts {
                 level.sendParticles(ParticleTypes.FLAME, back.x, back.y - 0.1D, back.z, 2, 0.1D, 0.1D, 0.1D, 0.02D);
             }
         }
-        tickFlame(player, state, level);
         tickRocket(player, state, level);
         if (state.overdriveUntil > 0L && state.overdriveUntil <= now) {
             state.overdriveUntil = 0L;
@@ -114,60 +119,111 @@ public final class ScrapArts {
         }
     }
 
-    // ---------------------------------------------------------------- flamethrower (X)
+    // ---------------------------------------------------------------- flamethrower (right click held)
 
-    static void flamethrower(ServerPlayer player, SuitWeapons.State state) {
-        long now = player.level().getGameTime();
-        if (now < state.skill1Ready || state.flameTicks > 0) {
-            SuitWeapons.cooldownMessage(player, state.skill1Ready - now);
-            return;
-        }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLAME_COST)) {
-            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            return;
-        }
-        state.skill1Ready = now + SuitTuning.FLAME_COOLDOWN_TICKS;
-        state.flameTicks = SuitTuning.FLAME_TICKS;
-        SuitWeapons.sendStatus(player, state);
-        player.level().playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.0F, 0.7F);
-    }
-
-    private static void tickFlame(ServerPlayer player, SuitWeapons.State state, ServerLevel level) {
-        if (state.flameTicks <= 0) {
-            return;
-        }
-        state.flameTicks--;
+    /** The right palm, where the fire comes from (the clients draw from the same spot). */
+    static Vec3 palm(ServerPlayer player) {
         Vec3 look = player.getLookAngle();
         Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
-        Vec3 palm = player.getEyePosition().add(look.scale(0.6D)).add(right.scale(0.35D)).add(0.0D, -0.3D, 0.0D);
-        // A tongue of fire: flame particles thrown along the look, widening as they go.
-        for (int i = 0; i < 4; i++) {
-            double along = 0.4D + level.random.nextDouble() * 1.2D;
-            Vec3 spread = new Vec3(level.random.nextGaussian(), level.random.nextGaussian(), level.random.nextGaussian()).scale(0.08D);
-            Vec3 v = look.scale(0.35D + along * 0.15D).add(spread);
-            level.sendParticles(ParticleTypes.FLAME, palm.x, palm.y, palm.z, 0, v.x, v.y, v.z, 1.0D);
-        }
-        if (state.flameTicks % 4 == 0) {
-            level.sendParticles(ParticleTypes.LARGE_SMOKE, palm.x + look.x * 2.0D, palm.y + look.y * 2.0D, palm.z + look.z * 2.0D, 1,
-                    0.3D, 0.3D, 0.3D, 0.01D);
-            level.playSound(null, player.blockPosition(), SoundEvents.FIRE_AMBIENT, SoundSource.PLAYERS, 0.8F, 0.8F);
-        }
-        if (state.flameTicks % 2 != 0) {
+        return player.getEyePosition().add(look.scale(0.6D)).add(right.scale(0.35D)).add(0.0D, -0.3D, 0.0D);
+    }
+
+    static void startFlame(ServerPlayer player) {
+        player.level().playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.9F, 0.8F);
+    }
+
+    static void stopFlame(ServerPlayer player) {
+        player.level().playSound(null, player.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.5F, 1.2F);
+    }
+
+    /**
+     * Burning: coal every tick, and every few ticks everything in the cone ahead takes a lick of fire and catches.
+     * Nothing but flesh burns - the suit's owner has a village to keep (so no fire on blocks).
+     */
+    static void tickFlame(ServerPlayer player, SuitWeapons.State state) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLAME_DRAIN)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
             return;
         }
+        ServerLevel level = player.serverLevel();
+        if (state.firingTicks % 7 == 1) {
+            level.playSound(null, player.blockPosition(), SoundEvents.FIRE_AMBIENT, SoundSource.PLAYERS, 1.0F, 0.7F);
+        }
+        if (state.firingTicks % 14 == 3) {
+            level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_BURN, SoundSource.PLAYERS, 0.4F, 0.6F);
+        }
+        if (state.firingTicks % SuitTuning.FLAME_HIT_INTERVAL != 0) {
+            return;
+        }
+        Vec3 look = player.getLookAngle();
+        Vec3 from = palm(player);
         double cos = Math.cos(Math.toRadians(SuitTuning.FLAME_ARC_DEG / 2.0D));
         float damage = SuitTuning.FLAME_DAMAGE * SuitWeapons.overdrive(state, player);
+        LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.FLAME_REACH).target();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(SuitTuning.FLAME_REACH),
-                entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity)
+                        && (entity instanceof Enemy || entity.getLastHurtByMob() == player || entity == aimed)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity))) {
-            Vec3 to = target.getBoundingBox().getCenter().subtract(player.getEyePosition());
-            if (to.length() - target.getBbWidth() / 2.0D > SuitTuning.FLAME_REACH || to.normalize().dot(look) < cos) {
+            Vec3 to = target.getBoundingBox().getCenter().subtract(from);
+            if (to.length() - target.getBbWidth() / 2.0D > SuitTuning.FLAME_REACH || to.normalize().dot(look) < cos
+                    || !player.hasLineOfSight(target)) {
                 continue;
             }
             target.invulnerableTime = 0;
             target.hurt(player.damageSources().playerAttack(player), damage);
             target.setSecondsOnFire(SuitTuning.FLAME_BURN_SECONDS);
         }
+    }
+
+    // ---------------------------------------------------------------- scrap shot (X)
+
+    /** A fan of hot iron scraps out of the left forearm: each pellet its own hit, a wall of them close up, nothing far off. */
+    static void scrapShot(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.skill1Ready) {
+            SuitWeapons.cooldownMessage(player, state.skill1Ready - now);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SCRAP_SHOT_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.skill1Ready = now + SuitTuning.SCRAP_SHOT_COOLDOWN_TICKS;
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        Vec3 look = player.getLookAngle();
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
+        Vec3 from = player.getEyePosition().add(look.scale(0.6D)).subtract(right.scale(0.35D)).add(0.0D, -0.3D, 0.0D);
+        float damage = SuitTuning.SCRAP_SHOT_DAMAGE * SuitWeapons.overdrive(state, player);
+        for (int i = 0; i < SuitTuning.SCRAP_SHOT_PELLETS; i++) {
+            Vec3 spread = new Vec3(level.random.nextGaussian(), level.random.nextGaussian(), level.random.nextGaussian())
+                    .scale(SuitTuning.SCRAP_SHOT_SPREAD);
+            Vec3 dir = look.add(spread).normalize();
+            Vec3 far = from.add(dir.scale(SuitTuning.SCRAP_SHOT_RANGE));
+            BlockHitResult block = level.clip(new ClipContext(from, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
+            EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, from, end, new AABB(from, end).inflate(0.5D),
+                    entity -> entity instanceof LivingEntity && entity.isAlive() && !entity.isSpectator() && entity.isPickable()
+                            && !SuitWeapons.isFriendly(player, entity));
+            if (hit != null) {
+                end = hit.getLocation();
+                LivingEntity target = (LivingEntity) hit.getEntity();
+                target.invulnerableTime = 0;
+                if (target.hurt(player.damageSources().playerAttack(player), damage)) {
+                    target.knockback(0.35D, -dir.x, -dir.z);
+                }
+            }
+            // Each scrap drawn flying to where it stopped: a hot spark with a short tail.
+            KiFx.shot(level, (byte) KiShots.Style.FIRE.ordinal(), 0xFFC860, 0.18F, from, dir, 2.2D, Math.max(0.5D, end.distanceTo(from)));
+        }
+        KiFx.burst(level, from.add(look.scale(0.3D)), KiFx.FIRE, 0.9F, 5, KiFx.FLASH);
+        level.sendParticles(ParticleTypes.LARGE_SMOKE, from.x, from.y, from.z, 3, 0.1D, 0.1D, 0.1D, 0.02D);
+        level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.7F, 1.7F);
+        level.playSound(null, player.blockPosition(), SoundEvents.CHAIN_BREAK, SoundSource.PLAYERS, 0.8F, 0.8F);
+        player.setDeltaMovement(player.getDeltaMovement().subtract(look.scale(0.12D)));
+        player.hurtMarked = true;
+        player.swing(InteractionHand.OFF_HAND, true);
     }
 
     // ---------------------------------------------------------------- rocket jump (C)
@@ -191,7 +247,7 @@ public final class ScrapArts {
         player.fallDistance = 0.0F;
         state.rocketArmed = true;
         Vec3 feet = player.position();
-        level.sendParticles(ParticleTypes.FLAME, feet.x, feet.y, feet.z, 20, 0.3D, 0.1D, 0.3D, 0.08D);
+        KiFx.burst(level, feet.add(0.0D, 0.2D, 0.0D), KiFx.FIRE, 1.6F, 8, KiFx.BLAST);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, feet.x, feet.y, feet.z, 10, 0.3D, 0.1D, 0.3D, 0.03D);
         level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.0F, 0.5F);
         level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.4F, 1.6F);
@@ -292,7 +348,7 @@ public final class ScrapArts {
         player.displayClientMessage(Component.translatable("message.flightsuit.flare_up"), true);
     }
 
-    // ---------------------------------------------------------------- lights (the flare, Mark 2's light orb)
+    // ---------------------------------------------------------------- lights (the flare)
 
     /** Puts an invisible light source at {@code pos} (if it's air) until {@code until}; removed again by tickLights. */
     public static boolean light(ServerLevel level, BlockPos pos, long until) {

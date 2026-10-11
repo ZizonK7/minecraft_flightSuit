@@ -47,6 +47,8 @@ public class FlightSuitMod {
                         output.accept(ModBlocks.SOLAR_PANEL.get());
                         output.accept(ModBlocks.GENERATOR.get());
                         output.accept(ModBlocks.BATTERY.get());
+                        output.accept(ModBlocks.CABLE.get());
+                        output.accept(ModBlocks.POWER_PLANT.get());
                         output.accept(ModBlocks.STATION_STORAGE.get());
                         output.accept(ModBlocks.SECURITY_SENSOR.get());
                         output.accept(ModBlocks.LAUNCH_PAD.get());

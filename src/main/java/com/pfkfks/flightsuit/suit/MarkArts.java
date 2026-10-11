@@ -21,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -37,9 +38,11 @@ import java.util.Set;
  * M18 moves of the two Mark suits (DESIGN.md 5차 피드백 역할표):
  * <ul>
  *   <li>Mark 1, the all-rounder: the full burst (V) - a repulsor shot at every foe around in quick turn, then the
- *       whole missile salvo - and the EDITH scan (B) that lights up monsters and ores through the walls;</li>
+ *       whole missile salvo - and the shoulder guns (B) that pick off whatever's ahead for a few seconds (the EDITH
+ *       scan went after the first test: Mark 1 needn't mine, and it doubled Mark 2's x-ray);</li>
  *   <li>Mark 2, the explorer: the mining laser (X) that cuts a 3x3 tunnel ahead and pockets the drops, x-ray (V)
- *       that shows ores and monsters through the rock for a while, and the light orb (B) that lights a cave.</li>
+ *       that shows ores and monsters through the rock for a while, and the flashbang (B) that blinds whatever has
+ *       eyes on it (the light orb went: the user couldn't tell what it was for).</li>
  * </ul>
  * Ores are drawn on the client (client/OreSightClient) from the positions the server scans once.
  */
@@ -50,11 +53,16 @@ public final class MarkArts {
     static void tick(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
         if (suitClass == SuitClass.STANDARD) {
             tickBurst(player, state);
+            tickGuns(player, state);
         } else {
             state.burst.clear();
+            state.gunTicks = 0;
         }
         if (suitClass != SuitClass.STEALTH) {
             state.xrayUntil = 0L;
+            state.flashTick = 0L;
+        } else {
+            tickFlashbang(player, state);
         }
     }
 
@@ -122,26 +130,69 @@ public final class MarkArts {
         }
     }
 
-    // ---------------------------------------------------------------- Mark 1: EDITH scan (B)
+    // ---------------------------------------------------------------- Mark 1: shoulder guns (B)
 
-    static void scan(ServerPlayer player, SuitWeapons.State state) {
+    /** Three seconds of the shoulder pods picking off whatever's ahead - a shot at the nearest foe in the cone every few ticks. */
+    static void shoulderGuns(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
-        if (now < state.skill3Ready) {
+        if (now < state.skill3Ready || state.gunTicks > 0) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SCAN_COST)) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SHOULDER_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill3Ready = now + SuitTuning.SCAN_COOLDOWN_TICKS;
+        state.skill3Ready = now + SuitTuning.SHOULDER_COOLDOWN_TICKS;
+        state.gunTicks = SuitTuning.SHOULDER_TICKS;
         SuitWeapons.sendStatus(player, state);
         ServerLevel level = player.serverLevel();
-        int mobs = reveal(player, SuitTuning.SCAN_RADIUS, SuitTuning.SCAN_TICKS);
-        int ores = sendOres(player, SuitTuning.SCAN_ORE_RADIUS, SuitTuning.SCAN_TICKS);
-        KiFx.burst(level, player.getEyePosition(), KiFx.UNIBEAM, (float) SuitTuning.SCAN_RADIUS, 20, KiFx.RING);
-        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8F, 1.8F);
-        player.displayClientMessage(Component.translatable("message.flightsuit.scan", mobs, ores), true);
+        level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.8F, 1.6F);
+        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.6F, 1.8F);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.MISSILE_LAUNCH, 0));
+        player.displayClientMessage(Component.translatable("message.flightsuit.shoulder_guns"), true);
+    }
+
+    private static void tickGuns(ServerPlayer player, SuitWeapons.State state) {
+        if (state.gunTicks <= 0) {
+            return;
+        }
+        state.gunTicks--;
+        if (state.gunTicks % SuitTuning.SHOULDER_INTERVAL != 0) {
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        double cos = Math.cos(Math.toRadians(SuitTuning.SHOULDER_ARC_DEG / 2.0D));
+        LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.SHOULDER_RANGE).target();
+        LivingEntity target = aimed != null && (aimed instanceof Enemy || aimed.getLastHurtByMob() == player) ? aimed : null;
+        if (target == null) {
+            double best = Double.MAX_VALUE;
+            for (LivingEntity foe : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(SuitTuning.SHOULDER_RANGE),
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                            && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity))) {
+                Vec3 to = foe.getBoundingBox().getCenter().subtract(eye);
+                double d = to.length();
+                if (d > SuitTuning.SHOULDER_RANGE || to.normalize().dot(look) < cos || !player.hasLineOfSight(foe) || d >= best) {
+                    continue;
+                }
+                best = d;
+                target = foe;
+            }
+        }
+        if (target == null) {
+            return;
+        }
+        // Left pod, right pod, left pod... just above the shoulders.
+        int side = (state.gunTicks / SuitTuning.SHOULDER_INTERVAL) % 2 == 0 ? 1 : -1;
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
+        Vec3 pod = eye.add(right.scale(0.45D * side)).add(0.0D, 0.15D, 0.0D).add(look.scale(0.2D));
+        Vec3 dir = target.getBoundingBox().getCenter().subtract(pod).normalize();
+        ServerPlayer shooter = player;
+        KiShots.fire(level, player, KiShots.Style.KI, pod, dir, 2.4D, SuitTuning.SHOULDER_RANGE + 4.0D, SuitTuning.SHOULDER_DAMAGE, 0.0D,
+                entity -> !SuitWeapons.isFriendly(shooter, entity));
+        level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 0.5F, 1.7F + side * 0.1F);
     }
 
     /** Monsters within {@code radius} glow for {@code ticks}; how many. */
@@ -273,36 +324,70 @@ public final class MarkArts {
         player.displayClientMessage(Component.translatable("message.flightsuit.xray", mobs, ores), true);
     }
 
-    // ---------------------------------------------------------------- Mark 2: light orb (B)
+    // ---------------------------------------------------------------- Mark 2: flashbang (B)
 
-    static void lightOrb(ServerPlayer player, SuitWeapons.State state) {
+    /**
+     * Thrown where you look: a burst of white that blinds everything with eyes on it, stops it in its tracks for a
+     * moment and makes it forget you - the way in, or the way out.
+     */
+    static void flashbang(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
         if (now < state.skill3Ready) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.ORB_COST)) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLASHBANG_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
         ServerLevel level = player.serverLevel();
         Vec3 eye = player.getEyePosition();
-        Vec3 far = eye.add(player.getLookAngle().scale(SuitTuning.ORB_RANGE));
+        Vec3 far = eye.add(player.getLookAngle().scale(SuitTuning.FLASHBANG_RANGE));
         BlockHitResult hit = level.clip(new ClipContext(eye, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 end = hit.getType() == HitResult.Type.MISS ? far : hit.getLocation();
-        // The orb sticks just short of the wall it meets (or where the throw runs out).
-        BlockPos at = hit.getType() == HitResult.Type.MISS ? BlockPos.containing(end) : hit.getBlockPos().relative(hit.getDirection());
-        state.skill3Ready = now + SuitTuning.ORB_COOLDOWN_TICKS;
+        Vec3 at = hit.getType() == HitResult.Type.MISS ? far : hit.getLocation().add(hit.getLocation().subtract(eye).normalize().scale(-0.3D));
+        state.skill3Ready = now + SuitTuning.FLASHBANG_COOLDOWN_TICKS;
         SuitWeapons.sendStatus(player, state);
         Vec3 hand = eye.add(player.getLookAngle().scale(0.5D)).add(0.0D, -0.2D, 0.0D);
-        Vec3 centre = Vec3.atCenterOf(at);
-        KiFx.shot(level, (byte) KiShots.Style.KI.ordinal(), KiFx.MOON, 0.5F, hand, centre.subtract(hand).normalize(), 1.2D, centre.distanceTo(hand));
-        if (ScrapArts.light(level, at, now + SuitTuning.ORB_TICKS)) {
-            KiFx.burst(level, centre, KiFx.MOON, 0.9F, SuitTuning.ORB_TICKS, KiFx.ORB);
-        } else {
-            KiFx.burst(level, centre, KiFx.MOON, 0.9F, 20, KiFx.FLASH);
+        KiFx.shot(level, (byte) KiShots.Style.KI.ordinal(), KiFx.WHITE, 0.35F, hand, at.subtract(hand).normalize(), 1.6D, at.distanceTo(hand));
+        int flight = (int) Math.ceil(at.distanceTo(hand) / 1.6D);
+        state.flashAt = at;
+        state.flashTick = now + flight;
+        player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
+        level.playSound(null, player.blockPosition(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 0.8F, 1.3F);
+    }
+
+    /** The thrown flashbang going off where it lands. */
+    private static void tickFlashbang(ServerPlayer player, SuitWeapons.State state) {
+        if (state.flashTick == 0L || player.level().getGameTime() < state.flashTick) {
+            return;
         }
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.6F);
-        level.playSound(null, at, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.8F, 1.8F);
+        state.flashTick = 0L;
+        ServerLevel level = player.serverLevel();
+        Vec3 at = state.flashAt;
+        KiFx.burst(level, at, KiFx.WHITE, (float) SuitTuning.FLASHBANG_RADIUS * 0.6F, 12, KiFx.FLASH);
+        KiFx.burst(level, at, KiFx.WHITE, (float) SuitTuning.FLASHBANG_RADIUS, 8, KiFx.RING);
+        KiFx.flare(level, player, at, (float) SuitTuning.FLASHBANG_RADIUS);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 1.2F, 1.6F);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 2.0F);
+        int blinded = 0;
+        for (LivingEntity mob : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(SuitTuning.FLASHBANG_RADIUS),
+                entity -> entity.isAlive() && entity != player && !SuitWeapons.isFriendly(player, entity)
+                        && entity.getBoundingBox().getCenter().distanceTo(at) <= SuitTuning.FLASHBANG_RADIUS)) {
+            // Only eyes on the flash: a wall between is a wall.
+            if (level.clip(new ClipContext(at, mob.getEyePosition(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob)).getType()
+                    != HitResult.Type.MISS) {
+                continue;
+            }
+            mob.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, SuitTuning.FLASHBANG_BLIND_TICKS, 0, false, false, true));
+            mob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, SuitTuning.FLASHBANG_BLIND_TICKS, 1, false, false, true));
+            if (mob instanceof net.minecraft.world.entity.Mob m) {
+                m.setTarget(null);
+                m.setLastHurtByMob(null);
+                m.getNavigation().stop();
+            }
+            HulkbusterArts.stun(level, mob, SuitTuning.FLASHBANG_STUN_TICKS);
+            blinded++;
+        }
+        player.displayClientMessage(Component.translatable("message.flightsuit.flashbang", blinded), true);
     }
 }
