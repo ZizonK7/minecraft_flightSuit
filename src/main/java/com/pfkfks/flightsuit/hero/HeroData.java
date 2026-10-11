@@ -157,6 +157,8 @@ public class HeroData extends SavedData {
     public int z;
     public int y;
     public boolean built;
+    /** M18: which small additions it has (town.TownAnnex.VERSION) - the diner. */
+    public int annex;
     /** Which plan it was built from (HeroCityBuilder.LAYOUT): an older one is put up again from the new plan. */
     public int layout;
     public long fallenUntilDay;
@@ -240,6 +242,7 @@ public class HeroData extends SavedData {
         tag.putInt("Y", y);
         tag.putBoolean("Built", built);
         tag.putInt("Layout", layout);
+        tag.putInt("Annex", annex);
         tag.putLong("FallenUntil", fallenUntilDay);
         CompoundTag away = new CompoundTag();
         for (Map.Entry<HeroType, Long> entry : awayUntil.entrySet()) {
@@ -271,6 +274,7 @@ public class HeroData extends SavedData {
         data.y = tag.getInt("Y");
         data.built = tag.getBoolean("Built");
         data.layout = tag.getInt("Layout");
+        data.annex = tag.getInt("Annex");
         data.fallenUntilDay = tag.getLong("FallenUntil");
         CompoundTag away = tag.getCompound("Away");
         for (HeroType hero : HeroType.values()) {

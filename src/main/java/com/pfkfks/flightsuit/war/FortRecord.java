@@ -20,6 +20,8 @@ public class FortRecord {
     public long fallenUntilDay;
     /** 0..1: how much of the garrison must fall before it gives up (항전 의지, rolled once per fortress). */
     public float resolve;
+    /** M18: which small additions it has (town.TownAnnex.VERSION) - signal fires, the tavern. */
+    public int annex;
 
     FortRecord(Kingdom kingdom) {
         this.kingdom = kingdom;
@@ -42,6 +44,7 @@ public class FortRecord {
         tag.putInt("Layout", layout);
         tag.putLong("FallenUntil", fallenUntilDay);
         tag.putFloat("Resolve", resolve);
+        tag.putInt("Annex", annex);
         return tag;
     }
 
@@ -54,6 +57,7 @@ public class FortRecord {
         fort.layout = tag.getInt("Layout");
         fort.fallenUntilDay = tag.getLong("FallenUntil");
         fort.resolve = tag.getFloat("Resolve");
+        fort.annex = tag.getInt("Annex");
         return fort;
     }
 }

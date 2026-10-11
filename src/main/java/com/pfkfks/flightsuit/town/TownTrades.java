@@ -55,6 +55,27 @@ public final class TownTrades {
             dbzOffers(offers, kind);
             return offers;
         }
+        if (role.isInnkeeper()) {
+            // M18 a hot meal for the town's money (the user's "식당에서 제니 주고 요리를 사 먹는 구조").
+            if (role.isCity()) {
+                offers.add(sell(Items.COOKED_BEEF, 2, 3));
+                offers.add(sell(Items.PUMPKIN_PIE, 1, 3));
+                offers.add(sell(Items.COOKED_CHICKEN, 2, 2));
+                offers.add(sell(Items.GOLDEN_CARROT, 2, 5));
+                offers.add(sell(Items.CAKE, 1, 8));
+                offers.add(buy(Items.BEEF, 6, 5));
+                offers.add(buy(Items.EGG, 8, 2));
+            } else {
+                offers.add(sell(Items.MUSHROOM_STEW, 1, 2));
+                offers.add(sell(Items.BREAD, 2, 2));
+                offers.add(sell(Items.COOKED_MUTTON, 2, 3));
+                offers.add(sell(Items.HONEY_BOTTLE, 1, 3));
+                offers.add(sell(Items.BAKED_POTATO, 3, 2));
+                offers.add(buy(Items.WHEAT, 10, 2));
+                offers.add(buy(Items.SWEET_BERRIES, 10, 2));
+            }
+            return offers;
+        }
         if (role.isCity()) {
             switch (kind) {
                 case 0 -> {
@@ -152,6 +173,9 @@ public final class TownTrades {
                 offers.add(sell(Items.CAKE, 1, 8));
                 offers.add(sell(Items.PUMPKIN_PIE, 3, 5));
                 offers.add(sell(Items.COOKIE, 12, 4));
+                // M18: the bakery serves meals too (West City's diner).
+                offers.add(sell(Items.COOKED_BEEF, 2, 6));
+                offers.add(sell(Items.MUSHROOM_STEW, 1, 4));
                 offers.add(buy(Items.WHEAT, 20, 5));
                 offers.add(buy(Items.SUGAR_CANE, 16, 5));
             }

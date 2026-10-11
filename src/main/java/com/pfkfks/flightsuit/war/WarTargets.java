@@ -63,6 +63,9 @@ public final class WarTargets {
             if (villageRaid) {
                 return !RaidManager.isDueling(self.raidId(), player, selfMob);
             }
+            if (selfMob instanceof GeneralEntity general && general.isSparringWith(player)) {
+                return true;
+            }
             int trust = trust(selfMob, player.getUUID(), self.kingdom());
             return self.role() == WarRole.RAID ? trust < 0 : trust <= -50;
         }

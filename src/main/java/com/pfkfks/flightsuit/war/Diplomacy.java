@@ -110,6 +110,50 @@ public final class Diplomacy {
         }
     }
 
+    /** M18 "/village spar <kingdom>": the nearest garrison officer of that kingdom takes the player on. */
+    public static boolean spar(ServerPlayer player, Kingdom kingdom) {
+        WarData data = WarData.get(player.server);
+        if (Standing.tier(data.trust(player.getUUID(), kingdom)) == Standing.Tier.HOSTILE || data.battleAt(kingdom) != null) {
+            player.sendSystemMessage(Component.translatable("fort.flightsuit.spar_no").withStyle(ChatFormatting.GRAY));
+            return false;
+        }
+        GeneralEntity best = null;
+        for (GeneralEntity general : player.serverLevel().getEntitiesOfClass(GeneralEntity.class, player.getBoundingBox().inflate(24.0D),
+                g -> g.isAlive() && g.role() == WarRole.GARRISON && g.kingdom() == kingdom && !g.getGeneral().isLeader() && g.canFight() && !g.isSparring())) {
+            if (best == null || general.distanceToSqr(player) < best.distanceToSqr(player)) {
+                best = general;
+            }
+        }
+        if (best == null) {
+            player.sendSystemMessage(Component.translatable("fort.flightsuit.spar_nobody").withStyle(ChatFormatting.GRAY));
+            return false;
+        }
+        best.startSpar(player);
+        player.sendSystemMessage(Component.translatable("fort.flightsuit.spar_rules").withStyle(ChatFormatting.GRAY));
+        return true;
+    }
+
+    /** The bout's end: coins and goodwill for a win, a word of praise either way. */
+    public static void onSpar(ServerPlayer player, GeneralEntity general, boolean playerWon) {
+        WarData data = WarData.get(player.server);
+        Kingdom kingdom = general.kingdom();
+        General who = general.getGeneral();
+        if (playerWon) {
+            data.addTrust(player.getUUID(), kingdom, WarTuning.SPAR_WIN_TRUST);
+            give(player, List.of(new ItemStack(com.pfkfks.flightsuit.registry.ModItems.WUZHU_COIN.get(), WarTuning.SPAR_WIN_COINS)));
+            player.sendSystemMessage(who.line("spar_lost", player.getName()));
+            player.sendSystemMessage(Component.translatable("fort.flightsuit.spar_won", WarTuning.SPAR_WIN_COINS, WarTuning.SPAR_WIN_TRUST)
+                    .withStyle(ChatFormatting.GOLD));
+            player.serverLevel().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.2F);
+        } else {
+            data.addTrust(player.getUUID(), kingdom, 1);
+            player.sendSystemMessage(who.line("spar_won", player.getName()));
+            player.sendSystemMessage(Component.translatable("fort.flightsuit.spar_lost").withStyle(ChatFormatting.GRAY));
+        }
+        // Nobody walks away from a friendly bout hurt.
+        player.setHealth(Math.max(player.getHealth(), player.getMaxHealth() * 0.5F));
+    }
+
     public static Component tierName(int trust) {
         return Component.translatable(Standing.tier(trust).key());
     }
@@ -148,6 +192,12 @@ public final class Diplomacy {
         }
         MutableComponent actions = Component.empty();
         boolean any = false;
+        if (tier != Standing.Tier.WARY && !general.getGeneral().isLeader() && data.battleAt(kingdom) == null && !general.isSparring()) {
+            // M18: a friendly bout at the training yard (DESIGN.md 5차 피드백 "갈 이유 - 일기토").
+            actions.append(button("fort.flightsuit.button_spar", "/village spar " + kingdom.id(), "fort.flightsuit.button_spar_hint",
+                    ChatFormatting.LIGHT_PURPLE));
+            any = true;
+        }
         if (tier == Standing.Tier.ALLIED || standing.leads(kingdom)) {
             actions.append(button("fort.flightsuit.button_muster", "/village muster " + kingdom.id(), "fort.flightsuit.button_muster_hint",
                     ChatFormatting.AQUA));

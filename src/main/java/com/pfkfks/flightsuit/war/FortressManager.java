@@ -147,6 +147,39 @@ public final class FortressManager {
         return true;
     }
 
+    /**
+     * M18 the beacons (DESIGN.md 5차 피드백 "성채 봉화"): the smoke of the four corner towers' signal fires, sent to
+     * everyone within SMOKE_REACH so the fortress can be found by it - a fallen fortress's fires are out.
+     */
+    private static final double SMOKE_REACH = 400.0D;
+
+    private static void signalSmoke(ServerLevel level, FortRecord fort) {
+        long day = level.getDayTime() / 24000L;
+        if (fort.isFallen(day)) {
+            return;
+        }
+        java.util.List<ServerPlayer> watchers = new ArrayList<>();
+        for (ServerPlayer player : level.players()) {
+            double dx = player.getX() - fort.x;
+            double dz = player.getZ() - fort.z;
+            if (dx * dx + dz * dz < SMOKE_REACH * SMOKE_REACH) {
+                watchers.add(player);
+            }
+        }
+        if (watchers.isEmpty()) {
+            return;
+        }
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                BlockPos top = fort.center().offset(sx * FortressBuilder.WALL, 13, sz * FortressBuilder.WALL);
+                com.pfkfks.flightsuit.network.SignalSmokeS2CPacket packet = new com.pfkfks.flightsuit.network.SignalSmokeS2CPacket(top, 36, 160);
+                for (ServerPlayer player : watchers) {
+                    com.pfkfks.flightsuit.network.ModNetwork.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player), packet);
+                }
+            }
+        }
+    }
+
     private static void startBuild(ServerLevel level, WarData data, FortRecord fort) {
         if (fort.y != -1000) {
             // Rebuilding where it stood.
@@ -249,6 +282,16 @@ public final class FortressManager {
                 maintain(level, data, fort, day);
             } else {
                 TICKING_SINCE.remove(fort.kingdom);
+            }
+            if (anyoneNear && fort.annex < com.pfkfks.flightsuit.town.TownAnnex.VERSION && !JOBS.containsKey(fort.kingdom)
+                    && fort.layout >= FortressBuilder.LAYOUT && level.isLoaded(fort.center())) {
+                // M18: the small additions (signal fires, the tavern) go in without a rebuild.
+                com.pfkfks.flightsuit.town.TownAnnex.fortress(level, fort.center());
+                fort.annex = com.pfkfks.flightsuit.town.TownAnnex.VERSION;
+                data.setDirty();
+            }
+            if (level.getGameTime() % 100 == 0) {
+                signalSmoke(level, fort);
             }
         }
     }

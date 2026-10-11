@@ -35,6 +35,13 @@ public final class WarTuning {
 
     /** How far the fortresses stand from world spawn: this plus up to the spread. */
     public static final int FORT_DISTANCE = 600;
+    // M18 sparring with a garrison general (Diplomacy.spar): how long a bout may run, when he yields (share of his
+    // health), when he pulls his blows (share of the player's), and what a win is worth.
+    public static final int SPAR_TICKS = 2_400;
+    public static final float SPAR_YIELD = 0.35F;
+    public static final float SPAR_MERCY = 0.25F;
+    public static final int SPAR_WIN_COINS = 30;
+    public static final int SPAR_WIN_TRUST = 5;
     public static final int FORT_DISTANCE_SPREAD = 250;
     /** Soldiers keeping a fortress (12 since the fortress grew to a town, M13 test - still a few dozen at most in a fight). */
     public static final int GARRISON_SIZE = 12;

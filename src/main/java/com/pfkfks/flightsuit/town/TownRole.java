@@ -14,12 +14,16 @@ public enum TownRole {
     FORT_SMITH("fort_smith", Place.SMITHY),
     FORT_COOK("fort_cook", Place.KITCHEN),
     FORT_ELDER("fort_elder", Place.SQUARE),
+    /** M18: the tavern keeper (주막) - meals for coins, and the rumours of the road (Rumours). */
+    FORT_INNKEEPER("fort_innkeeper", Place.INN),
     FORT_CHILD("fort_child", Place.PLAY),
     CITY_WORKER("city_worker", Place.OFFICE),
     CITY_SCIENTIST("city_scientist", Place.LAB),
     CITY_POLICE("city_police", Place.PATROL),
     CITY_SHOPKEEPER("city_shopkeeper", Place.SHOP),
     CITY_CITIZEN("city_citizen", Place.SQUARE),
+    /** M18: the diner's cook by the park - meals for dollars, and what's heard around town. */
+    CITY_DINER("city_diner", Place.INN),
     CITY_CHILD("city_child", Place.PLAY),
     // M17: Dragon Ball Earth's West City, round Capsule Corp; the Namekian village.
     DBZ_CITIZEN("dbz_citizen", Place.SQUARE),
@@ -28,7 +32,7 @@ public enum TownRole {
     NAMEKIAN("namekian", Place.SQUARE);
 
     /** Where their day is spent (the town's plan has spots of each kind). */
-    public enum Place { FIELD, SHOP, SMITHY, KITCHEN, SQUARE, PLAY, OFFICE, LAB, PATROL }
+    public enum Place { FIELD, SHOP, SMITHY, KITCHEN, SQUARE, PLAY, OFFICE, LAB, PATROL, INN }
 
     private static final TownRole[] VALUES = values();
 
@@ -54,7 +58,12 @@ public enum TownRole {
 
     /** Opens the trading screen when spoken to. */
     public boolean trades() {
-        return place == Place.SHOP;
+        return place == Place.SHOP || place == Place.INN;
+    }
+
+    /** M18: keeps the tavern or the diner - at the counter all day, with a rumour for whoever stops by. */
+    public boolean isInnkeeper() {
+        return place == Place.INN;
     }
 
     public boolean isCity() {
@@ -80,6 +89,8 @@ public enum TownRole {
             case CITY_SHOPKEEPER -> new ItemStack(com.pfkfks.flightsuit.registry.ModItems.DOLLAR.get());
             case DBZ_SHOPKEEPER -> new ItemStack(com.pfkfks.flightsuit.registry.ModItems.ZENI.get());
             case FORT_ELDER -> new ItemStack(Items.STICK);
+            case FORT_INNKEEPER -> new ItemStack(Items.BOWL);
+            case CITY_DINER -> new ItemStack(Items.COOKED_BEEF);
             case CITY_SCIENTIST -> new ItemStack(Items.BOOK);
             case CITY_WORKER -> new ItemStack(Items.PAPER);
             default -> ItemStack.EMPTY;

@@ -136,6 +136,13 @@ public final class HeroCity {
             }
         } else if (anyoneNear || data.storm != null) {
             maintain(level, data, day);
+            if (anyoneNear && data.annex < com.pfkfks.flightsuit.town.TownAnnex.VERSION && job == null
+                    && data.layout >= HeroCityBuilder.LAYOUT && level.isLoaded(data.center())) {
+                // M18: the diner by the park goes in without a rebuild.
+                com.pfkfks.flightsuit.town.TownAnnex.heroCity(level, data.center());
+                data.annex = com.pfkfks.flightsuit.town.TownAnnex.VERSION;
+                data.setDirty();
+            }
         } else {
             tickingSince = -1L;
         }

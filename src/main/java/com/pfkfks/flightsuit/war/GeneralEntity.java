@@ -95,6 +95,9 @@ public class GeneralEntity extends Monster implements RaidMember {
     private int ambushCooldown;
     private @Nullable UUID duelWith;
     private boolean duelOffered;
+    /** M18 sparring (훈련장 일기토): the garrison general's rival, and when the bout is called off. */
+    private @Nullable UUID sparWith;
+    private long sparUntil;
     private WarRole role = WarRole.RAID;
     private @Nullable BlockPos home;
     private @Nullable Kingdom foe;
@@ -321,6 +324,61 @@ public class GeneralEntity extends Monster implements RaidMember {
         return duelWith;
     }
 
+    /** M18: a friendly bout with a garrison general (Diplomacy [일기토 도전]) - the soldiers stay out of it. */
+    public boolean isSparringWith(Player player) {
+        return sparWith != null && sparWith.equals(player.getUUID()) && level().getGameTime() < sparUntil;
+    }
+
+    public boolean isSparring() {
+        return sparWith != null && level().getGameTime() < sparUntil;
+    }
+
+    public void startSpar(ServerPlayer player) {
+        sparWith = player.getUUID();
+        sparUntil = level().getGameTime() + WarTuning.SPAR_TICKS;
+        setTarget(player);
+        say(getGeneral().line("spar_start", player.getName()), 32.0D);
+        playSound(SoundEvents.PLAYER_ATTACK_STRONG, 1.2F, 0.7F);
+    }
+
+    /** The bout's end: won by the player (the general's health down to SPAR_YIELD), or called off. */
+    private void endSpar(boolean playerWon) {
+        Player rival = sparWith == null ? null : level().getPlayerByUUID(sparWith);
+        sparWith = null;
+        sparUntil = 0L;
+        setTarget(null);
+        getNavigation().stop();
+        setHealth(getMaxHealth());
+        if (rival instanceof ServerPlayer player && level() instanceof ServerLevel) {
+            Diplomacy.onSpar(player, this, playerWon);
+        } else {
+            say(getGeneral().line(playerWon ? "spar_lost" : "spar_won"), 32.0D);
+        }
+    }
+
+    private void tickSpar() {
+        if (sparWith == null) {
+            return;
+        }
+        Player rival = level().getPlayerByUUID(sparWith);
+        if (rival == null || !rival.isAlive() || rival.distanceTo(this) > 32.0F || level().getGameTime() >= sparUntil) {
+            endSpar(false);
+            return;
+        }
+        if (getHealth() <= getMaxHealth() * WarTuning.SPAR_YIELD) {
+            endSpar(true);
+            return;
+        }
+        if (rival.getHealth() <= rival.getMaxHealth() * WarTuning.SPAR_MERCY) {
+            // He pulls his blows: the bout ends before anyone gets badly hurt.
+            endSpar(false);
+            return;
+        }
+        if (getTarget() != rival) {
+            setTarget(rival);
+        }
+    }
+
     public boolean isInHomeVillage(BlockPos pos) {
         VillageHallBlockEntity hall = Villages.hallAt(level(), hallPos);
         return hall != null && hall.contains(pos);
@@ -401,6 +459,7 @@ public class GeneralEntity extends Monster implements RaidMember {
         if (role == WarRole.GARRISON && getGeneral().isLeader()) {
             tickThrone();
         }
+        tickSpar();
         tickSkills();
     }
 
@@ -676,9 +735,17 @@ public class GeneralEntity extends Monster implements RaidMember {
             if (!isRecruited() && attacker instanceof RaidMember member && !member.isNoThreat() && member.raidId() == raidId && raidId >= 0) {
                 return false;
             }
-            if (role == WarRole.GARRISON && attacker instanceof ServerPlayer player && level().getGameTime() - lastPenaltyAt > 40L) {
+            if (role == WarRole.GARRISON && attacker instanceof ServerPlayer player && !isSparringWith(player)
+                    && level().getGameTime() - lastPenaltyAt > 40L) {
                 lastPenaltyAt = level().getGameTime();
                 Diplomacy.onGarrisonHit(player, kingdom(), false);
+            }
+            if (isSparring() && attacker instanceof Player player && isSparringWith(player)) {
+                // A blow that would have finished him in earnest: the bout is his rival's.
+                if (amount >= getHealth()) {
+                    endSpar(true);
+                    return false;
+                }
             }
         }
         return super.hurt(source, amount);

@@ -38,7 +38,7 @@
 | `thief/` | 배트맨 일당: ThiefType, ThiefEntity(저장 안 함), ThiefManager(일정·실제/계산 밤·상자 털기·보상), ThiefData(SavedData: 다음 방문, 오늘 밤 방문, 처리 대기), 배트랭·갈고리 총·연막탄, ThiefCommands |
 | `entity/` | 동료 슈트, 원격 몸, 미사일·카드, 좌석(SeatEntity: 지도자가 왕좌에 앉음, 저장 안 함) |
 | `client/` | 렌더러, HUD 오버레이(이디스 경고 EdithAlertOverlay 포함), 화면. 전용 모델 슈트는 `SuitModel`(슬롯별 조각, `SuitArmorModels.CUSTOM`에 등록) + 생성 블록 클래스(`HulkbusterModel`, `TrunksSuitModel`), 헐크 `HulkModel/HulkRenderer`, 신룡 `ShenronModel/ShenronRenderer`, M17: 드래곤볼 인물 `DbzFighterModel/DbzFighterRenderer`(동작별 코드 포즈), 거대원숭이 `OozaruModel/OozaruRenderer`, 베로니카 포드, 팬텀 조준 `PhantomAimClient`(짧게 = 조준, 길게 = 훔치기, 휠 = 거리) |
-| `town/` | 성채·히어로 시티·서쪽 도시·나메크 마을의 마을 사람 TownsfolkEntity(저장 안 함, 마을 번호 0~2 성채·3 히어로 시티·4 서쪽 도시·5 나메크, 역할 TownRole(`group()`), 일과 TownLife(행성 마을은 `planetTowns`), 배치 TownPlan), 거래 TownTrades(`money(town)` = 오수전/달러/제니), 부탁 TownRequests |
+| `town/` | 성채·히어로 시티·서쪽 도시·나메크 마을의 마을 사람 TownsfolkEntity(저장 안 함, 마을 번호 0~2 성채·3 히어로 시티·4 서쪽 도시·5 나메크, 역할 TownRole(`group()`), 일과 TownLife(행성 마을은 `planetTowns`), 배치 TownPlan), 거래 TownTrades(`money(town)` = 오수전/달러/제니), 부탁 TownRequests. M18: 부속 건물 TownAnnex(봉화·주막·다이너, 다시 안 지음), 소문 Rumours, 바닐라 마을 소문·지도 VillageRumours, 주막 역할 `Place.INN`(정오 식사·심부름·인사·잠은 TownsfolkEntity) |
 | `guide/` | 안내서 GuideBookItem(처음 접속 때 지급, 화면은 `client/GuideBook`), ItemTips(`tip.flightsuit.*` → Shift 툴팁 `client/ItemTipsClient` + JEI 정보), JeiFlightSuit(@JeiPlugin, JEI는 선택 의존성) |
 | `fx/` | 기 기술 그림 KiFx (M17 테스트 뒤): 서버가 광선·기 모으기·기탄·폭발·빛기둥·오라·태양권을 `KiFxS2CPacket`으로 보내고 `client/KiFxClient`가 그림 (도형은 `client/KiDraw`, 가산 합성 렌더 타입 하나) |
 | `network/` | 패킷 (ModNetwork에 등록 순서대로) |
@@ -63,7 +63,8 @@
 
 ## 진행 상태 (2026-10-11)
 
-- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업, B 공장식 전력 완료** (로컬 빌드 통과, 인게임 테스트 전). 남은 묶음: C 살아 있는 마을, D 행성 지형, E 입체 부품(멀티 에이전트).
+- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업, B 공장식 전력, C 살아 있는 마을 완료** (로컬 빌드 통과, 인게임 테스트 전). 남은 묶음: D 행성 지형, E 입체 부품(멀티 에이전트).
+- 성채 봉화 연기: `FortressManager.signalSmoke` → `SignalSmokeS2CPacket`(400칸). 일기토: `GeneralEntity.startSpar`, 표적 규칙은 `WarTargets`(대련 상대만), 수치 `WarTuning.SPAR_*`.
 - 마을 직업을 더할 때: `ResidentJob` 끝에 추가(순서로 저장됨), 스킨 `tools/ResidentSkinGen.java <dir> <job>`, 작업장은 `Blueprint.workplaceOf`, 일은 `village/ai/*Goal` + 아침 집계는 `VillageWorkday`, 화면 설명 `ResidentScreen.effect`.
 - 슈트를 새로 만들 때: `SuitType`·`SuitArmorMaterial`·`SuitClass`(무기 종류 `weapon()`), `tools/SuitSkinGen` 그리기 → `SkinSplitter`, `models/item/<id>_*.json` 5개, 레시피 5개, 번역(item·tip.suit·tooltip.class·hud.weapon·hud.weapon.b), `SuitWeapons.handle`의 switch 9곳, `CompanionCombatGoal`, 안내서 쪽. 미리보기는 `java tools/SkinPreview.java out.png skin.png...`.
 

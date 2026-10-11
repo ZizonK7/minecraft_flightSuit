@@ -59,6 +59,8 @@ public final class WarCommands {
                                 FortressManager.decide(ctx.getSource().getServer(), kingdom, ctx.getSource().getPlayerOrException(), true)))))
                         .then(Commands.literal("release").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom ->
                                 FortressManager.decide(ctx.getSource().getServer(), kingdom, ctx.getSource().getPlayerOrException(), false))))))
+                .then(Commands.literal("spar").then(kingdomArgument().executes(ctx -> withKingdom(ctx, kingdom ->
+                        Diplomacy.spar(ctx.getSource().getPlayerOrException(), kingdom)))))
                 .then(Commands.literal("recruit")
                         .then(Commands.argument("raid", IntegerArgumentType.integer(0))
                                 .executes(ctx -> RaidManager.recruit(ctx.getSource().getServer(), IntegerArgumentType.getInteger(ctx, "raid"),

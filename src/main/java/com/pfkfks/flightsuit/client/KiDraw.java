@@ -34,6 +34,16 @@ public final class KiDraw extends RenderType {
                     .setDepthTestState(NO_DEPTH_TEST)
                     .createCompositeState(false));
 
+    /** M18: ordinary translucent blending for things that aren't light - the signal fires' smoke (SignalSmokeClient). */
+    public static final RenderType SMOKE = create("flightsuit_smoke", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1 << 14,
+            false, true, CompositeState.builder()
+                    .setShaderState(POSITION_COLOR_SHADER)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .createCompositeState(false));
+
     private static final int RINGS = 8;
     private static final int SIDES = 14;
 

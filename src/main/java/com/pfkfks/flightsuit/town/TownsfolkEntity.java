@@ -64,6 +64,12 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
     private static final long DAY_START = 1000L;
     private static final long EVENING = 11000L;
     private static final long NIGHT = 13000L;
+    /** M18: lunch at the tavern / diner. */
+    private static final long LUNCH_START = 5800L;
+    private static final long LUNCH_END = 7200L;
+    /** M18: a greeting to a player who comes close, this often per player. */
+    private static final long GREET_EVERY = 6000L;
+    private static final long RUMOUR_EVERY = 2400L;
 
     private int town = HERO_CITY;
     private int index;
@@ -73,6 +79,13 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
     private @Nullable Player trader;
     private @Nullable MerchantOffers offers;
     private long lastPenaltyAt;
+    /** M18: when each player was last greeted / told a rumour (game ticks). */
+    private final java.util.Map<java.util.UUID, Long> greeted = new java.util.HashMap<>();
+    private final java.util.Map<java.util.UUID, Long> rumoured = new java.util.HashMap<>();
+    /** M18 errands (visible logistics): where the thing in hand is going, and when the next one is due. */
+    private @Nullable BlockPos errandTo;
+    private int errandIn = 1200;
+    private boolean lunching;
 
     /** A small favour asked of the player: bring {@code count} of {@code item} for {@code pay} of the town's money. */
     public record Request(Item item, int count, int pay) {
@@ -136,6 +149,9 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
 
     private Component title() {
         TownRole role = getRole();
+        if (role.isInnkeeper()) {
+            return Component.translatable("town.flightsuit.shop." + role.group() + "_inn").withStyle(ChatFormatting.GREEN);
+        }
         if (role.trades()) {
             return Component.translatable("town.flightsuit.shop." + role.group() + "_" + Math.floorMod(index, shopKinds()))
                     .withStyle(ChatFormatting.GREEN);
@@ -157,6 +173,9 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
 
     @Override
     public EntityDimensions getDimensions(Pose pose) {
+        if (pose == Pose.SLEEPING) {
+            return EntityDimensions.fixed(0.2F, 0.2F);
+        }
         return getRole().isChild() ? super.getDimensions(pose).scale(0.6F) : super.getDimensions(pose);
     }
 
@@ -243,6 +262,14 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
             if (trader != null && trader != player) {
                 say(serverPlayer, Component.translatable("town.flightsuit.busy"));
                 return InteractionResult.CONSUME;
+            }
+            if (role.isInnkeeper()) {
+                // M18: the keeper has heard things (Rumours), once in a while per guest.
+                long now = level().getGameTime();
+                if (now - rumoured.getOrDefault(player.getUUID(), -RUMOUR_EVERY) >= RUMOUR_EVERY) {
+                    rumoured.put(player.getUUID(), now);
+                    say(serverPlayer, Rumours.tell(serverPlayer, blockPosition(), town));
+                }
             }
             getNavigation().stop();
             setTradingPlayer(player);
@@ -348,6 +375,110 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         if (trader != null && (!trader.isAlive() || trader.distanceToSqr(this) > 64.0D || trader.containerMenu == trader.inventoryMenu)) {
             trader = null;
         }
+        if (level().isClientSide || plan == null) {
+            return;
+        }
+        if (tickCount % 40 == 7) {
+            greet();
+        }
+        tickSleep();
+        tickLunch();
+    }
+
+    /** M18: a word for whoever comes close - by how the town feels about them (DESIGN.md 5차 피드백 "나를 알아보기"). */
+    private void greet() {
+        if (trader != null || isSleeping() || underAttack()) {
+            return;
+        }
+        Player player = level().getNearestPlayer(this, 4.0D);
+        if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator() || !hasLineOfSight(player)) {
+            return;
+        }
+        long now = level().getGameTime();
+        if (now - greeted.getOrDefault(player.getUUID(), -GREET_EVERY) < GREET_EVERY) {
+            return;
+        }
+        greeted.put(player.getUUID(), now);
+        String tier;
+        if (!keepsTrust()) {
+            tier = "friendly";
+        } else {
+            int trust = trust(player);
+            if (trust <= -50) {
+                return;
+            }
+            tier = trust < 0 ? "wary" : trust < 30 ? "neutral" : trust < 70 ? "friendly" : "allied";
+        }
+        TownRole role = getRole();
+        String who = role.isChild() ? "child" : role.isInnkeeper() ? "keeper" : "adult";
+        say(serverPlayer, Component.translatable("town.flightsuit.greet." + role.group() + "." + who + "." + tier + "." + level().random.nextInt(2)));
+        getLookControl().setLookAt(player, 60.0F, 60.0F);
+    }
+
+    /** M18: lying down at home through the night (the pose only; no bed is needed). */
+    private void tickSleep() {
+        long time = level().getDayTime() % 24000L;
+        boolean night = time >= NIGHT || time < DAY_START;
+        boolean atHome = home != null && position().distanceToSqr(Vec3.atBottomCenterOf(home)) < 2.5D * 2.5D;
+        boolean shouldSleep = night && atHome && !underAttack() && trader == null;
+        if (shouldSleep && getPose() != Pose.SLEEPING) {
+            getNavigation().stop();
+            setPose(Pose.SLEEPING);
+            setDeltaMovement(Vec3.ZERO);
+        } else if (!shouldSleep && getPose() == Pose.SLEEPING) {
+            setPose(Pose.STANDING);
+        }
+        if (getPose() == Pose.SLEEPING) {
+            setDeltaMovement(getDeltaMovement().multiply(0.0D, 1.0D, 0.0D));
+        }
+    }
+
+    @Override
+    public boolean isSleeping() {
+        return getPose() == Pose.SLEEPING;
+    }
+
+    /** Lunchtime for those who aren't serving it: a meal in hand at the tavern, a bite now and then. */
+    private void tickLunch() {
+        TownRole role = getRole();
+        long time = level().getDayTime() % 24000L;
+        boolean lunchtime = time >= LUNCH_START && time < LUNCH_END && !role.isInnkeeper() && role != TownRole.CITY_POLICE && !underAttack();
+        BlockPos seat = lunchtime ? plan.spot(TownRole.Place.INN, 1 + Math.floorMod(index, Math.max(1, plan.spots(TownRole.Place.INN).size() - 1))) : null;
+        boolean atTable = seat != null && position().distanceToSqr(Vec3.atBottomCenterOf(seat)) < 3.0D * 3.0D;
+        if (atTable && !lunching) {
+            lunching = true;
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(role.isCity() ? Items.COOKED_BEEF : town >= WEST_CITY ? Items.COOKED_CHICKEN : Items.BREAD));
+        } else if (!atTable && lunching) {
+            lunching = false;
+            if (errandTo == null) {
+                setItemSlot(EquipmentSlot.MAINHAND, role.tool());
+            }
+        }
+        if (lunching && tickCount % 30 == 0 && level() instanceof ServerLevel server) {
+            ItemStack meal = getMainHandItem();
+            if (!meal.isEmpty()) {
+                Vec3 mouth = position().add(getLookAngle().scale(0.3D)).add(0.0D, 1.4D, 0.0D);
+                server.sendParticles(new net.minecraft.core.particles.ItemParticleOption(ParticleTypes.ITEM, meal), mouth.x, mouth.y, mouth.z, 4,
+                        0.1D, 0.1D, 0.1D, 0.05D);
+                server.playSound(null, blockPosition(), SoundEvents.GENERIC_EAT, net.minecraft.sounds.SoundSource.NEUTRAL, 0.5F,
+                        0.9F + getRandom().nextFloat() * 0.2F);
+            }
+        }
+    }
+
+    /** M18 what this role carries where (DESIGN.md 5차 피드백 "보이는 물류"): the thing and the place it goes, or null. */
+    private @Nullable Object[] errand() {
+        return switch (getRole()) {
+            case FORT_FARMER -> new Object[]{TownRole.Place.KITCHEN, Items.WHEAT};
+            case FORT_COOK -> new Object[]{TownRole.Place.INN, Items.BREAD};
+            case FORT_MERCHANT -> new Object[]{TownRole.Place.INN, Items.HONEY_BOTTLE};
+            case FORT_SMITH -> new Object[]{TownRole.Place.SHOP, Items.IRON_SWORD};
+            case CITY_WORKER -> new Object[]{TownRole.Place.SHOP, Items.PAPER};
+            case CITY_SCIENTIST -> new Object[]{TownRole.Place.OFFICE, Items.BOOK};
+            case CITY_SHOPKEEPER -> new Object[]{TownRole.Place.INN, Items.BEEF};
+            case DBZ_SHOPKEEPER -> new Object[]{TownRole.Place.SQUARE, Items.BREAD};
+            default -> null;
+        };
     }
 
     /**
@@ -368,6 +499,22 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         }
         if (time >= NIGHT || time < DAY_START) {
             return home;
+        }
+        if (role.isInnkeeper()) {
+            // Behind the counter from morning till the lamps go out.
+            return plan.spots(TownRole.Place.INN).get(0);
+        }
+        if (level().isRaining() && town < WEST_CITY && !(role.place() == TownRole.Place.SMITHY || role.place() == TownRole.Place.OFFICE
+                || role.place() == TownRole.Place.LAB)) {
+            // M18: rain - everyone whose work is out of doors heads in.
+            return home;
+        }
+        if (time >= LUNCH_START && time < LUNCH_END && !role.isChild()) {
+            // M18: lunch at the tavern / diner (the keeper's own spot is the first).
+            java.util.List<BlockPos> seats = plan.spots(TownRole.Place.INN);
+            if (seats.size() > 1) {
+                return seats.get(1 + Math.floorMod(index, seats.size() - 1));
+            }
         }
         if (time >= EVENING) {
             return plan.spot(role.isChild() ? TownRole.Place.PLAY : TownRole.Place.SQUARE, index);
@@ -399,6 +546,26 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         public void tick() {
             ticks++;
             TownRole role = getRole();
+            if (getPose() == Pose.SLEEPING) {
+                return;
+            }
+            if (errandTo != null) {
+                // M18 out on an errand: there with the thing in hand, then back to work.
+                if (ticks % 20 == 1) {
+                    getNavigation().moveTo(errandTo.getX() + 0.5D, errandTo.getY(), errandTo.getZ() + 0.5D, 0.7D);
+                }
+                if (closeTo(errandTo, 2.5D) || ticks % 20 == 1 && getNavigation().isDone() && getRandom().nextInt(6) == 0) {
+                    swing(InteractionHand.MAIN_HAND);
+                    if (level() instanceof ServerLevel server) {
+                        server.playSound(null, blockPosition(), SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6F, 0.9F);
+                    }
+                    setItemSlot(EquipmentSlot.MAINHAND, role.tool());
+                    errandTo = null;
+                    errandIn = 2400 + getRandom().nextInt(2400);
+                    target = null;
+                }
+                return;
+            }
             if (ticks % 20 == 1) {
                 BlockPos want = destination();
                 if (role == TownRole.CITY_POLICE && (target == null || closeTo(target, 3.0D))) {
@@ -426,6 +593,16 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         private void atPlace(TownRole role) {
             long time = level().getDayTime() % 24000L;
             boolean working = time >= DAY_START && time < EVENING && !underAttack();
+            Object[] errand = errand();
+            if (working && errand != null && !lunching && time < LUNCH_START - 200 || working && errand != null && !lunching && time >= LUNCH_END) {
+                // M18: now and then something has to be carried somewhere - and seen going.
+                if (--errandIn <= 0 && plan != null) {
+                    errandTo = plan.spot((TownRole.Place) errand[0], index + getRandom().nextInt(3));
+                    setItemSlot(EquipmentSlot.MAINHAND, new ItemStack((net.minecraft.world.item.Item) errand[1], 1 + getRandom().nextInt(3)));
+                    getNavigation().stop();
+                    return;
+                }
+            }
             if (working && ticks % 80 == 1 && level() instanceof ServerLevel server) {
                 swing(InteractionHand.MAIN_HAND);
                 SoundEvent sound = switch (role) {

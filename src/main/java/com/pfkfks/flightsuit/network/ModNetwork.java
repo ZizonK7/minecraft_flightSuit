@@ -77,6 +77,8 @@ public final class ModNetwork {
                 KiFxS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, OreSightS2CPacket.class, OreSightS2CPacket::encode, OreSightS2CPacket::decode,
                 OreSightS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, SignalSmokeS2CPacket.class, SignalSmokeS2CPacket::encode, SignalSmokeS2CPacket::decode,
+                SignalSmokeS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToServer(Object packet) {

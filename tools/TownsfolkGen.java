@@ -40,7 +40,7 @@ public class TownsfolkGen {
         dir.mkdirs();
         String[] names = {"fort_farmer", "fort_merchant", "fort_smith", "fort_cook", "fort_elder", "fort_child",
                 "city_worker", "city_scientist", "city_police", "city_shopkeeper", "city_citizen", "city_child",
-                "dbz_citizen", "dbz_shopkeeper", "dbz_child", "namekian"};
+                "dbz_citizen", "dbz_shopkeeper", "dbz_child", "namekian", "fort_innkeeper", "city_diner"};
         if (args.length > 1) {
             // Only the skins named (M17: the new ones, without redrawing the rest).
             names = java.util.Arrays.copyOfRange(args, 1, args.length);
@@ -67,6 +67,8 @@ public class TownsfolkGen {
                 case "dbz_shopkeeper" -> dbzShopkeeper();
                 case "dbz_child" -> dbzChild();
                 case "namekian" -> namekian();
+                case "fort_innkeeper" -> fortInnkeeper();
+                case "city_diner" -> cityDiner();
                 default -> throw new IllegalStateException(name);
             }
             ImageIO.write(skin, "png", new File(dir, name + ".png"));
@@ -122,6 +124,37 @@ public class TownsfolkGen {
     }
 
     /** Cook: white headscarf, a white apron over a beige jacket, rolled sleeves. */
+    /** M18 the tavern keeper: a brown headscarf, a sleeveless hemp tunic over a white shirt, a long apron. */
+    static void fortInnkeeper() {
+        tone(TONE_TAN, 0xFF2A1A10, 0xFF2A1A10);
+        hair(0xFF2A1A10);
+        colors("A", 0xFFB89A6A, "a", 0xFF8E7450, "w", 0xFFEDE6D6, "P", 0xFF5A4634, "p", 0xFF3E3024, "R", 0xFF8E4A3A);
+        head("short", "stubble", false);
+        top(HAT, 'R');
+        ring(HAT, "RR");
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && i >= 2 && i <= 5 && j >= 2 ? 'w' : j < 2 ? 'w' : 'A');
+        top(BODY, 'A');
+        limbs("wwSSSSSSSSSS", "PPPPPPPPPPpp");
+        // The apron over the front of the legs.
+        face(R_PANTS, Face.FRONT, "wwww", "wwww", "wwww", "wwww", "wwww", "wwww", "aaaa");
+        face(L_PANTS, Face.FRONT, "wwww", "wwww", "wwww", "wwww", "wwww", "wwww", "aaaa");
+    }
+
+    /** M18 the diner's cook: a white paper cap, a white jacket with red piping, a red half-apron, checked trousers. */
+    static void cityDiner() {
+        tone(TONE_FAIR, 0xFF4A3220, 0xFF2F5A7A);
+        hair(0xFF4A3220);
+        colors("w", 0xFFF4F4F4, "R", 0xFFC8312A, "r", 0xFF8E1F1A, "C", 0xFF2A2A2E, "c", 0xFFE8E8E8, "P", 0xFF3A3A40);
+        head("short", "none", false);
+        top(HAT, 'w');
+        ring(HAT, "www");
+        wrap(BODY, (f, i, j) -> f == Face.FRONT && (i == 0 || i == 7) ? 'R' : j >= 9 ? 'R' : 'w');
+        top(BODY, 'w');
+        limbs("wwwwwwwwSSSS", "CcCcCcCcCcPP");
+        face(R_PANTS, Face.FRONT, "RRRR", "RRRR", "RRRR", "rrrr");
+        face(L_PANTS, Face.FRONT, "RRRR", "RRRR", "RRRR", "rrrr");
+    }
+
     static void fortCook() {
         tone(TONE_EAST, 0xFF2A1A10, 0xFF2A1A10);
         hair(0xFF1A1410);

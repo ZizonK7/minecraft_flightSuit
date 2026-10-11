@@ -55,6 +55,21 @@ public final class TownPlan {
         places.computeIfAbsent(place, p -> new ArrayList<>()).add(pos);
     }
 
+    /**
+     * M18 the town grows with its goodwill (DESIGN.md 5차 피드백 "성장"): friends bring a couple more people, allies a
+     * couple more again. {@code tier} is Standing.Tier's ordinal (3 friendly, 4 allied) - the best any player has.
+     */
+    public void grow(int tier, boolean city) {
+        if (tier >= 3) {
+            roles(city ? TownRole.CITY_CITIZEN : TownRole.FORT_FARMER, 1);
+            roles(city ? TownRole.CITY_CHILD : TownRole.FORT_CHILD, 1);
+        }
+        if (tier >= 4) {
+            roles(city ? TownRole.CITY_WORKER : TownRole.FORT_MERCHANT, 1);
+            roles(city ? TownRole.CITY_CITIZEN : TownRole.FORT_ELDER, 1);
+        }
+    }
+
     private void roles(TownRole role, int count) {
         for (int i = 0; i < count; i++) {
             roster.add(role);
@@ -89,6 +104,14 @@ public final class TownPlan {
         for (int[] at : new int[][]{{-18, 6}, {-18, -6}, {-20, 0}, {-16, 0}}) {
             plan.add(TownRole.Place.PLAY, base.offset(at[0], 0, at[1]));
         }
+        // M18 the tavern (TownAnnex): the keeper's spot first, then the benches the diners sit at over lunch.
+        int tx = TownAnnex.FORT_TAVERN[0];
+        int tz = TownAnnex.FORT_TAVERN[2];
+        plan.add(TownRole.Place.INN, base.offset(tx, 0, tz));
+        for (int[] at : new int[][]{{tx - 2, tz + 1}, {tx + 2, tz + 1}, {tx - 1, tz + 2}, {tx + 1, tz + 2}, {tx - 3, tz + 3}, {tx + 3, tz + 3}}) {
+            plan.add(TownRole.Place.INN, base.offset(at[0], 0, at[1]));
+        }
+        plan.roles(TownRole.FORT_INNKEEPER, 1);
         plan.roles(TownRole.FORT_FARMER, 4);
         plan.roles(TownRole.FORT_MERCHANT, 3);
         plan.roles(TownRole.FORT_SMITH, 1);
@@ -133,6 +156,14 @@ public final class TownPlan {
                 plan.add(TownRole.Place.PATROL, base.offset(36, 0, s * d));
             }
         }
+        // M18 the diner by the park (TownAnnex): the cook behind the counter, stools and the lawn for lunch.
+        int dx = TownAnnex.CITY_DINER[0];
+        int dz = TownAnnex.CITY_DINER[2];
+        plan.add(TownRole.Place.INN, base.offset(dx, 0, dz));
+        for (int[] at : new int[][]{{dx - 2, dz + 3}, {dx + 2, dz + 3}, {dx - 1, dz + 3}, {dx + 1, dz + 3}, {dx - 4, dz + 4}, {dx + 4, dz + 4}}) {
+            plan.add(TownRole.Place.INN, base.offset(at[0], 0, at[1]));
+        }
+        plan.roles(TownRole.CITY_DINER, 1);
         plan.roles(TownRole.CITY_WORKER, 5);
         plan.roles(TownRole.CITY_SCIENTIST, 2);
         plan.roles(TownRole.CITY_POLICE, 3);

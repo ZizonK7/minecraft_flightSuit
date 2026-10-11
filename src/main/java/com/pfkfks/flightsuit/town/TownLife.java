@@ -54,14 +54,26 @@ public final class TownLife {
         for (FortRecord fort : war.forts().values()) {
             if (fort.built && anyoneNear(level, fort.center(), FORT_NEAR)) {
                 BlockPos center = fort.center();
-                keep(level, fort.kingdom.ordinal(), TownPlan.fortress(center),
+                TownPlan plan = TownPlan.fortress(center);
+                int best = 0;
+                for (com.pfkfks.flightsuit.war.Standing standing : war.standings().values()) {
+                    best = Math.max(best, standing.trust(fort.kingdom));
+                }
+                plan.grow(com.pfkfks.flightsuit.war.Standing.tier(best).ordinal(), false);
+                keep(level, fort.kingdom.ordinal(), plan,
                         new AABB(center).inflate(FortressBuilder.CLEAR + 16, 24.0D, FortressBuilder.CLEAR + 16));
             }
         }
         HeroData heroes = HeroData.get(level.getServer());
         if (heroes.built && anyoneNear(level, heroes.center(), CITY_NEAR)) {
             BlockPos center = heroes.center();
-            keep(level, TownsfolkEntity.HERO_CITY, TownPlan.city(center),
+            TownPlan plan = TownPlan.city(center);
+            int best = 0;
+            for (HeroData.Standing standing : heroes.standings().values()) {
+                best = Math.max(best, standing.trust);
+            }
+            plan.grow(best >= 70 ? 4 : best >= 30 ? 3 : 0, true);
+            keep(level, TownsfolkEntity.HERO_CITY, plan,
                     new AABB(center).inflate(HeroCityBuilder.EDGE + 12, 64.0D, HeroCityBuilder.EDGE + 12));
         }
     }
