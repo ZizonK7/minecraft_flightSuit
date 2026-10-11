@@ -2057,27 +2057,204 @@ public class ModelGen {
     }
 
     /**
-     * Head parts: the Namekians' antennae and ears ("antennae", "ears"), Ginyu's horns ("horns"), Dodoria's head
-     * spikes ("spikes"), all groups under the head. TODO (M18 agent).
+     * Head parts (M18): the Namekians' antennae and long pointed ears ("antennae", "ears" - Piccolo, Dende), Ginyu's
+     * horns ("horns") and Dodoria's crown of head spikes ("spikes"), all groups under the head. Head space: the skull
+     * is x -4..4, y -8..0, z -4..4 and the skin's hat layer sits 0.5 px outside it, so everything starts at 4.5 / -8.5.
      */
     static final class NamekianParts {
-        static final int GREEN = 0xFF6FA84A, GREEN_DARK = 0xFF4E7A33, PINK = 0xFFE8A0B8, PINK_DARK = 0xFFC07890;
-        static final int HORN = 0xFF3A2E2A, HORN_LIGHT = 0xFF5A4A44;
+        // Namekian skin: between piccolo.png (5AAA4A) and dende.png (6ABF5A); darker at the roots, lighter at the tips.
+        static final int GREEN = 0xFF60B04E, GREEN_DARK = 0xFF447A35, GREEN_LIGHT = 0xFF8AD070, GREEN_INNER = 0xFF365F2B;
+        // Ginyu's horns: near-black purple with worn, lighter growth rings and a pale point.
+        static final int HORN = 0xFF2A2030, HORN_DARK = 0xFF17111A, HORN_LIGHT = 0xFF4E4058, HORN_TIP = 0xFF8A7A94;
+        // Dodoria's spikes: his skin pink (dodoria.png E88AA8), shadowed at the root, paler toward the points.
+        static final int PINK = 0xFFE88AA8, PINK_DARK = 0xFFB0587A, PINK_LIGHT = 0xFFF6B8CC;
 
         static Model build() {
-            Model m = Parts.partsModel("parts_namekian", 64, 32);
+            Model m = Parts.partsModel("parts_namekian", 64, 64);
             Part head = Parts.head(m);
-            head.child("antennae", 0, -8, -2).box("left", 1, -3, -1, 1, 3, 1, p -> grain(p, GREEN, 0.04))
-                    .box("right", -2, -3, -1, 1, 3, 1, p -> grain(p, GREEN, 0.04));
-            head.child("ears", 0, -4, 0).box("ear_right", -5, -2, -1, 1, 3, 2, p -> grain(p, GREEN, 0.04))
-                    .mirrored("ear_left", -5, -2, -1, 1, 3, 2, p -> grain(p, GREEN, 0.04));
-            head.child("horns", 0, -8, 0).box("horn_right", -4, -3, -1, 1, 3, 1, p -> grain(p, HORN, 0.04))
-                    .mirrored("horn_left", -4, -3, -1, 1, 3, 1, p -> grain(p, HORN, 0.04));
-            head.child("spikes", 0, -8, 0).box("spike", -1, -3, -1, 2, 3, 2, p -> grain(p, PINK, 0.04));
+            antennae(head);
+            Part ears = head.child("ears", 0, 0, 0);
+            ear(ears, false);
+            ear(ears, true);
+            Part horns = head.child("horns", 0, 0, 0);
+            horn(horns, false);
+            horn(horns, true);
+            spikes(head.child("spikes", 0, 0, 0));
             return m;
         }
-    }
 
+        // ---------------------------------------------------------------- antennae
+
+        /**
+         * Two antennae from the forehead just above the brow: three thin segments each, rising up and forward, levelling
+         * out above the crown and drooping at the tip. The group's pivot is at their roots so animate() can bob them.
+         */
+        static void antennae(Part head) {
+            // Roots just above the brow (the brow is y -5..-4), on the hat layer's front; under Piccolo's turban edge.
+            Part group = head.child("antennae", 0, -5.7F, -4.5F);
+            antenna(group, false);
+            antenna(group, true);
+        }
+
+        static void antenna(Part group, boolean left) {
+            String s = left ? "l" : "r";
+            float side = left ? 1 : -1;
+            // Root: a slightly thicker segment leaning ~35 degrees forward and a touch outward.
+            Part a = group.child("antenna_" + s, 1.5F * side, 0, 0, 0.5F, 0, 0.1F * side);
+            a.box("antenna_" + s + "_root", -0.5F, -3, -0.5F, 1, 3, 1, 0.15F, p -> antennaSkin(p, 0));
+            // Middle: bends on forward, nearly level with the crown.
+            Part b = a.child("antenna_" + s + "_mid", 0, -3, 0, 0.55F, 0, 0);
+            b.box("antenna_" + s + "_mid", -0.5F, -2, -0.5F, 1, 2, 1, p -> antennaSkin(p, 1));
+            // Tip: curls down steeply, a little thinner.
+            Part c = b.child("antenna_" + s + "_tip", 0, -2, 0, 0.85F, 0, 0);
+            c.box("antenna_" + s + "_tip", -0.5F, -2, -0.5F, 1, 2, 1, -0.1F, p -> antennaSkin(p, 2));
+        }
+
+        /** Smooth skin: dark at the root grading to a light tip, lit from above, a faint ring where segments meet. */
+        static int antennaSkin(Px p, int seg) {
+            // 0 at the root of the whole antenna, 1 at the tip (segments are 3, 2, 2 px long; y runs -h..0 in each).
+            double along = seg == 0 ? (-p.y) / 7.0 : seg == 1 ? (3 - p.y) / 7.0 : (5 - p.y) / 7.0;
+            int c = along < 0.5 ? mix(GREEN_DARK, GREEN, along * 2) : mix(GREEN, GREEN_LIGHT, (along - 0.5) * 2);
+            if (p.face == Face.TOP) {
+                c = shade(c, seg == 2 ? 0.9 : 1.1);
+            } else if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.8);
+            } else if (p.face == Face.BACK) {
+                c = shade(c, 0.9);
+            } else if (p.face == Face.FRONT) {
+                c = shade(c, 1.05);
+            }
+            if (seg > 0 && p.side() && p.j == p.fh - 1) {
+                c = shade(c, 0.88); // the joint
+            }
+            return grain(p, c, 0.04);
+        }
+
+        // ---------------------------------------------------------------- ears
+
+        /**
+         * A long pointed ear: a flat base on the side of the head at eye height, then a narrower middle and a 1x1 point
+         * sweeping back and up, flaring a little away from the head. Outer surface skin green, the side toward the head
+         * darker (the hollow), the thin rims dark.
+         */
+        static void ear(Part ears, boolean left) {
+            String s = left ? "l" : "r";
+            float side = left ? 1 : -1;
+            float x = left ? 0 : -1;
+            // 0.1 px clear of the hat layer (Piccolo's turban is opaque there) so the inner face can't z-fight it.
+            // The whole ear leans back a little; the base is a tall flat plate over the side of the head.
+            Part base = ears.child("ear_" + s, 4.6F * side, -3, 0, 0.25F, 0, 0);
+            base.box("ear_" + s + "_base", x, -2, -1.5F, 1, 4, 3, p -> earSkin(p, left, 0));
+            Part mid = base.child("ear_" + s + "_mid", 0, -1.5F, 1.5F, 0.3F, 0.12F * side, 0);
+            mid.box("ear_" + s + "_mid", x, -1, 0, 1, 2, 2, p -> earSkin(p, left, 1));
+            Part tip = mid.child("ear_" + s + "_tip", 0, -0.5F, 2, 0.35F, 0, 0);
+            tip.box("ear_" + s + "_tip", x, -0.5F, 0, 1, 1, 2, -0.05F, p -> earSkin(p, left, 2));
+        }
+
+        static int earSkin(Px p, boolean left, int seg) {
+            boolean inner = left ? p.face == Face.RIGHT : p.face == Face.LEFT;
+            boolean outer = left ? p.face == Face.LEFT : p.face == Face.RIGHT;
+            int c = seg == 0 ? GREEN : seg == 1 ? mix(GREEN, GREEN_LIGHT, 0.35) : mix(GREEN, GREEN_LIGHT, 0.7);
+            if (inner) {
+                // The hollow of the ear: dark, with a slightly lighter rim.
+                c = p.edge() == 0 ? mix(GREEN_INNER, GREEN_DARK, 0.5) : GREEN_INNER;
+            } else if (outer) {
+                // Lit toward the top; the base has a shaded fold along its lower back (the lobe).
+                c = shade(c, 1.08 - p.fy * 0.18);
+                boolean back = left ? p.fx > 0.5 : p.fx < 0.5; // fx runs front->back on LEFT, back->front on RIGHT
+                if (seg == 0 && p.fy > 0.6 && back) {
+                    c = mix(c, GREEN_DARK, 0.5);
+                }
+            } else if (p.face == Face.TOP) {
+                c = shade(GREEN, 1.05);
+            } else if (p.face == Face.BOTTOM) {
+                c = shade(GREEN_DARK, 0.85);
+            } else {
+                c = GREEN_DARK;
+            }
+            return grain(p, c, 0.05);
+        }
+
+        // ---------------------------------------------------------------- horns
+
+        /**
+         * Ginyu's horns: short, thick, from the top-front corners of the skull, leaning outward and a little back, a
+         * thinner upper segment bending further out to a pale point.
+         */
+        static void horn(Part horns, boolean left) {
+            String s = left ? "l" : "r";
+            float side = left ? 1 : -1;
+            // Pivot a little below the skull's top so the leaning base's raised corner still meets the scalp.
+            Part base = horns.child("horn_" + s, 2.5F * side, -7.8F, -1, -0.12F, 0, 0.3F * side);
+            base.box("horn_" + s + "_base", -1, -3, -1, 2, 3, 2, 0.1F, p -> hornSkin(p, 0));
+            Part tip = base.child("horn_" + s + "_tip", 0, -3, 0, -0.15F, 0, 0.45F * side);
+            tip.box("horn_" + s + "_tip", -0.5F, -2, -0.5F, 1, 2, 1, 0.2F, p -> hornSkin(p, 1));
+        }
+
+        /** Dark horn with lighter growth rings every 2 px, a dark root ring and a pale worn point. */
+        static int hornSkin(Px p, int seg) {
+            double along = seg == 0 ? (-p.y) / 5.0 : (3 - p.y) / 5.0; // 0 root .. 1 point
+            int c = HORN;
+            if (seg == 0 && -p.y < 0.9) {
+                c = HORN_DARK; // the root, in the scalp's shadow
+            } else if ((int) Math.floor(-p.y + 0.3) % 2 == 1) {
+                c = mix(HORN, HORN_LIGHT, 0.6); // a ring
+            }
+            if (along > 0.75) {
+                c = mix(c, HORN_TIP, (along - 0.75) * 3.2);
+            }
+            if (p.face == Face.TOP) {
+                c = seg == 1 ? HORN_TIP : shade(c, 1.15);
+            } else if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.7);
+            } else if (p.face == Face.BACK || p.face == Face.RIGHT) {
+                c = shade(c, 0.9);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        // ---------------------------------------------------------------- spikes
+
+        /**
+         * Dodoria: six spikes around the crown (the two down the middle taller, the sides splayed out) and three more
+         * down the back of the head. Leaning spikes' pivots sit a little inside the scalp so no gap shows under them.
+         */
+        static void spikes(Part group) {
+            spike(group, 1, 0, -7.9F, -1.8F, 0.3F, 0, 2);
+            spike(group, 2, -2.6F, -7.8F, -0.3F, 0.05F, -0.4F, 1);
+            spike(group, 3, 2.6F, -7.8F, -0.3F, 0.05F, 0.4F, 1);
+            spike(group, 4, 0, -7.9F, 1.2F, -0.3F, 0, 2);
+            spike(group, 5, -2.6F, -7.8F, 2.6F, -0.4F, -0.45F, 1);
+            spike(group, 6, 2.6F, -7.8F, 2.6F, -0.4F, 0.45F, 1);
+            spike(group, 7, -1.8F, -6.8F, 3.9F, -0.95F, -0.25F, 1);
+            spike(group, 8, 1.8F, -6.8F, 3.9F, -0.95F, 0.25F, 1);
+            spike(group, 9, 0, -5.0F, 3.9F, -1.2F, 0, 1);
+        }
+
+        /** One spike pointing up its own -Y: a three-step cone, 2.4 px wide at the root, 1.6 in the middle, a 1 px point. */
+        static void spike(Part group, int n, float x, float y, float z, float rx, float rz, int tipH) {
+            Part base = group.child("spike_" + n, x, y, z, rx, 0, rz);
+            base.box("spike_" + n + "_base", -1, -1, -1, 2, 1, 2, 0.2F, p -> spikeSkin(p, 0, tipH));
+            base.box("spike_" + n + "_mid", -0.5F, -2.2F, -0.5F, 1, 1, 1, 0.3F, p -> spikeSkin(p, 1, tipH));
+            base.box("spike_" + n + "_tip", -0.5F, -2.5F - tipH, -0.5F, 1, tipH, 1, p -> spikeSkin(p, 2, tipH));
+        }
+
+        static int spikeSkin(Px p, int seg, int tipH) {
+            double total = 2.5 + tipH;
+            double along = (-p.y) / total; // 0 root .. 1 point (all three boxes share the spike's space)
+            int c = along < 0.3 ? mix(PINK_DARK, PINK, along / 0.3) : mix(PINK, PINK_LIGHT, (along - 0.3) / 0.7);
+            if (p.face == Face.TOP) {
+                c = seg == 2 ? PINK_LIGHT : shade(c, 1.08);
+            } else if (p.face == Face.BOTTOM) {
+                c = shade(PINK_DARK, 0.8);
+            } else if (p.face == Face.BACK) {
+                c = shade(c, 0.88);
+            } else if (p.face == Face.RIGHT) {
+                c = shade(c, 0.94);
+            }
+            return grain(p, c, 0.05);
+        }
+    }
     /**
      * Frieza: the first form's horns ("horns", head), shoulder pads ("pads", body) and thick tail ("tail", body), and
      * the final form's smooth tail ("tail_final", body). TODO (M18 agent).
