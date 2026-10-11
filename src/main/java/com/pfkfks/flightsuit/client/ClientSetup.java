@@ -39,6 +39,11 @@ public final class ClientSetup {
         event.registerLayerDefinition(OozaruModel.LAYER, OozaruModel::createLayer);
         event.registerLayerDefinition(ShenronModel.LAYER, ShenronModel::createLayer);
         event.registerLayerDefinition(MonkeyModel.LAYER, MonkeyModel::createLayer);
+        // M18: the Dragon Ball cast's 3D parts (client/parts, drawn by DbzPartsLayer).
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.SaiyanParts.LAYER, com.pfkfks.flightsuit.client.parts.SaiyanParts::createLayer);
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.NamekianParts.LAYER, com.pfkfks.flightsuit.client.parts.NamekianParts::createLayer);
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.FriezaParts.LAYER, com.pfkfks.flightsuit.client.parts.FriezaParts::createLayer);
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.CellBuuParts.LAYER, com.pfkfks.flightsuit.client.parts.CellBuuParts::createLayer);
     }
 
     @SubscribeEvent

@@ -13,7 +13,11 @@ import java.util.Map;
 /**
  * Code-built models: the box layout, the texture and a preview render of every model that isn't a plain skin.
  *
- * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|monkey|weapons|all]
+ * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|monkey|weapons|parts_saiyan|parts_namekian|parts_frieza|parts_cell_buu|all]
+ *
+ * The parts_* models (M18, DESIGN.md 5차 피드백 "인물별 입체 부품") are the Dragon Ball cast's 3D parts drawn over the
+ * skinned body by client/DbzPartsLayer: two roots, "head" and "body", at the player model's pivots, each with named
+ * child groups (the names are the contract with client/parts/DbzParts). See Parts.partsModel.
  *
  * Entity and suit models (hulk, hulkbuster, trunks, shenron): boxes are laid out here in model space (pixels, y
  * down, front is -Z, the usual ModelPart conventions), their UVs are packed automatically, every face is
@@ -61,6 +65,18 @@ public class ModelGen {
         }
         if (all || what.equals("weapons")) {
             Weapons.buildAll();
+        }
+        if (all || what.equals("parts_saiyan")) {
+            emit(SaiyanParts.build(), "client/parts/SaiyanParts.java", "textures/entity/dbz/parts/saiyan.png");
+        }
+        if (all || what.equals("parts_namekian")) {
+            emit(NamekianParts.build(), "client/parts/NamekianParts.java", "textures/entity/dbz/parts/namekian.png");
+        }
+        if (all || what.equals("parts_frieza")) {
+            emit(FriezaParts.build(), "client/parts/FriezaParts.java", "textures/entity/dbz/parts/frieza.png");
+        }
+        if (all || what.equals("parts_cell_buu")) {
+            emit(CellBuuParts.build(), "client/parts/CellBuuParts.java", "textures/entity/dbz/parts/cell_buu.png");
         }
     }
 
@@ -1988,6 +2004,123 @@ public class ModelGen {
 
         static int paw(Px p) {
             return grain(p, p.face == Face.BOTTOM || p.face == Face.FRONT ? PAW : FUR_DARK, 0.04);
+        }
+    }
+
+    // ================================================================ Dragon Ball parts (M18)
+
+    /**
+     * Shared ground for the parts models: a texture of the given size, and the two roots the layer drives - "head"
+     * (pivot at the neck, like the player model's head) and "body" (pivot at the shoulders). Add groups as children
+     * of those: {@code head.child("antennae", 0, -8, 0).box(...)}. Model space is the player model's: pixels, y down,
+     * the front is -Z; the head spans y -8..0, the body 0..12, x -4..4, z -2..2.
+     */
+    static final class Parts {
+        static Model partsModel(String name, int texW, int texH) {
+            Model m = new Model(name, texW, texH);
+            m.part("head", 0, 0, 0);
+            m.part("body", 0, 0, 0);
+            m.previewScale = 10.0F;
+            return m;
+        }
+
+        static Part head(Model m) {
+            return m.root.children.get(0);
+        }
+
+        static Part body(Model m) {
+            return m.root.children.get(1);
+        }
+
+        static int fur(Px p, int base, int dark, int light) {
+            int c = p.noise() < 0.12 ? light : (int) Math.floor(p.x * 1.1 + p.y * 0.9 + 40) % 4 == 0 ? dark : base;
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.8);
+            }
+            return grain(p, c, 0.05);
+        }
+    }
+
+    /**
+     * Saiyan tails (Raditz, Vegeta, young Gohan): group "tail" under the body. TODO (M18 agent): a furred tail from
+     * the small of the back - three or four segments getting thinner, curling up at the tip.
+     */
+    static final class SaiyanParts {
+        static final int FUR = 0xFF6B4423, FUR_DARK = 0xFF4A2E17, FUR_LIGHT = 0xFF8A5A30;
+
+        static Model build() {
+            Model m = Parts.partsModel("parts_saiyan", 64, 32);
+            Part tail = Parts.body(m).child("tail", 0, 10, 2, 0.6F, 0, 0);
+            tail.box("tail", -1, -1, 0, 2, 2, 8, p -> Parts.fur(p, FUR, FUR_DARK, FUR_LIGHT));
+            return m;
+        }
+    }
+
+    /**
+     * Head parts: the Namekians' antennae and ears ("antennae", "ears"), Ginyu's horns ("horns"), Dodoria's head
+     * spikes ("spikes"), all groups under the head. TODO (M18 agent).
+     */
+    static final class NamekianParts {
+        static final int GREEN = 0xFF6FA84A, GREEN_DARK = 0xFF4E7A33, PINK = 0xFFE8A0B8, PINK_DARK = 0xFFC07890;
+        static final int HORN = 0xFF3A2E2A, HORN_LIGHT = 0xFF5A4A44;
+
+        static Model build() {
+            Model m = Parts.partsModel("parts_namekian", 64, 32);
+            Part head = Parts.head(m);
+            head.child("antennae", 0, -8, -2).box("left", 1, -3, -1, 1, 3, 1, p -> grain(p, GREEN, 0.04))
+                    .box("right", -2, -3, -1, 1, 3, 1, p -> grain(p, GREEN, 0.04));
+            head.child("ears", 0, -4, 0).box("ear_right", -5, -2, -1, 1, 3, 2, p -> grain(p, GREEN, 0.04))
+                    .mirrored("ear_left", -5, -2, -1, 1, 3, 2, p -> grain(p, GREEN, 0.04));
+            head.child("horns", 0, -8, 0).box("horn_right", -4, -3, -1, 1, 3, 1, p -> grain(p, HORN, 0.04))
+                    .mirrored("horn_left", -4, -3, -1, 1, 3, 1, p -> grain(p, HORN, 0.04));
+            head.child("spikes", 0, -8, 0).box("spike", -1, -3, -1, 2, 3, 2, p -> grain(p, PINK, 0.04));
+            return m;
+        }
+    }
+
+    /**
+     * Frieza: the first form's horns ("horns", head), shoulder pads ("pads", body) and thick tail ("tail", body), and
+     * the final form's smooth tail ("tail_final", body). TODO (M18 agent).
+     */
+    static final class FriezaParts {
+        static final int SHELL = 0xFF5B2E8E, SHELL_DARK = 0xFF3E1E66, WHITE = 0xFFEDEBF2, WHITE_DARK = 0xFFC9C5D4, HORN = 0xFF2E2630;
+
+        static Model build() {
+            Model m = Parts.partsModel("parts_frieza", 64, 64);
+            Parts.head(m).child("horns", 0, -8, 0).box("horn_right", -5, -1, -1, 2, 1, 2, p -> grain(p, HORN, 0.04))
+                    .mirrored("horn_left", -5, -1, -1, 2, 1, 2, p -> grain(p, HORN, 0.04));
+            Part body = Parts.body(m);
+            body.child("pads", 0, 0, 0).box("pad_right", -7, -1, -3, 3, 2, 6, p -> grain(p, SHELL, 0.04))
+                    .mirrored("pad_left", -7, -1, -3, 3, 2, 6, p -> grain(p, SHELL, 0.04));
+            body.child("tail", 0, 10, 2, 0.5F, 0, 0).box("tail", -1.5F, -1.5F, 0, 3, 3, 10, p -> grain(p, WHITE, 0.04));
+            body.child("tail_final", 0, 10, 2, 0.5F, 0, 0).box("tail", -1, -1, 0, 2, 2, 10, p -> grain(p, WHITE, 0.04));
+            return m;
+        }
+    }
+
+    /**
+     * Cell and Buu: Cell's head crest per form ("crest_imperfect", "crest_semi", "crest", "crest_jr", head), his
+     * wings ("wings", body) and the imperfect form's tail ("tail", body); Buu's antenna ("antenna_fat",
+     * "antenna_super", "antenna_kid", head). TODO (M18 agent).
+     */
+    static final class CellBuuParts {
+        static final int CELL_GREEN = 0xFF5F9E3E, CELL_DARK = 0xFF3C6A28, CELL_BLACK = 0xFF1E2A1C, BUU_PINK = 0xFFF2A7C5, BUU_DARK = 0xFFD07FA3;
+
+        static Model build() {
+            Model m = Parts.partsModel("parts_cell_buu", 64, 64);
+            Part head = Parts.head(m);
+            head.child("crest_imperfect", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
+            head.child("crest_semi", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
+            head.child("crest", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
+            head.child("crest_jr", 0, -8, 0).box("crest", -1, -2, -1, 2, 2, 3, p -> grain(p, CELL_GREEN, 0.04));
+            head.child("antenna_fat", 0, -8, 0).box("antenna", -1, -4, -1, 2, 4, 2, p -> grain(p, BUU_PINK, 0.04));
+            head.child("antenna_super", 0, -8, 0).box("antenna", -1, -6, -1, 2, 6, 2, p -> grain(p, BUU_PINK, 0.04));
+            head.child("antenna_kid", 0, -8, 0).box("antenna", -1, -5, -1, 2, 5, 2, p -> grain(p, BUU_PINK, 0.04));
+            Part body = Parts.body(m);
+            body.child("wings", 0, 1, 2).box("wing_right", -6, 0, 0, 6, 10, 1, p -> grain(p, CELL_DARK, 0.04))
+                    .mirrored("wing_left", -6, 0, 0, 6, 10, 1, p -> grain(p, CELL_DARK, 0.04));
+            body.child("tail", 0, 10, 2, 0.6F, 0, 0).box("tail", -1, -1, 0, 2, 2, 10, p -> grain(p, CELL_GREEN, 0.04));
+            return m;
         }
     }
 

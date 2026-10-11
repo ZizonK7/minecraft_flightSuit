@@ -32,6 +32,8 @@ public class DbzFighterRenderer extends HumanoidMobRenderer<DbzFighterEntity, Db
     public DbzFighterRenderer(EntityRendererProvider.Context context) {
         super(context, new DbzFighterModel(context.bakeLayer(ModelLayers.PLAYER)), 0.5F);
         this.oozaru = new OozaruRenderer(context);
+        // M18: tails, antennae, horns, wings over the skinned body.
+        addLayer(new DbzPartsLayer(this, context));
     }
 
     @Override
