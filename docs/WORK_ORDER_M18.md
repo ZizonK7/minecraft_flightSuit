@@ -67,7 +67,7 @@
 
 ## 5. 묶음 E: 인물별 입체 부품 (멀티 에이전트)
 
-- 사이어인 꼬리, 피콜로·나메크인 더듬이, 프리저 체형(꼬리·어깨), 셀·부우 체형. 에이전트마다 한 인물군, `ModelGen`에 이름을 추가하고 `DbzFighterModel.shape`에 부품 붙임.
+- 사이어인 꼬리, 피콜로·나메크인 더듬이, 프리저 체형(꼬리·어깨), 셀·부우 체형. 에이전트마다 한 인물군(작업 트리 분리), `ModelGen parts_*` + `client/parts/*Parts` + 렌더 레이어 `DbzPartsLayer` (몸 모델 `DbzFighterModel`은 손대지 않음).
 
 ## 6. 끝낼 때
 
@@ -79,3 +79,4 @@ README(조작키·슈트 종류·제작법·전력·마을), DESIGN.md 5장 "M18
 - 묶음 B 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): `block/CableBlock`, `block/PowerPlantBlock(+Entity)`, `PowerGrid.nodesLinked/nodesWithin`, `ResidentJob.ENGINEER` + `village/ai/EngineerWorkGoal` + `VillageWorkday.engineer`, `Blueprint.POWER_PLANT`, 텍스처(`TextureGen power`)·스킨(`ResidentSkinGen engineer`)·리소스·번역·README·안내서.
 - 묶음 C 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): `town/TownAnnex`(봉화·주막·다이너), `SignalSmokeS2CPacket`/`SignalSmokeClient`, 역할 `FORT_INNKEEPER`·`CITY_DINER`(`Place.INN`), `town/Rumours`, `town/VillageRumours`(바닐라 주민 소문 + 지도 제작자 지도), `TownsfolkEntity`(정오 식사·비·잠·인사·심부름), `TownPlan.grow`, 일기토(`GeneralEntity.startSpar`, `Diplomacy.spar`, `/village spar`), 스킨 2종, 번역, README.
 - 묶음 D 완료 (2026-10-11, 서버 부팅으로 데이터팩 로드 확인, 인게임 테스트 전): `worldgen/noise_settings/{dbz_earth,namek,titan}.json`, 바이옴 `dbz_plains/dbz_mesa/dbz_wasteland/titan`, 차원 JSON 교체. README·DESIGN·TEST_PLAN.
+- 묶음 E 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): 에이전트 4개(사이어인·나메크인·프리저·셀/부우)가 각자 작업 트리에서 만든 것을 병합. `client/DbzPartsLayer`, `client/parts/{DbzPartsModel,DbzParts,SaiyanParts,NamekianParts,FriezaParts,CellBuuParts}`, `ModelGen parts_*`, 텍스처 `textures/entity/dbz/parts/*.png`, 미리보기 `docs/reference/parts_*_preview.png`. README·DESIGN·TEST_PLAN·CLAUDE.
