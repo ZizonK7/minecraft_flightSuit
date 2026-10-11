@@ -57,6 +57,11 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class FortressManager {
     private static final int BUILD_PER_TICK = 3000;
+    /** Nobody within this of the site: the build goes up in one go (the first M18 test - "it appears as I come"). */
+    private static final double WATCHED_RANGE = 112.0D;
+    private static final int BUILD_UNWATCHED = 2_000_000;
+    /** The build starts this far out - beyond what's drawn - so the walls stand before anyone sees the hill. */
+    private static final double BUILD_RANGE = 256.0D;
     private static final TicketType<ChunkPos> BATTLE_TICKET =
             TicketType.create("flightsuit_battle", Comparator.comparingLong(ChunkPos::toLong), 100);
 
@@ -207,16 +212,15 @@ public final class FortressManager {
         if (JOBS.isEmpty()) {
             return;
         }
-        WarData data = null;
+        WarData data = WarData.get(level.getServer());
         for (Kingdom kingdom : new ArrayList<>(JOBS.keySet())) {
             BuildJob job = JOBS.get(kingdom);
-            if (job.work().tick(level, BUILD_PER_TICK)) {
+            FortRecord fort = data.fort(kingdom);
+            // Watched, it goes up at a pace; unwatched, all at once.
+            boolean watched = fort == null || watched(level, new BlockPos(fort.x, fort.y, fort.z));
+            if (job.work().tick(level, watched ? BUILD_PER_TICK : BUILD_UNWATCHED)) {
                 stockChests(level, kingdom, job.plan().chests());
                 JOBS.remove(kingdom);
-                if (data == null) {
-                    data = WarData.get(level.getServer());
-                }
-                FortRecord fort = data.fort(kingdom);
                 if (fort != null) {
                     fort.built = true;
                     fort.layout = FortressBuilder.LAYOUT;
@@ -224,6 +228,16 @@ public final class FortressManager {
                 }
             }
         }
+    }
+
+    /** Is a player close enough to the site to see it built? */
+    static boolean watched(ServerLevel level, BlockPos site) {
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(site.getX(), player.getY(), site.getZ()) < WATCHED_RANGE * WATCHED_RANGE) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void stockChests(ServerLevel level, Kingdom kingdom, List<BlockPos> chests) {
@@ -257,6 +271,7 @@ public final class FortressManager {
         long day = level.getDayTime() / 24000L;
         for (FortRecord fort : data.forts().values()) {
             boolean anyoneNear = false;
+            boolean anyoneClose = false;
             for (ServerPlayer player : level.players()) {
                 double dx = player.getX() - fort.x;
                 double dz = player.getZ() - fort.z;
@@ -267,13 +282,16 @@ public final class FortressManager {
                 if (distSqr < 144.0D * 144.0D) {
                     anyoneNear = true;
                 }
+                if (distSqr < BUILD_RANGE * BUILD_RANGE) {
+                    anyoneClose = true;
+                }
             }
             if (fort.built && fort.layout < FortressBuilder.LAYOUT && anyoneNear && data.battleAt(fort.kingdom) == null) {
                 // Built from an older, smaller plan: put it up again from the current one, where it stands.
                 rebuild(level, fort.kingdom);
             }
             if (!fort.built) {
-                if (anyoneNear && !JOBS.containsKey(fort.kingdom)) {
+                if (anyoneClose && !JOBS.containsKey(fort.kingdom)) {
                     startBuild(level, data, fort);
                 }
                 continue;

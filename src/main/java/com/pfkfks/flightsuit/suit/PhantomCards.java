@@ -70,7 +70,7 @@ public final class PhantomCards {
         Vec3 look = player.getLookAngle();
         double cos = Math.cos(Math.toRadians(angleDeg));
         return player.serverLevel().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(range),
-                        entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && entity instanceof Enemy
+                        entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && SuitWeapons.isHostile(player, entity)
                                 && entity.getBoundingBox().getCenter().subtract(eye).normalize().dot(look) >= cos
                                 && player.hasLineOfSight(entity))
                 .stream()
@@ -167,7 +167,7 @@ public final class PhantomCards {
     /** Club: a ring of cards fans out from the phantom and seeks out everything hostile around. */
     private static void fanOfCards(ServerPlayer player, SuitWeapons.State state) {
         List<Mob> targets = player.serverLevel().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(24.0D),
-                mob -> mob instanceof Enemy && mob.isAlive());
+                mob -> SuitWeapons.isHostile(player, mob) && mob.isAlive());
         targets.sort(Comparator.comparingDouble(player::distanceToSqr));
         int count = 12;
         for (int i = 0; i < count; i++) {

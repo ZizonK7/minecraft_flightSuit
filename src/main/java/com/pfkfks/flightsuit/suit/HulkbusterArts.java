@@ -100,7 +100,7 @@ public final class HulkbusterArts {
             ModNetwork.sendToTrackingAndSelf(player, new ShieldStateS2CPacket(player.getId(), false));
             // Letting go: the plates slam back and the ground jumps.
             int hit = slam(level, player, SuitTuning.ARMOUR_MODE_WAVE_RADIUS, SuitTuning.ARMOUR_MODE_WAVE_DAMAGE,
-                    entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                    entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
                             && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
             KiFx.burst(level, player.position().add(0.0D, 0.2D, 0.0D), KiFx.RED, (float) SuitTuning.ARMOUR_MODE_WAVE_RADIUS, 10, KiFx.RING);
             level.playSound(null, player.blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 1.0F, 0.6F);
@@ -396,7 +396,7 @@ public final class HulkbusterArts {
         ServerLevel level = player.serverLevel();
         LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.PUNCH_REACH + 1.0D).target();
         int landed = punchFan(level, player, SuitTuning.PUNCH_DAMAGE, entity -> !SuitWeapons.isFriendly(player, entity)
-                && (entity == aimed || entity instanceof Enemy && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)), state);
+                && (entity == aimed || SuitWeapons.isHostile(player, entity) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)), state);
         Vec3 fist = fist(player, left);
         level.sendParticles(ParticleTypes.CLOUD, fist.x, fist.y, fist.z, 3, 0.15D, 0.15D, 0.15D, 0.05D);
         level.playSound(null, player.blockPosition(), landed > 0 ? SoundEvents.PLAYER_ATTACK_STRONG : SoundEvents.PLAYER_ATTACK_NODAMAGE,
@@ -652,7 +652,7 @@ public final class HulkbusterArts {
         player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
         slam(player.serverLevel(), player, SuitTuning.SLAM_RADIUS, SuitTuning.SLAM_DAMAGE,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity == player.getLastHurtMob())
+                entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity == player.getLastHurtMob())
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
     }
 

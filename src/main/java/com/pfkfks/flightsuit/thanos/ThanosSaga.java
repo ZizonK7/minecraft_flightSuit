@@ -104,7 +104,8 @@ public final class ThanosSaga {
         CompoundTag world = data.world(Planet.TITAN);
         for (TitanSites place : TitanSites.values()) {
             BlockPos column = place.around(site);
-            if (!world.contains(place.id()) && anyoneWithin(level, column, 96.0D) && level.isLoaded(column)) {
+            if (!world.contains(place.id()) && anyoneWithin(level, column, com.pfkfks.flightsuit.planet.dbz.DbzEarth.SIGHT_RANGE)) {
+                com.pfkfks.flightsuit.planet.dbz.DbzEarth.load(level, column, 3);
                 world.putLong(place.id(), place.build(level, site).asLong());
                 data.setDirty();
             }

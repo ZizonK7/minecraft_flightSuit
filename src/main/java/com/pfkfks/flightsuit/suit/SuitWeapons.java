@@ -236,6 +236,18 @@ public final class SuitWeapons {
                 || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner);
     }
 
+    /**
+     * What the wearer's weapons may pick out on their own: a monster - but a kingdom's soldier only if that kingdom
+     * fights the wearer (WarTargets.isPlayerFoe; a companion suit asks for its owner). Garrisons at peace are left be.
+     */
+    public static boolean isHostile(LivingEntity who, Entity entity) {
+        if (entity instanceof com.pfkfks.flightsuit.war.RaidMember member && entity instanceof Mob mob) {
+            UUID id = who instanceof SuitCompanionEntity companion && companion.getOwner() != null ? companion.getOwner().getUUID() : who.getUUID();
+            return com.pfkfks.flightsuit.war.WarTargets.isPlayerFoe(mob, id, member);
+        }
+        return entity instanceof Enemy;
+    }
+
     /** Beams (repulsor, cryo, the bishop's staff) hum while they fire and are drawn as a ribbon by the clients. */
     public static boolean isBeam(byte kind) {
         return kind == FIRE_REPULSOR || kind == FIRE_CRYO || kind == FIRE_HOLY;
@@ -556,7 +568,7 @@ public final class SuitWeapons {
         double range = SuitTuning.MISSILE_LOCK_RANGE;
         List<LivingEntity> found = new ArrayList<>(player.serverLevel().getEntitiesOfClass(Mob.class,
                 player.getBoundingBox().inflate(range), mob -> {
-                    if (!(mob instanceof Enemy) || !mob.isAlive() || isFriendly(player, mob)) {
+                    if (!isHostile(player, mob) || !mob.isAlive() || isFriendly(player, mob)) {
                         return false;
                     }
                     Vec3 to = mob.getBoundingBox().getCenter().subtract(eye);

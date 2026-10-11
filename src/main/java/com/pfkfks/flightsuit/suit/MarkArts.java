@@ -77,7 +77,7 @@ public final class MarkArts {
         Vec3 eye = player.getEyePosition();
         List<LivingEntity> foes = new ArrayList<>(player.serverLevel().getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().inflate(SuitTuning.FULL_BURST_RANGE),
-                entity -> entity.isAlive() && entity instanceof Enemy && !SuitWeapons.isFriendly(player, entity)
+                entity -> entity.isAlive() && SuitWeapons.isHostile(player, entity) && !SuitWeapons.isFriendly(player, entity)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
                         && entity.distanceToSqr(eye) <= SuitTuning.FULL_BURST_RANGE * SuitTuning.FULL_BURST_RANGE && player.hasLineOfSight(entity)));
         if (foes.isEmpty()) {
@@ -166,11 +166,11 @@ public final class MarkArts {
         Vec3 look = player.getLookAngle();
         double cos = Math.cos(Math.toRadians(SuitTuning.SHOULDER_ARC_DEG / 2.0D));
         LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.SHOULDER_RANGE).target();
-        LivingEntity target = aimed != null && (aimed instanceof Enemy || aimed.getLastHurtByMob() == player) ? aimed : null;
+        LivingEntity target = aimed != null && (SuitWeapons.isHostile(player, aimed) || aimed.getLastHurtByMob() == player) ? aimed : null;
         if (target == null) {
             double best = Double.MAX_VALUE;
             for (LivingEntity foe : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(SuitTuning.SHOULDER_RANGE),
-                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
                             && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity))) {
                 Vec3 to = foe.getBoundingBox().getCenter().subtract(eye);
                 double d = to.length();
@@ -199,7 +199,7 @@ public final class MarkArts {
     private static int reveal(ServerPlayer player, double radius, int ticks) {
         int count = 0;
         for (LivingEntity mob : player.serverLevel().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius),
-                entity -> entity.isAlive() && entity instanceof Enemy && !SuitWeapons.isFriendly(player, entity)
+                entity -> entity.isAlive() && SuitWeapons.isHostile(player, entity) && !SuitWeapons.isFriendly(player, entity)
                         && entity.distanceToSqr(player) <= radius * radius)) {
             mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, ticks, 0, false, false, false));
             count++;

@@ -78,6 +78,10 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class HeroCity {
     private static final int BUILD_PER_TICK = 4000;
+    /** Nobody within this of the site: the build goes up in one go (the first M18 test). The build starts at BUILD_RANGE. */
+    private static final double WATCHED_RANGE = 128.0D;
+    private static final int BUILD_UNWATCHED = 3_000_000;
+    private static final double BUILD_RANGE = 288.0D;
     private static final int AGENTS = 6;
     private static final String VILLAIN_TAG = "flightsuit_villain";
     private static final TicketType<ChunkPos> STORM_TICKET =
@@ -115,6 +119,7 @@ public final class HeroCity {
         ensureSite(level, data);
         long day = level.getDayTime() / 24000L;
         boolean anyoneNear = false;
+        boolean anyoneClose = false;
         for (ServerPlayer player : level.players()) {
             double dx = player.getX() - data.x;
             double dz = player.getZ() - data.z;
@@ -125,13 +130,16 @@ public final class HeroCity {
             if (distSqr < 160.0D * 160.0D) {
                 anyoneNear = true;
             }
+            if (distSqr < BUILD_RANGE * BUILD_RANGE) {
+                anyoneClose = true;
+            }
         }
         if (data.built && data.layout < HeroCityBuilder.LAYOUT && anyoneNear && data.storm == null) {
             // Built from an older, smaller plan: put it up again from the current one, where it stands.
             rebuild(level);
         }
         if (!data.built) {
-            if (anyoneNear && job == null) {
+            if (anyoneClose && job == null) {
                 startBuild(level, data);
             }
         } else if (anyoneNear || data.storm != null) {
@@ -220,7 +228,13 @@ public final class HeroCity {
         if (job == null) {
             return;
         }
-        if (job.tick(level, BUILD_PER_TICK)) {
+        boolean watched = false;
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(data.x, player.getY(), data.z) < WATCHED_RANGE * WATCHED_RANGE) {
+                watched = true;
+            }
+        }
+        if (job.tick(level, watched ? BUILD_PER_TICK : BUILD_UNWATCHED)) {
             stockVault(level, vault(data));
             job = null;
             data.built = true;

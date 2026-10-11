@@ -282,7 +282,8 @@ public final class DbzSaga {
                 continue;
             }
             BlockPos column = site.around(landing);
-            if (level.isLoaded(column) && someoneAt(level, column, 96.0D, site.from)) {
+            if (someoneAt(level, column, DbzEarth.SIGHT_RANGE, site.from)) {
+                DbzEarth.load(level, column, 3);
                 world.putLong(site.key(), build(level, site, column).asLong());
                 if (site == Site.NAMEK_VILLAGE) {
                     world.putInt(site.key() + "_layout", NAMEK_LAYOUT);

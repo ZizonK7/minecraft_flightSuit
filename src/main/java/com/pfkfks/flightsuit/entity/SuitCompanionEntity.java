@@ -243,7 +243,8 @@ public class SuitCompanionEntity extends PathfinderMob {
         if (entity == getTarget()) {
             return true;
         }
-        return entity instanceof net.minecraft.world.entity.monster.Enemy && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
+        // A kingdom's soldier only if that kingdom fights the owner (a garrison at peace is left be).
+        return com.pfkfks.flightsuit.suit.SuitWeapons.isHostile(this, entity) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
                 && !(entity instanceof com.pfkfks.flightsuit.war.RaidMember member && member.isPlayerSide());
     }
 

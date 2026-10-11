@@ -240,7 +240,7 @@ public final class HeroArts {
         double cos = Math.cos(Math.toRadians(SuitTuning.SWORD_ARC_DEG / 2.0D));
         LivingEntity aimed = SuitWeapons.aim(player, reach).target();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(reach),
-                entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity == aimed || entity instanceof Enemy))) {
+                entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity == aimed || SuitWeapons.isHostile(player, entity)))) {
             Vec3 to = target.getBoundingBox().getCenter().subtract(eye);
             if (target != aimed && (to.length() - target.getBbWidth() / 2.0D > reach || to.normalize().dot(look) < cos
                     || !player.hasLineOfSight(target))) {
@@ -360,7 +360,7 @@ public final class HeroArts {
             boolean wall = block.getType() != HitResult.Type.MISS;
             Vec3 end = wall ? block.getLocation() : to;
             for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, end).inflate(1.2D),
-                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player))) {
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player))) {
                 if (!b.hit.add(target)) {
                     continue;
                 }
@@ -463,7 +463,7 @@ public final class HeroArts {
         ServerLevel level = player.serverLevel();
         Vec3 center = player.position();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius, 2.0D, radius),
-                entity -> entity.isAlive() && entity instanceof Enemy && !SuitWeapons.isFriendly(player, entity))) {
+                entity -> entity.isAlive() && SuitWeapons.isHostile(player, entity) && !SuitWeapons.isFriendly(player, entity))) {
             Vec3 out = target.position().subtract(center).multiply(1.0D, 0.0D, 1.0D);
             if (out.length() - target.getBbWidth() / 2.0D > radius) {
                 continue;

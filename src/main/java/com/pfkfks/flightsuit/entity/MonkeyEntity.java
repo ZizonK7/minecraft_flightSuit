@@ -156,7 +156,7 @@ public class MonkeyEntity extends PathfinderMob {
         if (owner instanceof ServerPlayer player && SuitWeapons.isFriendly(player, entity)) {
             return false;
         }
-        return (entity instanceof Enemy || owner != null && entity.getLastHurtByMob() == owner)
+        return ((owner != null ? SuitWeapons.isHostile(owner, entity) : entity instanceof Enemy) || owner != null && entity.getLastHurtByMob() == owner)
                 && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity);
     }
 

@@ -116,7 +116,7 @@ public final class SwordArts {
         ServerLevel level = player.serverLevel();
         LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.THRUST_REACH).target();
         Set<LivingEntity> hit = cut(level, player, player.getLookAngle(), step, multiplier,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity == aimed || entity instanceof Enemy
+                entity -> !SuitWeapons.isFriendly(player, entity) && (entity == aimed || SuitWeapons.isHostile(player, entity)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)));
         // The same foe through all three steps: stunned.
         if (step == CUT_ACROSS) {
@@ -539,12 +539,12 @@ public final class SwordArts {
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SWORD_V, 0));
         LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.THRUST_REACH).target();
         cut(level, player, player.getLookAngle(), CUT_DOWN, multiplier,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity == aimed || entity instanceof Enemy
+                entity -> !SuitWeapons.isFriendly(player, entity) && (entity == aimed || SuitWeapons.isHostile(player, entity)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)));
         int colour = state.superSaiyan ? KiFx.GOLD : KiFx.KI;
         KiShots.fire(level, player, KiShots.Style.DISC, hands(player), player.getLookAngle(), 1.4D, SuitTuning.CHARGE_WAVE_RANGE,
                 SuitTuning.CHARGE_WAVE_DAMAGE * power(state), 1.4D,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
         KiFx.burst(level, hands(player), colour, 1.2F, 10, KiFx.FLASH);
         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0F, 0.7F);
@@ -582,7 +582,7 @@ public final class SwordArts {
         SuitWeapons.Aim aim = SuitWeapons.aim(player, 40.0D);
         Vec3 dir = aim.end().subtract(palm).normalize();
         KiShots.fire(level, player, KiShots.Style.KI, palm, dir, 2.2D, 40.0D, SuitTuning.VOLLEY_DAMAGE * power(state), 0.8D,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity == aim.target())
+                entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity == aim.target())
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
         player.swing(side > 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND, true);
     }

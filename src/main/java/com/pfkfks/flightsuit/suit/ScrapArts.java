@@ -163,7 +163,7 @@ public final class ScrapArts {
         LivingEntity aimed = SuitWeapons.aim(player, SuitTuning.FLAME_REACH).target();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(SuitTuning.FLAME_REACH),
                 entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity)
-                        && (entity instanceof Enemy || entity.getLastHurtByMob() == player || entity == aimed)
+                        && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player || entity == aimed)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity))) {
             Vec3 to = target.getBoundingBox().getCenter().subtract(from);
             if (to.length() - target.getBbWidth() / 2.0D > SuitTuning.FLAME_REACH || to.normalize().dot(look) < cos
@@ -269,7 +269,7 @@ public final class ScrapArts {
         state.rocketArmed = false;
         player.fallDistance = 0.0F;
         HulkbusterArts.slam(level, player, SuitTuning.ROCKET_LAND_RADIUS, SuitTuning.ROCKET_LAND_DAMAGE * SuitWeapons.overdrive(state, player),
-                entity -> !SuitWeapons.isFriendly(player, entity) && (entity instanceof Enemy || entity.getLastHurtByMob() == player)
+                entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
                         && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
         BlockState under = level.getBlockState(player.blockPosition().below());
         if (!under.isAir()) {
@@ -342,7 +342,7 @@ public final class ScrapArts {
         level.playSound(null, at, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 1.0F, 0.8F);
         // Everything out there shows itself in the red light.
         for (LivingEntity mob : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(SuitTuning.FLARE_RADIUS),
-                entity -> entity.isAlive() && entity instanceof Enemy && !SuitWeapons.isFriendly(player, entity))) {
+                entity -> entity.isAlive() && SuitWeapons.isHostile(player, entity) && !SuitWeapons.isFriendly(player, entity))) {
             mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, SuitTuning.FLARE_TICKS, 0, false, false, false));
         }
         player.displayClientMessage(Component.translatable("message.flightsuit.flare_up"), true);

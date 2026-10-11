@@ -45,7 +45,9 @@ public final class DbzEarth {
         CompoundTag world = data.world(Planet.DBZ_EARTH);
         for (DbzLandmarks mark : DbzLandmarks.values()) {
             BlockPos column = mark.around(site);
-            if (!world.contains(mark.id()) && anyoneWithin(level, column, 96.0D) && level.isLoaded(column)) {
+            if (!world.contains(mark.id()) && anyoneWithin(level, column, SIGHT_RANGE)) {
+                // Beyond what's drawn: load (generate) the ground first, then build - it's there when you get there.
+                load(level, column, 3);
                 BlockPos center = mark.build(level, site);
                 world.putLong(mark.id(), center.asLong());
                 data.setDirty();
@@ -53,7 +55,8 @@ public final class DbzEarth {
         }
         // M17: West City round Capsule Corp, once Capsule Corp is up and everything it covers is loaded.
         BlockPos cc = center(world, DbzLandmarks.CAPSULE_CORP);
-        if (cc != null && world.getInt(WestCity.KEY) < WestCity.LAYOUT && anyoneWithin(level, cc, 96.0D) && WestCity.loaded(level, cc)) {
+        if (cc != null && world.getInt(WestCity.KEY) < WestCity.LAYOUT && anyoneWithin(level, cc, SIGHT_RANGE)) {
+            load(level, cc, (WestCity.REACH >> 4) + 1);
             WestCity.build(level, cc);
             world.putInt(WestCity.KEY, WestCity.LAYOUT);
             data.setDirty();
@@ -72,6 +75,20 @@ public final class DbzEarth {
 
     public static @Nullable BlockPos center(CompoundTag world, DbzLandmarks mark) {
         return world.contains(mark.id()) ? BlockPos.of(world.getLong(mark.id())) : null;
+    }
+
+    /** How far out a sight is built (the first M18 test: at 96 it was seen going up). */
+    public static final double SIGHT_RANGE = 192.0D;
+
+    /** Loads (generating if need be) the chunks {@code radius} round {@code pos}, so a build there finds real ground. */
+    public static void load(ServerLevel level, BlockPos pos, int radius) {
+        int cx = pos.getX() >> 4;
+        int cz = pos.getZ() >> 4;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                level.getChunk(cx + dx, cz + dz);
+            }
+        }
     }
 
     private static boolean anyoneWithin(ServerLevel level, BlockPos pos, double range) {

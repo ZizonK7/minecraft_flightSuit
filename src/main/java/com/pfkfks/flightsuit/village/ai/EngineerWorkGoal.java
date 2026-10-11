@@ -24,14 +24,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * M18 the engineer's day (DESIGN.md 5차 피드백 "기술자"): by day they keep the village's power plant and generators
  * fed. Whenever one of them is running low they walk to the hall, take a few lumps of coal (any furnace fuel) out
- * of its storage - carried in hand, for everyone to see - and walk them over to the hungry block. With nothing to
- * carry they stand at the plant and tinker. The hall's board gets a line about the day's coal each morning
- * (VillageHallBlockEntity.morning counts the lumps noted here).
+ * of its storage - carried in hand, for everyone to see - and walk them over to the hungry block (one engineer per
+ * hungry block: the others leave it to them). With nothing to carry they do their rounds instead - the plant, the
+ * generators, the batteries, the panels, the cables, one after another, a look and a spanner's clank at each - so
+ * a crew of them spreads over the works rather than crowding one plant (the first M18 test). The hall's board gets
+ * a line about the day's coal each morning (VillageHallBlockEntity.morning counts the lumps noted here).
  */
 public class EngineerWorkGoal extends Goal {
     private static final long DAY_START = 1000L;
@@ -39,12 +44,17 @@ public class EngineerWorkGoal extends Goal {
     /** A block with fewer lumps than this gets a delivery. */
     private static final int LOW_FUEL = 6;
     private static final int CARRY = 8;
+    /** Who is seeing to which block right now (a delivery under way, or a stop on the rounds), so they spread out. */
+    private static final Map<BlockPos, UUID> CLAIMS = new HashMap<>();
 
     private final ResidentEntity engineer;
-    private @Nullable BlockEntity target;
+    private @Nullable BlockPos target;
     private boolean fetching;
     private int ticks;
-    private int idleTicks;
+    /** How long this stop on the rounds lasts once they're there. */
+    private int stay;
+    private int atTicks;
+    private @Nullable BlockPos lastStop;
 
     public EngineerWorkGoal(ResidentEntity engineer) {
         this.engineer = engineer;
@@ -72,6 +82,21 @@ public class EngineerWorkGoal extends Goal {
         return out;
     }
 
+    /** Everything on the village's grid - the stops of the rounds. */
+    private List<BlockPos> works(VillageHallBlockEntity hall) {
+        List<BlockPos> out = new ArrayList<>();
+        BlockPos centre = hall.getBlockPos();
+        for (PowerGrid.Role role : PowerGrid.Role.values()) {
+            for (PowerGrid.Node node : PowerGrid.nodesWithin(engineer.level(), centre, VillageTuning.RADIUS, role)) {
+                BlockPos pos = node.self().getBlockPos();
+                if (!out.contains(pos) && pos.closerThan(centre, VillageTuning.RADIUS)) {
+                    out.add(pos);
+                }
+            }
+        }
+        return out;
+    }
+
     /** Any furnace fuel in the hall's storage. */
     private static boolean hasFuel(VillageHallBlockEntity hall) {
         for (int i = 0; i < hall.getStorage().getContainerSize(); i++) {
@@ -96,6 +121,21 @@ public class EngineerWorkGoal extends Goal {
         return be instanceof GeneratorBlockEntity generator ? generator.getFuel().getCount() : 0;
     }
 
+    /** Is someone else already on this block? */
+    private boolean claimed(BlockPos pos) {
+        UUID who = CLAIMS.get(pos);
+        return who != null && !who.equals(engineer.getUUID());
+    }
+
+    private void claim(BlockPos pos) {
+        release();
+        CLAIMS.put(pos, engineer.getUUID());
+    }
+
+    private void release() {
+        CLAIMS.values().removeIf(id -> id.equals(engineer.getUUID()));
+    }
+
     @Override
     public boolean canUse() {
         if (!able() || engineer.getRandom().nextInt(reducedTickDelay(40)) != 0) {
@@ -105,30 +145,42 @@ public class EngineerWorkGoal extends Goal {
         if (hall == null || hall.isAlarm()) {
             return false;
         }
-        List<BlockEntity> burners = burners(hall);
-        if (burners.isEmpty()) {
-            return false;
-        }
-        // A hungry one first (and coal to give it), else the nearest to tinker at.
-        boolean coal = hasFuel(hall);
-        for (BlockEntity be : burners) {
-            if (fuelIn(be) < LOW_FUEL && coal) {
-                target = be;
-                fetching = true;
-                ticks = 0;
-                return true;
+        // A hungry one first (coal to give it, nobody else on it), else a stop on the rounds.
+        if (hasFuel(hall)) {
+            for (BlockEntity be : burners(hall)) {
+                if (fuelIn(be) < LOW_FUEL && !claimed(be.getBlockPos())) {
+                    target = be.getBlockPos();
+                    claim(target);
+                    fetching = true;
+                    ticks = 0;
+                    return true;
+                }
             }
         }
-        target = burners.get(0);
+        List<BlockPos> stops = works(hall);
+        stops.removeIf(pos -> pos.equals(lastStop) || claimed(pos));
+        if (stops.isEmpty()) {
+            return false;
+        }
+        target = stops.get(engineer.getRandom().nextInt(stops.size()));
+        claim(target);
         fetching = false;
         ticks = 0;
+        atTicks = 0;
+        stay = 60 + engineer.getRandom().nextInt(80);
         return true;
     }
 
     @Override
     public boolean canContinueToUse() {
         VillageHallBlockEntity hall = engineer.hall();
-        return target != null && !target.isRemoved() && able() && hall != null && !hall.isAlarm() && ticks < 20 * 90;
+        return target != null && able() && hall != null && !hall.isAlarm() && ticks < 20 * 90 && stillThere(target);
+    }
+
+    /** The block they're heading for is still a power block (someone may have broken it meanwhile). */
+    private boolean stillThere(BlockPos pos) {
+        return engineer.level().getBlockEntity(pos) != null
+                || engineer.level().getBlockState(pos).getBlock() instanceof com.pfkfks.flightsuit.block.CableBlock;
     }
 
     private Vec3 beside(BlockPos pos) {
@@ -170,7 +222,7 @@ public class EngineerWorkGoal extends Goal {
             fetching = false;
             return;
         }
-        Vec3 spot = beside(target.getBlockPos());
+        Vec3 spot = beside(target);
         ItemStack hand = engineer.getMainHandItem();
         boolean delivering = GeneratorBlockEntity.isFuel(hand);
         if (engineer.position().distanceToSqr(spot) > 2.6D * 2.6D) {
@@ -180,12 +232,13 @@ public class EngineerWorkGoal extends Goal {
             return;
         }
         engineer.getNavigation().stop();
-        engineer.getLookControl().setLookAt(Vec3.atCenterOf(target.getBlockPos()));
+        engineer.getLookControl().setLookAt(Vec3.atCenterOf(target));
+        BlockEntity be = engineer.level().getBlockEntity(target);
         if (delivering) {
             int before = hand.getCount();
-            if (target instanceof PowerPlantBlockEntity plant) {
+            if (be instanceof PowerPlantBlockEntity plant) {
                 plant.insertFuel(hand);
-            } else if (target instanceof GeneratorBlockEntity generator) {
+            } else if (be instanceof GeneratorBlockEntity generator) {
                 int taken = generator.insertFuel(hand);
                 hand.shrink(taken);
             }
@@ -193,7 +246,7 @@ public class EngineerWorkGoal extends Goal {
             if (given > 0) {
                 noteCoal(hall, given);
                 engineer.swing(InteractionHand.MAIN_HAND);
-                engineer.level().playSound(null, target.getBlockPos(), SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.5F, 0.8F);
+                engineer.level().playSound(null, target, SoundEvents.FIRECHARGE_USE, SoundSource.NEUTRAL, 0.5F, 0.8F);
                 engineer.setLastWork(Component.translatable("activity.flightsuit.engineer_fed", given));
             }
             if (!hand.isEmpty()) {
@@ -205,15 +258,22 @@ public class EngineerWorkGoal extends Goal {
             ticks = Math.max(ticks, 20 * 60);
             return;
         }
-        // Tinkering: a spanner's clank and a spark now and then.
-        if (++idleTicks % 70 == 0 && engineer.level() instanceof ServerLevel server) {
+        // A stop on the rounds: a look, one clank of the spanner, then on to the next.
+        atTicks++;
+        if (atTicks == 20 || atTicks == stay - 15) {
             engineer.swing(InteractionHand.MAIN_HAND);
-            Vec3 hands = engineer.position().add(engineer.getLookAngle().scale(0.6D)).add(0.0D, 1.1D, 0.0D);
-            server.sendParticles(ParticleTypes.ELECTRIC_SPARK, hands.x, hands.y, hands.z, 3, 0.2D, 0.2D, 0.2D, 0.05D);
-            server.playSound(null, engineer.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.25F, 1.6F);
-            if (engineer.getRandom().nextInt(4) == 0) {
+            if (engineer.level() instanceof ServerLevel server) {
+                Vec3 hands = engineer.position().add(engineer.getLookAngle().scale(0.6D)).add(0.0D, 1.1D, 0.0D);
+                server.sendParticles(ParticleTypes.ELECTRIC_SPARK, hands.x, hands.y, hands.z, 2, 0.2D, 0.2D, 0.2D, 0.05D);
+                server.playSound(null, engineer.blockPosition(), SoundEvents.ANVIL_USE, SoundSource.NEUTRAL, 0.15F, 1.7F);
+            }
+            if (atTicks == 20 && engineer.getRandom().nextInt(4) == 0) {
                 engineer.setLastWork(Component.translatable("activity.flightsuit.engineer_tinkered"));
             }
+        }
+        if (atTicks >= stay) {
+            lastStop = target;
+            target = null;
         }
     }
 
@@ -225,8 +285,12 @@ public class EngineerWorkGoal extends Goal {
 
     @Override
     public void stop() {
+        if (target != null) {
+            lastStop = target;
+        }
         target = null;
         fetching = false;
+        release();
         engineer.getNavigation().stop();
         // Never left holding the coal.
         if (GeneratorBlockEntity.isFuel(engineer.getMainHandItem())) {

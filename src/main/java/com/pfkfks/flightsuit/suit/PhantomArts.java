@@ -233,7 +233,7 @@ public final class PhantomArts {
         }
         ServerLevel level = player.serverLevel();
         TempestRain.start(level, player, ground(level, at), entity -> !SuitWeapons.isFriendly(player, entity)
-                && (entity instanceof Enemy || entity == player.getLastHurtMob()) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
+                && (SuitWeapons.isHostile(player, entity) || entity == player.getLastHurtMob()) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.TEMPEST_THROW, 0));
         // One card thrown up into the sky.
         Vec3 hand = player.getEyePosition().add(0.0D, 0.4D, 0.0D);

@@ -126,6 +126,23 @@ public final class WarTargets {
         return false;
     }
 
+    /**
+     * Does this soldier fight {@code player}? Raiders always; a garrison only while the player storms its fortress
+     * (an invasion they lead) or is hated there (trust at -50 or below) - a visit to a fortress at peace is a visit
+     * (the first M18 test: companion suits picked fights with every garrison).
+     */
+    public static boolean isPlayerFoe(Mob anyMob, UUID player, RaidMember them) {
+        Kingdom storming = null;
+        if (anyMob.level() instanceof ServerLevel server) {
+            for (Battle battle : WarData.get(server.getServer()).battles().values()) {
+                if (player.equals(battle.player) && battle.kind == Battle.Kind.INVADE) {
+                    storming = battle.fort;
+                }
+            }
+        }
+        return isPlayerSideFoe(anyMob, player, storming, them);
+    }
+
     public static int trust(Mob anyMob, UUID player, Kingdom kingdom) {
         if (anyMob.level() instanceof ServerLevel server) {
             return WarData.get(server.getServer()).trust(player, kingdom);

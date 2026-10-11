@@ -90,7 +90,7 @@ public final class BishopArts {
 
     private static boolean isFoe(ServerPlayer bishop, LivingEntity entity) {
         return entity.isAlive() && !SuitWeapons.isFriendly(bishop, entity) && !isAlly(bishop, entity)
-                && (entity instanceof Enemy || entity.getLastHurtByMob() == bishop) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity);
+                && (SuitWeapons.isHostile(bishop, entity) || entity.getLastHurtByMob() == bishop) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity);
     }
 
     private static List<LivingEntity> alliesAround(ServerPlayer bishop, double radius) {

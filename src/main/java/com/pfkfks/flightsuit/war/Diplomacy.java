@@ -171,6 +171,12 @@ public final class Diplomacy {
         if (!who.isLeader()) {
             player.sendSystemMessage(Component.translatable("general.flightsuit.says", who.displayName(),
                     Component.translatable("fort.flightsuit.officer." + tier.name().toLowerCase(java.util.Locale.ROOT), player.getName())));
+            // M18: a friendly bout at the training yard (DESIGN.md 5차 피드백 "갈 이유 - 일기토") - the officers take you on.
+            if (tier != Standing.Tier.WARY && tier != Standing.Tier.HOSTILE && data.battleAt(kingdom) == null && !general.isSparring()
+                    && general.canFight()) {
+                player.sendSystemMessage(button("fort.flightsuit.button_spar", "/village spar " + kingdom.id(), "fort.flightsuit.button_spar_hint",
+                        ChatFormatting.LIGHT_PURPLE));
+            }
             return;
         }
         String tierKey = tier.name().toLowerCase(java.util.Locale.ROOT);
@@ -192,12 +198,6 @@ public final class Diplomacy {
         }
         MutableComponent actions = Component.empty();
         boolean any = false;
-        if (tier != Standing.Tier.WARY && !general.getGeneral().isLeader() && data.battleAt(kingdom) == null && !general.isSparring()) {
-            // M18: a friendly bout at the training yard (DESIGN.md 5차 피드백 "갈 이유 - 일기토").
-            actions.append(button("fort.flightsuit.button_spar", "/village spar " + kingdom.id(), "fort.flightsuit.button_spar_hint",
-                    ChatFormatting.LIGHT_PURPLE));
-            any = true;
-        }
         if (tier == Standing.Tier.ALLIED || standing.leads(kingdom)) {
             actions.append(button("fort.flightsuit.button_muster", "/village muster " + kingdom.id(), "fort.flightsuit.button_muster_hint",
                     ChatFormatting.AQUA));

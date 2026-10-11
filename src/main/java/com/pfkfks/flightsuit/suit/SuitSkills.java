@@ -231,7 +231,7 @@ public final class SuitSkills {
         BlockHitResult block = level.clip(new ClipContext(eye, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, player, eye, end, new AABB(eye, end).inflate(1.0D),
-                entity -> entity instanceof Enemy && entity instanceof LivingEntity && entity.isAlive() && entity.isPickable());
+                entity -> entity instanceof LivingEntity && SuitWeapons.isHostile(player, entity) && entity.isAlive() && entity.isPickable());
         if (hit != null) {
             LivingEntity behind = (LivingEntity) hit.getEntity();
             Vec3 back = behind.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
