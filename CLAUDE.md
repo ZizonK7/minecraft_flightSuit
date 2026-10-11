@@ -50,7 +50,7 @@
 - 큰 슈트(헐크버스터): `SuitType.size()` → `SuitSize`가 풀세트 착용자(플레이어·동료)의 히트박스를 키우고, 그림은 `SuitSize.drawn()`으로 전체를 키움. 새 큰 슈트를 만들면 모델 쪽 `SIZE`와 `SuitType` 크기를 맞출 것.
 - 슈트 배터리 용량은 항상 `SuitEnergy.capacity(stack)` (아이언맨 업그레이드 포함). `SuitArmorItem.getEnergyCapacity()`를 직접 쓰지 말 것.
 - 1.20.1에서 goalSelector는 엔티티마다 2틱에 한 번 돈다. `canUse`에 `tickCount % N` 같은 짝수 의존 조건을 쓰지 말 것 (`getRandom().nextInt(reducedTickDelay(N))` 사용). `customServerAiStep`은 매 틱이라 괜찮음.
-- 차원: 행성은 데이터팩 차원 (`data/flightsuit/dimension/*.json`). `RemoteLink.start(player, suitLevel, ...)`로 다른 차원의 슈트에 접속할 수 있음 (세션 등록은 순간이동 뒤에 - 세션이 있으면 차원 이동을 막으므로).
+- 차원: 행성은 데이터팩 차원 (`data/flightsuit/dimension/*.json`, M18부터 전용 `worldgen/noise_settings`·`worldgen/biome` - 바닐라 오버월드 설정을 복사해 표면 규칙·지형 손잡이만 바꾼 것. 다시 만들려면 클라이언트 jar의 `data/minecraft/worldgen/noise_settings/overworld.json`을 꺼내 스크립트로 변형). `RemoteLink.start(player, suitLevel, ...)`로 다른 차원의 슈트에 접속할 수 있음 (세션 등록은 순간이동 뒤에 - 세션이 있으면 차원 이동을 막으므로).
 - `/flightsuit` 루트를 새로 등록할 때는 루트에도 `.requires(op)`를 붙일 것 (Brigadier는 먼저 등록된 루트의 조건을 유지 - 하나라도 빠지면 등록 순서에 따라 전부 열림).
 - 주인에게 알림: 채팅 + `EdithAlert.send(...)` (안경/슈트 헬멧이 있으면 HUD 경고창).
 - 새 아이템을 만들면 `tip.flightsuit.<id>` 번역(줄은 `
@@ -63,7 +63,7 @@
 
 ## 진행 상태 (2026-10-11)
 
-- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업, B 공장식 전력, C 살아 있는 마을 완료** (로컬 빌드 통과, 인게임 테스트 전). 남은 묶음: D 행성 지형, E 입체 부품(멀티 에이전트).
+- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업, B 공장식 전력, C 살아 있는 마을, D 행성 지형 완료** (로컬 빌드·서버 부팅 통과, 인게임 테스트 전). 남은 묶음: E 입체 부품(멀티 에이전트).
 - 성채 봉화 연기: `FortressManager.signalSmoke` → `SignalSmokeS2CPacket`(400칸). 일기토: `GeneralEntity.startSpar`, 표적 규칙은 `WarTargets`(대련 상대만), 수치 `WarTuning.SPAR_*`.
 - 마을 직업을 더할 때: `ResidentJob` 끝에 추가(순서로 저장됨), 스킨 `tools/ResidentSkinGen.java <dir> <job>`, 작업장은 `Blueprint.workplaceOf`, 일은 `village/ai/*Goal` + 아침 집계는 `VillageWorkday`, 화면 설명 `ResidentScreen.effect`.
 - 슈트를 새로 만들 때: `SuitType`·`SuitArmorMaterial`·`SuitClass`(무기 종류 `weapon()`), `tools/SuitSkinGen` 그리기 → `SkinSplitter`, `models/item/<id>_*.json` 5개, 레시피 5개, 번역(item·tip.suit·tooltip.class·hud.weapon·hud.weapon.b), `SuitWeapons.handle`의 switch 9곳, `CompanionCombatGoal`, 안내서 쪽. 미리보기는 `java tools/SkinPreview.java out.png skin.png...`.

@@ -2,7 +2,7 @@
   "type": "flightsuit:namek",
   "generator": {
     "type": "minecraft:noise",
-    "settings": "minecraft:overworld",
+    "settings": "flightsuit:namek",
     "biome_source": {
       "type": "minecraft:fixed",
       "biome": "flightsuit:namek"
