@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "flightsuit:block/power_plant_top",
+    "front": "flightsuit:block/power_plant_front_on",
+    "side": "flightsuit:block/power_plant_side"
+  }
+}

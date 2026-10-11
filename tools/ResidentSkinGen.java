@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Draws the village residents as 64x64 classic (4px arm) player skins, one per job.
  *
- * Usage: java tools/ResidentSkinGen.java <out dir>
+ * Usage: java tools/ResidentSkinGen.java <out dir> [job] - one job only (M18: "engineer"), else all of them
  *
  * Writes farmer, rancher, cook, architect, teacher, doctor, blacksmith, merchant, musician and soldier.png
  * (the guard uses a downloaded stormtrooper skin instead). Each resident is a shared head (skin tone, hair
@@ -39,8 +39,9 @@ public class ResidentSkinGen {
     public static void main(String[] args) throws IOException {
         File dir = new File(args[0]);
         dir.mkdirs();
-        for (String job : new String[]{"farmer", "rancher", "cook", "architect", "teacher", "doctor",
-                "blacksmith", "merchant", "musician", "soldier"}) {
+        String[] jobs = args.length > 1 ? new String[]{args[1]} : new String[]{"farmer", "rancher", "cook", "architect", "teacher", "doctor",
+                "blacksmith", "merchant", "musician", "soldier", "engineer"};
+        for (String job : jobs) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
             pal.put('W', 0xFFFFFFFF);
@@ -56,6 +57,7 @@ public class ResidentSkinGen {
                 case "merchant" -> merchant();
                 case "musician" -> musician();
                 case "soldier" -> soldier();
+                case "engineer" -> engineer();
                 default -> throw new IllegalStateException(job);
             }
             File out = new File(dir, job + ".png");
@@ -65,6 +67,62 @@ public class ResidentSkinGen {
     }
 
     // ---------------------------------------------------------------- jobs
+
+    /**
+     * M18 the engineer: a yellow hard hat, goggles on the brim, an orange high-visibility vest over a grey boiler
+     * suit with a copper spanner in the chest pocket, a tool belt, heavy boots.
+     */
+    static void engineer() {
+        tone(0xFFC98E62, 0xFF3A2A1C, 0xFF2F5A7A);
+        hair(0xFF3A2A1C);
+        colors("G", 0xFF6E7278, "g", 0xFF55595F, "O", 0xFFF28C1E, "o", 0xFFC46A10, "V", 0xFFE8E8E8,
+                "Y", 0xFFF2C21F, "y", 0xFFB58E12, "B", 0xFF3A2A1C, "b", 0xFF261A10, "C", 0xFFC57A3B,
+                "T", 0xFF4A4E55, "Q", 0xFF2A2C30, "q", 0xFF7FB8D8);
+        head("short", "stubble", false);
+        wrapRows(BODY, "GGGGGGGGGGTT");
+        top(BODY, 'G');
+        // The vest: orange with two white reflective stripes, open down the front over the grey suit.
+        face(BODY, Face.FRONT,
+                "OGGGGGGO",
+                "OOGGGGOO",
+                "OOGCGGOO",
+                "VVGGGGVV",
+                "OOGGGGOO",
+                "OOGGGGOO",
+                "VVGGGGVV",
+                "OOGGGGOO",
+                "OOGGGGOO",
+                "TTTTTTTT",
+                "TTTyTTTT",
+                "TTTTTTTT");
+        face(BODY, Face.BACK,
+                "OOOOOOOO",
+                "OOOOOOOO",
+                "OOOOOOOO",
+                "VVVVVVVV",
+                "OOOOOOOO",
+                "OOOOOOOO",
+                "VVVVVVVV",
+                "OOOOOOOO",
+                "OOOOOOOO",
+                "TTTTTTTT",
+                "TTTTTTTT",
+                "TTTTTTTT");
+        for (Box arm : new Box[]{R_ARM, L_ARM}) {
+            wrapRows(arm, "OGGGGGGGGGSS");
+            top(arm, 'O');
+            bottom(arm, 'S');
+        }
+        for (Box leg : new Box[]{R_LEG, L_LEG}) {
+            wrapRows(leg, "TGGGGGGGGbbb");
+            top(leg, 'T');
+            bottom(leg, 'b');
+        }
+        // The hard hat on the outer head layer, goggles on its brim.
+        ring(HAT, "YYYy");
+        top(HAT, 'Y');
+        face(HAT, Face.FRONT, "YYYYYYYY", "YYYYYYYY", "YYYYYYYY", "yQqqQqqQ");
+    }
 
     /** Straw hat, red plaid shirt with rolled sleeves, denim overalls, work boots. */
     static void farmer() {

@@ -76,3 +76,4 @@ README(조작키·슈트 종류·제작법·전력·마을), DESIGN.md 5장 "M18
 ## 7. 진행 기록
 
 - 묶음 A 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): 무기 아이템 `SuitWeaponItem`(좌클릭 `SWING`), 키 여섯 개 전부(`SKILL_3` = B), Mark 0 `ScrapArts`, Mark 1·2 `MarkArts`(+`OreSightS2CPacket`/`OreSightClient`), Mark 4·5·44 추가 기술, Mark 6 `CannonArts`(+`MonkeyEntity`, `CannonballEntity`, `MonkeyModel`), Mark 7 `BishopArts`, Mark 50 삭제, 대결 즉사, 슈트 휠 격자, 호버카 구매(`/planet buy hovercar`), 스킨 3종·무기 모델 2종·원숭이 모델, 레시피 15개, 번역 ko/en, 안내서 22쪽, README. 테스트 목록은 `docs/TEST_PLAN.md`.
+- 묶음 B 완료 (2026-10-11, 로컬 빌드 통과, 인게임 테스트 전): `block/CableBlock`, `block/PowerPlantBlock(+Entity)`, `PowerGrid.nodesLinked/nodesWithin`, `ResidentJob.ENGINEER` + `village/ai/EngineerWorkGoal` + `VillageWorkday.engineer`, `Blueprint.POWER_PLANT`, 텍스처(`TextureGen power`)·스킨(`ResidentSkinGen engineer`)·리소스·번역·README·안내서.

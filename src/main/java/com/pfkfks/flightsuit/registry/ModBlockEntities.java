@@ -2,6 +2,7 @@ package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.block.BatteryBlockEntity;
+import com.pfkfks.flightsuit.block.PowerPlantBlockEntity;
 import com.pfkfks.flightsuit.block.GeneratorBlockEntity;
 import com.pfkfks.flightsuit.block.SecuritySensorBlockEntity;
 import com.pfkfks.flightsuit.block.SolarPanelBlockEntity;
@@ -27,6 +28,8 @@ public final class ModBlockEntities {
     @SuppressWarnings("DataFlowIssue")
     public static final RegistryObject<BlockEntityType<GeneratorBlockEntity>> GENERATOR = BLOCK_ENTITY_TYPES.register("generator",
             () -> BlockEntityType.Builder.of(GeneratorBlockEntity::new, ModBlocks.GENERATOR.get()).build(null));
+    public static final RegistryObject<BlockEntityType<PowerPlantBlockEntity>> POWER_PLANT = BLOCK_ENTITY_TYPES.register("power_plant",
+            () -> BlockEntityType.Builder.of(PowerPlantBlockEntity::new, ModBlocks.POWER_PLANT.get()).build(null));
     @SuppressWarnings("DataFlowIssue")
     public static final RegistryObject<BlockEntityType<BatteryBlockEntity>> BATTERY = BLOCK_ENTITY_TYPES.register("battery",
             () -> BlockEntityType.Builder.of(BatteryBlockEntity::new, ModBlocks.BATTERY.get()).build(null));

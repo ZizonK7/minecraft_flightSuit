@@ -251,6 +251,9 @@ public class ResidentScreen extends Screen {
             case MUSICIAN -> {
                 return Component.translatable("screen.flightsuit.job_musician", stars, 2 + 2 * stars);
             }
+            case ENGINEER -> {
+                return Component.translatable("screen.flightsuit.job_engineer", stars);
+            }
             default -> {
             }
         }

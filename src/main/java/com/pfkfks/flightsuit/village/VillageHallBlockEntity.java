@@ -743,6 +743,7 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         concertBy = null;
         int smithStars = VillageWorkday.smith(this);
         VillageWorkday.ranch(this);
+        VillageWorkday.engineer(this);
         for (ResidentEntity resident : residents()) {
             resident.morning(takeMeal(), deaths, safety, bonus + concert);
             resident.setSmithBonus(smithStars);

@@ -181,6 +181,29 @@ public final class VillageWorkday {
     // ---------------------------------------------------------------- blacksmith
 
     /** Smelting and glass panes; returns the best smith's stars (for the fighters' weapons), 0 if none. */
+    /** M18 the engineers' day on the board: the coal they carried, and what the plants made (PowerPlantBlockEntity). */
+    static void engineer(VillageHallBlockEntity hall) {
+        long made = 0L;
+        if (hall.getLevel() != null) {
+            for (com.pfkfks.flightsuit.energy.PowerGrid.Node node : com.pfkfks.flightsuit.energy.PowerGrid.nodesWithin(hall.getLevel(),
+                    hall.getBlockPos(), VillageTuning.RADIUS, com.pfkfks.flightsuit.energy.PowerGrid.Role.PRODUCER)) {
+                if (node.self() instanceof com.pfkfks.flightsuit.block.PowerPlantBlockEntity plant) {
+                    made += plant.takeMadeToday();
+                }
+            }
+        }
+        for (ResidentEntity engineer : workers(hall, ResidentJob.ENGINEER)) {
+            int coal = engineer.getPersistentData().getInt("FlightSuitCoalToday");
+            engineer.getPersistentData().remove("FlightSuitCoalToday");
+            if (coal > 0 || made > 0) {
+                hall.addNews(Component.translatable("news.flightsuit.engineer", engineer.getName(), coal, made));
+            }
+            engineer.setLastWork(Component.translatable(coal > 0 ? "activity.flightsuit.engineer_fed" : "activity.flightsuit.engineer_tinkered", coal));
+            // One line a day is enough however many engineers there are.
+            made = 0L;
+        }
+    }
+
     static int smith(VillageHallBlockEntity hall) {
         int best = 0;
         SimpleContainer storage = hall.getStorage();

@@ -181,6 +181,7 @@ public class ResidentEntity extends PathfinderMob {
         goalSelector.addGoal(6, new WandererGoal(this));
         goalSelector.addGoal(6, new com.pfkfks.flightsuit.village.ai.WorkplaceGoal(this));
         goalSelector.addGoal(5, new com.pfkfks.flightsuit.village.ai.MusicianGoal(this));
+        goalSelector.addGoal(5, new com.pfkfks.flightsuit.village.ai.EngineerWorkGoal(this));
         goalSelector.addGoal(7, new ResidentStrollGoal(this));
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -768,7 +769,7 @@ public class ResidentEntity extends PathfinderMob {
 
     /** The jobs whose day is done by the hall each morning (VillageWorkday, the market) - their last day shows on the screen. */
     private static final java.util.Set<ResidentJob> WORKDAY_JOBS = java.util.EnumSet.of(ResidentJob.MERCHANT, ResidentJob.COOK,
-            ResidentJob.BLACKSMITH, ResidentJob.RANCHER, ResidentJob.MUSICIAN);
+            ResidentJob.BLACKSMITH, ResidentJob.RANCHER, ResidentJob.MUSICIAN, ResidentJob.ENGINEER);
 
     /** What they got done last (the merchant's market, the cook's kitchen, ...), for the screen. Not saved. */
     private @Nullable Component lastWork;

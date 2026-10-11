@@ -197,6 +197,20 @@ public enum Blueprint {
             {"X...X", ".....", ".....", ".....", "X...X"},
             {"X...X", ".....", "..h..", ".....", "X...X"},
             {"ooooo", "ooooo", "ooooo", "ooooo", "ooooo"}
+    }),
+    /**
+     * M18 the engineer's power station (stage 2): a cobbled shed with the power plant at the back under a brick
+     * stack, a coal barrel beside it, and a cable run out to the front where the village's lines join on.
+     */
+    POWER_PLANT("power_plant", 2, false, new String[][]{
+            {"CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC"},
+            {"X..i..X", "...i...", "...i...", "...i...", "XrjgjrX"},
+            {"X.....X", ".......", ".......", ".......", "X.jjj.X"},
+            {"X.....X", ".......", "...h...", ".......", "X..j..X"},
+            {"ooooooo", "ooooooo", "ooooooo", "ooooooo", "oooGooo"},
+            {"       ", "       ", "       ", "       ", "   j   "},
+            {"       ", "       ", "       ", "       ", "   j   "},
+            {"       ", "       ", "       ", "       ", "   j   "}
     });
 
     static {
@@ -268,6 +282,7 @@ public enum Blueprint {
             case CLINIC -> ResidentJob.DOCTOR;
             case STAGE -> ResidentJob.MUSICIAN;
             case WORKSHOP -> ResidentJob.ARCHITECT;
+            case POWER_PLANT -> ResidentJob.ENGINEER;
             default -> null;
         };
     }
@@ -408,6 +423,10 @@ public enum Blueprint {
             case 'V' -> Blocks.WHITE_CONCRETE.defaultBlockState();
             case 'I' -> Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState();
             case 'u' -> Blocks.QUARTZ_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH);
+            // M18 the power station: our power plant (facing the way in) and a cable.
+            case 'g' -> com.pfkfks.flightsuit.registry.ModBlocks.POWER_PLANT.get().defaultBlockState()
+                    .setValue(com.pfkfks.flightsuit.block.PowerPlantBlock.FACING, Direction.NORTH);
+            case 'i' -> com.pfkfks.flightsuit.registry.ModBlocks.CABLE.get().defaultBlockState();
             default -> Blocks.AIR.defaultBlockState();
         };
     }

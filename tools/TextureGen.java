@@ -9,7 +9,8 @@ import java.io.IOException;
  *
  *   java tools/TextureGen.java src/main/resources/assets/flightsuit/textures
  *
- * With "zeni" after the directory, only the M17 zeni note is drawn (nothing else is overwritten).
+ * With "zeni" after the directory, only the M17 zeni note is drawn (nothing else is overwritten); with "power",
+ * only the M18 cable and power plant textures.
  */
 public class TextureGen {
     // Palette.
@@ -30,6 +31,14 @@ public class TextureGen {
         armor.mkdirs();
         if (args.length > 1 && args[1].equals("zeni")) {
             write(zeni(), new File(item, "zeni.png"));
+            return;
+        }
+        if (args.length > 1 && args[1].equals("power")) {
+            write(cable(), new File(block, "cable.png"));
+            write(powerPlantFront(false), new File(block, "power_plant_front.png"));
+            write(powerPlantFront(true), new File(block, "power_plant_front_on.png"));
+            write(powerPlantSide(), new File(block, "power_plant_side.png"));
+            write(powerPlantTop(), new File(block, "power_plant_top.png"));
             return;
         }
 
@@ -809,6 +818,89 @@ public class TextureGen {
         fill(img, 0, 0, 16, 16, METAL);
         fill(img, 0, 10, 16, 1, SILVER);
         fill(img, 0, 15, 16, 1, EDGE);
+        return img;
+    }
+
+    // ---- M18: cable and power plant ----
+
+    static final int COPPER = 0xFFC57A3B, COPPER_LIGHT = 0xFFE09A58, RUBBER = 0xFF26282C, RUBBER_LIGHT = 0xFF3A3D43;
+    static final int BRICK = 0xFF8E4A3A, BRICK_DARK = 0xFF66332A, BRICK_MORTAR = 0xFFB9AFA3;
+
+    /**
+     * The cable, one texture for every face: black rubber with a copper core showing along the middle - the model's
+     * UVs take the middle 6px band for the core cube and the 5px ends for the arms.
+     */
+    static BufferedImage cable() {
+        BufferedImage img = img(16, 16);
+        fill(img, 0, 0, 16, 16, RUBBER);
+        // Ribbed insulation along x, lighter ribs every other texel.
+        for (int x = 0; x < 16; x += 2) {
+            fill(img, x, 0, 1, 16, RUBBER_LIGHT);
+        }
+        // The copper core down the middle band, with a bright seam.
+        fill(img, 0, 7, 16, 2, COPPER);
+        fill(img, 0, 7, 16, 1, COPPER_LIGHT);
+        // Collars where the arms meet the core.
+        fill(img, 4, 5, 1, 6, METAL_LIGHT);
+        fill(img, 11, 5, 1, 6, METAL_LIGHT);
+        return img;
+    }
+
+    /** The boiler's front: riveted plate, a round firebox door that glows when lit, a brass pressure dial. */
+    static BufferedImage powerPlantFront(boolean lit) {
+        BufferedImage img = plate(METAL_DARK);
+        border(img, 0, 0, 16, 16, EDGE);
+        for (int i = 2; i < 14; i += 4) {
+            img.setRGB(i, 1, METAL_LIGHT);
+            img.setRGB(i, 14, METAL_LIGHT);
+        }
+        // The door: a dark circle with a lit grate.
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                double d = Math.hypot(x - 7.5, y - 9.5);
+                if (d < 4.6) {
+                    img.setRGB(x, y, d > 3.6 ? METAL : EDGE);
+                }
+            }
+        }
+        for (int y = 7; y <= 12; y += 2) {
+            for (int x = 5; x <= 10; x++) {
+                if (Math.hypot(x - 7.5, y - 9.5) < 3.4) {
+                    img.setRGB(x, y, lit ? ((x + y) % 3 == 0 ? ORANGE_HOT : ORANGE) : METAL_DARK);
+                }
+            }
+        }
+        // The dial up top.
+        fill(img, 6, 2, 4, 3, GOLD_DARK);
+        fill(img, 7, 2, 2, 2, lit ? ORANGE_HOT : SILVER);
+        return img;
+    }
+
+    /** Boiler plate with a copper pipe running across and a brass band. */
+    static BufferedImage powerPlantSide() {
+        BufferedImage img = plate(METAL_DARK);
+        border(img, 0, 0, 16, 16, EDGE);
+        fill(img, 0, 3, 16, 1, GOLD_DARK);
+        fill(img, 0, 11, 16, 1, GOLD_DARK);
+        fill(img, 0, 6, 16, 3, COPPER);
+        fill(img, 0, 6, 16, 1, COPPER_LIGHT);
+        for (int x = 3; x < 16; x += 5) {
+            fill(img, x, 5, 1, 5, METAL_LIGHT);
+        }
+        return img;
+    }
+
+    /** The top: a brick stack in the middle of the plate. */
+    static BufferedImage powerPlantTop() {
+        BufferedImage img = plate(METAL_DARK);
+        border(img, 0, 0, 16, 16, EDGE);
+        for (int y = 4; y < 12; y++) {
+            for (int x = 4; x < 12; x++) {
+                boolean mortar = (y % 2 == 0) || ((x + (y / 2) * 2) % 4 == 0);
+                img.setRGB(x, y, mortar ? BRICK_MORTAR : (x + y) % 3 == 0 ? BRICK_DARK : BRICK);
+            }
+        }
+        fill(img, 6, 6, 4, 4, EDGE);
         return img;
     }
 

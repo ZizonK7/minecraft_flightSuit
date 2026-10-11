@@ -2,6 +2,8 @@ package com.pfkfks.flightsuit.registry;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.block.BatteryBlock;
+import com.pfkfks.flightsuit.block.CableBlock;
+import com.pfkfks.flightsuit.block.PowerPlantBlock;
 import com.pfkfks.flightsuit.cleaner.CleanerDockBlock;
 import com.pfkfks.flightsuit.block.GeneratorBlock;
 import com.pfkfks.flightsuit.block.SecuritySensorBlock;
@@ -37,6 +39,12 @@ public final class ModBlocks {
             () -> new GeneratorBlock(metal().lightLevel(state -> state.getValue(GeneratorBlock.LIT) ? 13 : 0)));
     public static final RegistryObject<BatteryBlock> BATTERY = register("battery",
             () -> new BatteryBlock(metal()));
+    /** M18 (DESIGN.md 5차 피드백 "공장식 전력"): cables that join power blocks over any distance, and the coal-fired power plant. */
+    public static final RegistryObject<CableBlock> CABLE = register("cable",
+            () -> new CableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(0.5F, 2.0F)
+                    .sound(SoundType.COPPER).noOcclusion()));
+    public static final RegistryObject<PowerPlantBlock> POWER_PLANT = register("power_plant",
+            () -> new PowerPlantBlock(metal().lightLevel(state -> state.getValue(PowerPlantBlock.LIT) ? 13 : 0)));
     public static final RegistryObject<StationStorageBlock> STATION_STORAGE = register("station_storage",
             () -> new StationStorageBlock(metal()));
     public static final RegistryObject<SecuritySensorBlock> SECURITY_SENSOR = register("security_sensor",

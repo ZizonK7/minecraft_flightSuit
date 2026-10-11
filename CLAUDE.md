@@ -26,8 +26,8 @@
 |---|---|
 | `suit/` | 슈트 아이템·에너지·무기, 착용/귀환(SuitUpManager), 스테이션 로봇 팔(StationRig), 원격 조종(RemoteLink, RemoteStorage), 이디스 경고(EdithAlert). M17: 헐크버스터 주먹 `HulkbusterArts`, 트랭크스 검·초사이어인 `SwordArts`, 팬텀 훔치기·템페스트 `PhantomArts`(+`TempestRain`, `CandyShrink`), 훔친 기술 15종 `StolenSkill`(드래곤볼 인물과 공유하는 발사 코드), 날아가는 기탄 `KiShots`, 기탄 막기 판정 `KiGuard`. M18: 무기 아이템 `SuitWeaponItem`(검·지팡이·대포, 흉갑을 입으면 손에), 새 기술 클래스 `ScrapArts`(Mark 0)·`MarkArts`(Mark 1·2)·`CannonArts`(Mark 6, 원숭이 `entity/MonkeyEntity`, 포탄 `entity/CannonballEntity`)·`BishopArts`(Mark 7), 광석 표시 `network/OreSightS2CPacket` → `client/OreSightClient`. 수치는 전부 `SuitTuning`. 키 액션 번호는 `SuitWeapons`(ULTIMATE=4, SKILL_3=5(B), STEAL=6, SWING=7 좌클릭) |
 | `war/StructureJob` | 큰 건물(성채·히어로 시티) 건설: 부지 정리(기둥 단위) → 배치 목록. 설계 버전(`FortressBuilder.LAYOUT`, `HeroCityBuilder.LAYOUT`)이 저장된 것보다 새로우면 가까이 갈 때 같은 높이에 다시 지음 |
-| `block/` | 슈트 스테이션, 전력 블록, 스테이션 창고(StationStorageBlock/Entity), 보안 센서(SecuritySensorBlock/Entity) |
-| `energy/` | 무선 전력망(PowerGrid, 반경 8), 수치(PowerTuning) |
+| `block/` | 슈트 스테이션, 전력 블록(태양광·발전기·배터리, M18 케이블 `CableBlock`·발전소 `PowerPlantBlock/Entity`), 스테이션 창고(StationStorageBlock/Entity), 보안 센서(SecuritySensorBlock/Entity) |
+| `energy/` | 전력망(PowerGrid: 무선 반경 8 + M18 케이블 추적 `nodesLinked`, 마을 범위 검색 `nodesWithin`), 수치(PowerTuning) |
 | `village/` | 마을 회관(VillageHallBlockEntity: 게시판·창고·경보·아침·수업·출생), 주민(ResidentEntity, 직업 ResidentJob), 건축(VillageWorks/Blueprint/Construction), 피해 장부(DamageLedger), 불 감시(FireWatch), AI(`village/ai`) |
 | `war/` | 삼국지: Kingdom, General(기술, 지도자), KingdomSoldierEntity/GeneralEntity(역할 WarRole: RAID/GARRISON/ALLY), WarTargets(누가 누구와 싸우나), RaidManager(마을 습격), FortressBuilder/FortressManager(성채 위치·건설·수비대·함락·성채 전투), Diplomacy(의뢰·대화·지원군·지도자·공물), Request/Battle/Standing/FortRecord, Army(원정), WarData(SavedData 전부), WarCommands(`/village ...`, `/flightsuit raid|fort ...`), AI(`war/ai`) |
 | `hero/` | 히어로 시티: HeroType(7명 + 요원), CityHeroEntity(저장 안 함, 기술), HeroCityBuilder, HeroCity(위치·건설·관계·아이언맨 작업실·의뢰·악당 웨이브·함락), HeroData(SavedData), HeroCommands(`/village hero|ironman ...`, `/flightsuit hero ...`) |
@@ -63,7 +63,8 @@
 
 ## 진행 상태 (2026-10-11)
 
-- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업 완료** (로컬 빌드 통과, 인게임 테스트 전) - 무기 아이템, 키 여섯 개 전부, Mark 0·6·7, Mark 50 삭제, 대결 즉사, 슈트 휠 격자, 호버카 구매. 남은 묶음: B 전력 공장, C 살아 있는 마을, D 행성 지형, E 입체 부품(멀티 에이전트).
+- **M18 진행 중** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백"): **묶음 A 슈트 라인업, B 공장식 전력 완료** (로컬 빌드 통과, 인게임 테스트 전). 남은 묶음: C 살아 있는 마을, D 행성 지형, E 입체 부품(멀티 에이전트).
+- 마을 직업을 더할 때: `ResidentJob` 끝에 추가(순서로 저장됨), 스킨 `tools/ResidentSkinGen.java <dir> <job>`, 작업장은 `Blueprint.workplaceOf`, 일은 `village/ai/*Goal` + 아침 집계는 `VillageWorkday`, 화면 설명 `ResidentScreen.effect`.
 - 슈트를 새로 만들 때: `SuitType`·`SuitArmorMaterial`·`SuitClass`(무기 종류 `weapon()`), `tools/SuitSkinGen` 그리기 → `SkinSplitter`, `models/item/<id>_*.json` 5개, 레시피 5개, 번역(item·tip.suit·tooltip.class·hud.weapon·hud.weapon.b), `SuitWeapons.handle`의 switch 9곳, `CompanionCombatGoal`, 안내서 쪽. 미리보기는 `java tools/SkinPreview.java out.png skin.png...`.
 
 ## 지난 진행 상태 (2026-10-10)
