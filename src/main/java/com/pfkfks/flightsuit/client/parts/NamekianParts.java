@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
@@ -42,10 +43,19 @@ public class NamekianParts extends DbzPartsModel {
     @Override
     public void animate(DbzFighterEntity fighter, float ageInTicks) {
         ModelPart antennae = group("antennae");
-        if (antennae != null) {
-            // A slight bob with the step.
-            antennae.xRot = Mth.sin(ageInTicks * 0.3F) * 0.04F;
+        if (antennae == null) {
+            return; // ears, horns and spikes stay still
         }
+        // The group's pivot is at the antennae's roots: a slow idle bob, a nod with each step, and they lift (and
+        // tremble) while he gathers ki or transforms, or are pressed back when flying.
+        float bob = Mth.sin(ageInTicks * 0.3F) * 0.04F;
+        float step = Mth.cos(fighter.walkAnimation.position() * 0.6662F) * 0.1F * Math.min(1.0F, fighter.walkAnimation.speed());
+        float pose = switch (fighter.getAction()) {
+            case CHARGE, TRANSFORM -> -0.2F + Mth.sin(ageInTicks * 1.4F) * 0.05F;
+            case FLY -> -0.15F;
+            default -> 0.0F;
+        };
+        antennae.xRot = bob + step + pose;
     }
 
     // <ModelGen:parts_namekian>
@@ -55,24 +65,110 @@ public class NamekianParts extends DbzPartsModel {
         PartDefinition root = mesh.getRoot();
         PartDefinition head = root.addOrReplaceChild("head", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        head.addOrReplaceChild("antennae", CubeListBuilder.create()
-                .texOffs(20, 0).addBox(1.0F, -3.0F, -1.0F, 1.0F, 3.0F, 1.0F) // left
-                .texOffs(24, 0).addBox(-2.0F, -3.0F, -1.0F, 1.0F, 3.0F, 1.0F), // right
-                PartPose.offset(0.0F, -8.0F, -2.0F));
-        head.addOrReplaceChild("ears", CubeListBuilder.create()
-                .texOffs(8, 0).addBox(-5.0F, -2.0F, -1.0F, 1.0F, 3.0F, 2.0F) // ear_right
-                .texOffs(14, 0).addBox(4.0F, -2.0F, -1.0F, 1.0F, 3.0F, 2.0F), // ear_left
-                PartPose.offset(0.0F, -4.0F, 0.0F));
-        head.addOrReplaceChild("horns", CubeListBuilder.create()
-                .texOffs(28, 0).addBox(-4.0F, -3.0F, -1.0F, 1.0F, 3.0F, 1.0F) // horn_right
-                .texOffs(32, 0).addBox(3.0F, -3.0F, -1.0F, 1.0F, 3.0F, 1.0F), // horn_left
-                PartPose.offset(0.0F, -8.0F, 0.0F));
-        head.addOrReplaceChild("spikes", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-1.0F, -3.0F, -1.0F, 2.0F, 3.0F, 2.0F), // spike
-                PartPose.offset(0.0F, -8.0F, 0.0F));
+        PartDefinition antennae = head.addOrReplaceChild("antennae", CubeListBuilder.create(),
+                PartPose.offset(0.0F, -5.7F, -4.5F));
+        PartDefinition antenna_r = antennae.addOrReplaceChild("antenna_r", CubeListBuilder.create()
+                .texOffs(44, 0).addBox(-0.5F, -3.0F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.15F)), // antenna_r_root
+                PartPose.offsetAndRotation(-1.5F, 0.0F, 0.0F, 0.5F, 0.0F, -0.1F));
+        PartDefinition antenna_r_mid = antenna_r.addOrReplaceChild("antenna_r_mid", CubeListBuilder.create()
+                .texOffs(12, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F), // antenna_r_mid
+                PartPose.offsetAndRotation(0.0F, -3.0F, 0.0F, 0.55F, 0.0F, 0.0F));
+        antenna_r_mid.addOrReplaceChild("antenna_r_tip", CubeListBuilder.create()
+                .texOffs(16, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F, new CubeDeformation(-0.1F)), // antenna_r_tip
+                PartPose.offsetAndRotation(0.0F, -2.0F, 0.0F, 0.85F, 0.0F, 0.0F));
+        PartDefinition antenna_l = antennae.addOrReplaceChild("antenna_l", CubeListBuilder.create()
+                .texOffs(48, 0).addBox(-0.5F, -3.0F, -0.5F, 1.0F, 3.0F, 1.0F, new CubeDeformation(0.15F)), // antenna_l_root
+                PartPose.offsetAndRotation(1.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.1F));
+        PartDefinition antenna_l_mid = antenna_l.addOrReplaceChild("antenna_l_mid", CubeListBuilder.create()
+                .texOffs(20, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F), // antenna_l_mid
+                PartPose.offsetAndRotation(0.0F, -3.0F, 0.0F, 0.55F, 0.0F, 0.0F));
+        antenna_l_mid.addOrReplaceChild("antenna_l_tip", CubeListBuilder.create()
+                .texOffs(24, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F, new CubeDeformation(-0.1F)), // antenna_l_tip
+                PartPose.offsetAndRotation(0.0F, -2.0F, 0.0F, 0.85F, 0.0F, 0.0F));
+        PartDefinition ears = head.addOrReplaceChild("ears", CubeListBuilder.create(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition ear_r = ears.addOrReplaceChild("ear_r", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-1.0F, -2.0F, -1.5F, 1.0F, 4.0F, 3.0F), // ear_r_base
+                PartPose.offsetAndRotation(-4.6F, -3.0F, 0.0F, 0.25F, 0.0F, 0.0F));
+        PartDefinition ear_r_mid = ear_r.addOrReplaceChild("ear_r_mid", CubeListBuilder.create()
+                .texOffs(32, 0).addBox(-1.0F, -1.0F, 0.0F, 1.0F, 2.0F, 2.0F), // ear_r_mid
+                PartPose.offsetAndRotation(0.0F, -1.5F, 1.5F, 0.3F, -0.12F, 0.0F));
+        ear_r_mid.addOrReplaceChild("ear_r_tip", CubeListBuilder.create()
+                .texOffs(0, 10).addBox(-1.0F, -0.5F, 0.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(-0.05F)), // ear_r_tip
+                PartPose.offsetAndRotation(0.0F, -0.5F, 2.0F, 0.35F, 0.0F, 0.0F));
+        PartDefinition ear_l = ears.addOrReplaceChild("ear_l", CubeListBuilder.create()
+                .texOffs(8, 0).addBox(0.0F, -2.0F, -1.5F, 1.0F, 4.0F, 3.0F), // ear_l_base
+                PartPose.offsetAndRotation(4.6F, -3.0F, 0.0F, 0.25F, 0.0F, 0.0F));
+        PartDefinition ear_l_mid = ear_l.addOrReplaceChild("ear_l_mid", CubeListBuilder.create()
+                .texOffs(38, 0).addBox(0.0F, -1.0F, 0.0F, 1.0F, 2.0F, 2.0F), // ear_l_mid
+                PartPose.offsetAndRotation(0.0F, -1.5F, 1.5F, 0.3F, 0.12F, 0.0F));
+        ear_l_mid.addOrReplaceChild("ear_l_tip", CubeListBuilder.create()
+                .texOffs(6, 10).addBox(0.0F, -0.5F, 0.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(-0.05F)), // ear_l_tip
+                PartPose.offsetAndRotation(0.0F, -0.5F, 2.0F, 0.35F, 0.0F, 0.0F));
+        PartDefinition horns = head.addOrReplaceChild("horns", CubeListBuilder.create(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition horn_r = horns.addOrReplaceChild("horn_r", CubeListBuilder.create()
+                .texOffs(16, 0).addBox(-1.0F, -3.0F, -1.0F, 2.0F, 3.0F, 2.0F, new CubeDeformation(0.1F)), // horn_r_base
+                PartPose.offsetAndRotation(-2.5F, -7.8F, -1.0F, -0.12F, 0.0F, -0.3F));
+        horn_r.addOrReplaceChild("horn_r_tip", CubeListBuilder.create()
+                .texOffs(28, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F, new CubeDeformation(0.2F)), // horn_r_tip
+                PartPose.offsetAndRotation(0.0F, -3.0F, 0.0F, -0.15F, 0.0F, -0.45F));
+        PartDefinition horn_l = horns.addOrReplaceChild("horn_l", CubeListBuilder.create()
+                .texOffs(24, 0).addBox(-1.0F, -3.0F, -1.0F, 2.0F, 3.0F, 2.0F, new CubeDeformation(0.1F)), // horn_l_base
+                PartPose.offsetAndRotation(2.5F, -7.8F, -1.0F, -0.12F, 0.0F, 0.3F));
+        horn_l.addOrReplaceChild("horn_l_tip", CubeListBuilder.create()
+                .texOffs(32, 10).addBox(-0.5F, -2.0F, -0.5F, 1.0F, 2.0F, 1.0F, new CubeDeformation(0.2F)), // horn_l_tip
+                PartPose.offsetAndRotation(0.0F, -3.0F, 0.0F, -0.15F, 0.0F, 0.45F));
+        PartDefinition spikes = head.addOrReplaceChild("spikes", CubeListBuilder.create(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
+        spikes.addOrReplaceChild("spike_1", CubeListBuilder.create()
+                .texOffs(52, 0).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_1_base
+                .texOffs(44, 10).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_1_mid
+                .texOffs(36, 10).addBox(-0.5F, -4.5F, -0.5F, 1.0F, 2.0F, 1.0F), // spike_1_tip
+                PartPose.offsetAndRotation(0.0F, -7.9F, -1.8F, 0.3F, 0.0F, 0.0F));
+        spikes.addOrReplaceChild("spike_2", CubeListBuilder.create()
+                .texOffs(0, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_2_base
+                .texOffs(48, 10).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_2_mid
+                .texOffs(52, 10).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_2_tip
+                PartPose.offsetAndRotation(-2.6F, -7.8F, -0.3F, 0.05F, 0.0F, -0.4F));
+        spikes.addOrReplaceChild("spike_3", CubeListBuilder.create()
+                .texOffs(8, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_3_base
+                .texOffs(56, 10).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_3_mid
+                .texOffs(60, 10).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_3_tip
+                PartPose.offsetAndRotation(2.6F, -7.8F, -0.3F, 0.05F, 0.0F, 0.4F));
+        spikes.addOrReplaceChild("spike_4", CubeListBuilder.create()
+                .texOffs(16, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_4_base
+                .texOffs(0, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_4_mid
+                .texOffs(40, 10).addBox(-0.5F, -4.5F, -0.5F, 1.0F, 2.0F, 1.0F), // spike_4_tip
+                PartPose.offsetAndRotation(0.0F, -7.9F, 1.2F, -0.3F, 0.0F, 0.0F));
+        spikes.addOrReplaceChild("spike_5", CubeListBuilder.create()
+                .texOffs(24, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_5_base
+                .texOffs(4, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_5_mid
+                .texOffs(8, 13).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_5_tip
+                PartPose.offsetAndRotation(-2.6F, -7.8F, 2.6F, -0.4F, 0.0F, -0.45F));
+        spikes.addOrReplaceChild("spike_6", CubeListBuilder.create()
+                .texOffs(32, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_6_base
+                .texOffs(12, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_6_mid
+                .texOffs(16, 13).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_6_tip
+                PartPose.offsetAndRotation(2.6F, -7.8F, 2.6F, -0.4F, 0.0F, 0.45F));
+        spikes.addOrReplaceChild("spike_7", CubeListBuilder.create()
+                .texOffs(40, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_7_base
+                .texOffs(20, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_7_mid
+                .texOffs(24, 13).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_7_tip
+                PartPose.offsetAndRotation(-1.8F, -6.8F, 3.9F, -0.95F, 0.0F, -0.25F));
+        spikes.addOrReplaceChild("spike_8", CubeListBuilder.create()
+                .texOffs(48, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_8_base
+                .texOffs(28, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_8_mid
+                .texOffs(32, 13).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_8_tip
+                PartPose.offsetAndRotation(1.8F, -6.8F, 3.9F, -0.95F, 0.0F, 0.25F));
+        spikes.addOrReplaceChild("spike_9", CubeListBuilder.create()
+                .texOffs(56, 7).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)) // spike_9_base
+                .texOffs(36, 13).addBox(-0.5F, -2.2F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.3F)) // spike_9_mid
+                .texOffs(40, 13).addBox(-0.5F, -3.5F, -0.5F, 1.0F, 1.0F, 1.0F), // spike_9_tip
+                PartPose.offsetAndRotation(0.0F, -5.0F, 3.9F, -1.2F, 0.0F, 0.0F));
         root.addOrReplaceChild("body", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        return LayerDefinition.create(mesh, 64, 32);
+        return LayerDefinition.create(mesh, 64, 64);
     }
     // </ModelGen:parts_namekian>
 }
