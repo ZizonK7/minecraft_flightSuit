@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -99,8 +100,8 @@ public final class SuitWeapons {
         // Mark 2: unbroken exposure of one target to the cryo beam.
         LivingEntity frostTarget;
         int frostTicks;
-        // Mark 1: missiles still in the pods this salvo.
-        final Deque<LivingEntity> salvo = new ArrayDeque<>();
+        // Mark 1: missiles still in the pods this salvo (null = no lock, so not an ArrayDeque).
+        final Deque<LivingEntity> salvo = new LinkedList<>();
         Vec3 salvoAim = Vec3.ZERO;
         int salvoFired;
         // Mark 3.
