@@ -2179,23 +2179,289 @@ public class ModelGen {
      * "antenna_super", "antenna_kid", head). TODO (M18 agent).
      */
     static final class CellBuuParts {
-        static final int CELL_GREEN = 0xFF5F9E3E, CELL_DARK = 0xFF3C6A28, CELL_BLACK = 0xFF1E2A1C, BUU_PINK = 0xFFF2A7C5, BUU_DARK = 0xFFD07FA3;
+        // Skin colours: cell_imperfect / cell_semi / cell / cell_jr / majin_buu / super_buu / kid_buu.
+        static final int IMP = 0xFF4A8A3E, IMP_DARK = 0xFF2A5A2A, SEMI = 0xFF5AAA4A, SEMI_DARK = 0xFF3B6E2E;
+        static final int PERFECT = 0xFF6ABF5A, PERFECT_DARK = 0xFF3B6E2E, JR_DARK = 0xFF1E3A1E;
+        static final int SPOT = 0xFF141216, SHELL = 0xFF1A221C, SHELL_LIGHT = 0xFF2C3A2C, SHELL_RIM = 0xFF4A8A3A;
+        static final int FAT = 0xFFF0A0C0, FAT_DARK = 0xFFE08AAA, FAT_LINE = 0xFFB36E88;
+        static final int BUU = 0xFFE88AB0, BUU_DARK = 0xFFC86A90, BUU_LINE = 0xFF9D5D77;
+        /** The wings' resting spread (yRot of each wing, outer edge back); CellBuuParts.animate uses the same value. */
+        static final float WING_SPREAD = 0.25F;
+        /** The tail's bend per segment (group, then tail_2..tail_5, then the bulb); CellBuuParts.animate repeats these. */
+        static final float[] TAIL_BEND = {-0.7F, 0.35F, 0.4F, 0.45F, 0.45F, 0.2F};
 
         static Model build() {
-            Model m = Parts.partsModel("parts_cell_buu", 64, 64);
+            Model m = Parts.partsModel("parts_cell_buu", 128, 64);
+            // Preview: one row per group (the crests and antennae would hide each other drawn together).
+            m.previewGroups.addAll(List.of("crest_imperfect", "crest_semi", "crest", "crest_jr", "wings", "tail", "antenna_fat", "antenna_super", "antenna_kid"));
             Part head = Parts.head(m);
-            head.child("crest_imperfect", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
-            head.child("crest_semi", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
-            head.child("crest", 0, -8, 0).box("crest", -1, -3, -2, 2, 3, 4, p -> grain(p, CELL_GREEN, 0.04));
-            head.child("crest_jr", 0, -8, 0).box("crest", -1, -2, -1, 2, 2, 3, p -> grain(p, CELL_GREEN, 0.04));
-            head.child("antenna_fat", 0, -8, 0).box("antenna", -1, -4, -1, 2, 4, 2, p -> grain(p, BUU_PINK, 0.04));
-            head.child("antenna_super", 0, -8, 0).box("antenna", -1, -6, -1, 2, 6, 2, p -> grain(p, BUU_PINK, 0.04));
-            head.child("antenna_kid", 0, -8, 0).box("antenna", -1, -5, -1, 2, 5, 2, p -> grain(p, BUU_PINK, 0.04));
             Part body = Parts.body(m);
-            body.child("wings", 0, 1, 2).box("wing_right", -6, 0, 0, 6, 10, 1, p -> grain(p, CELL_DARK, 0.04))
-                    .mirrored("wing_left", -6, 0, 0, 6, 10, 1, p -> grain(p, CELL_DARK, 0.04));
-            body.child("tail", 0, 10, 2, 0.6F, 0, 0).box("tail", -1, -1, 0, 2, 2, 10, p -> grain(p, CELL_GREEN, 0.04));
+            crestImperfect(head);
+            crestSemi(head);
+            crestPerfect(head);
+            crestJr(head);
+            wings(body);
+            tail(body);
+            antennaFat(head);
+            antennaSuper(head);
+            antennaKid(head);
             return m;
+        }
+
+        // ---------------------------------------------------------------- Cell's crests
+
+        /**
+         * Imperfect Cell: two long crests from above the brow (where the skin's hat layer has its bump), rising and
+         * curving back over the head, splaying out a little - each a thick stub, a thinner middle and a needle tip.
+         */
+        static void crestImperfect(Part head) {
+            Part g = head.child("crest_imperfect", 0, -8.5F, -1.5F);
+            for (int s = -1; s <= 1; s += 2) {
+                String n = s < 0 ? "ci_r" : "ci_l";
+                Part base = g.child(n, 2.0F * s, 0, 0, -0.6F, 0, -0.2F * s);
+                base.box(n + "_base", -1.5F, -3, -1.5F, 3, 4, 3, p -> crest(p, IMP, IMP_DARK, 0.22));
+                Part mid = base.child(n + "_mid", 0, -2.8F, 0, -0.45F, 0, -0.12F * s);
+                mid.box(n + "_mid", -1, -3, -1, 2, 3, 2, p -> crest(p, IMP, IMP_DARK, 0.2));
+                Part tip = mid.child(n + "_tip", 0, -2.8F, 0, -0.45F, 0, -0.1F * s);
+                tip.box(n + "_tip", -0.5F, -3, -0.5F, 1, 3, 1, p -> crestTip(p, IMP, IMP_DARK));
+            }
+        }
+
+        /** Semi-perfect Cell: shorter, thicker crests from the top corners of the head, thrown up and out like a Y. */
+        static void crestSemi(Part head) {
+            Part g = head.child("crest_semi", 0, -8.5F, -0.5F);
+            for (int s = -1; s <= 1; s += 2) {
+                String n = s < 0 ? "cs_r" : "cs_l";
+                Part base = g.child(n, 2.8F * s, 0, 0, -0.3F, 0, -0.65F * s);
+                base.box(n + "_base", -1.5F, -3, -1.5F, 3, 4, 3, p -> crest(p, SEMI, SEMI_DARK, 0.18));
+                Part tip = base.child(n + "_tip", 0, -2.8F, 0, -0.25F, 0, -0.3F * s);
+                tip.box(n + "_tip", -1, -3, -1, 2, 3, 2, p -> crestTip(p, SEMI, SEMI_DARK));
+            }
+        }
+
+        /**
+         * Perfect Cell: two broad plates (deeper front-to-back than wide) from the sides of the head behind the brow,
+         * rising up and back in a V - the black shell with the lighter green ridge along its front edge and top.
+         */
+        static void crestPerfect(Part head) {
+            Part g = head.child("crest", 0, -8.5F, 0.5F);
+            for (int s = -1; s <= 1; s += 2) {
+                String n = s < 0 ? "cp_r" : "cp_l";
+                Part base = g.child(n, 3.3F * s, 0, 0, -0.35F, 0, -0.3F * s);
+                base.box(n + "_base", -1, -3, -2, 2, 4, 4, p -> shell(p, PERFECT, PERFECT_DARK, SHELL));
+                Part mid = base.child(n + "_mid", 0, -2.8F, -0.5F, -0.15F, 0, -0.15F * s);
+                mid.box(n + "_mid", -1, -3, -1.5F, 2, 3, 3, p -> shell(p, PERFECT, PERFECT_DARK, SHELL));
+                Part tip = mid.child(n + "_tip", 0, -2.8F, -0.5F, -0.1F, 0, -0.1F * s);
+                tip.box(n + "_tip", -0.5F, -2, -1, 1, 2, 2, p -> shell(p, PERFECT, PERFECT_DARK, SHELL));
+            }
+        }
+
+        /** Cell Jr.: the perfect crest at child size. */
+        static void crestJr(Part head) {
+            Part g = head.child("crest_jr", 0, -8.5F, 0.5F);
+            for (int s = -1; s <= 1; s += 2) {
+                String n = s < 0 ? "cj_r" : "cj_l";
+                Part base = g.child(n, 3.3F * s, 0, 0, -0.3F, 0, -0.3F * s);
+                base.box(n + "_base", -1, -2, -1.5F, 2, 3, 3, p -> shell(p, PERFECT, PERFECT_DARK, JR_DARK));
+                Part tip = base.child(n + "_tip", 0, -1.8F, -0.5F, -0.2F, 0, -0.15F * s);
+                tip.box(n + "_tip", -0.5F, -3, -1, 1, 3, 2, p -> shell(p, PERFECT, PERFECT_DARK, JR_DARK));
+            }
+        }
+
+        /** Green shell with black speckles; darker underneath; the top face a touch lighter where the light lands. */
+        static int crest(Px p, int green, int dark, double speckle) {
+            double n = p.noise();
+            int c = n < speckle ? SPOT : n < speckle + 0.12 ? dark : green;
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.72);
+            } else if (p.face == Face.TOP) {
+                c = shade(c, 1.08);
+            } else if (p.face == Face.BACK) {
+                c = shade(c, 0.9);
+            }
+            return grain(p, c, 0.04);
+        }
+
+        /** The last segment: speckled green darkening to a black point. */
+        static int crestTip(Px p, int green, int dark) {
+            int c = crest(p, green, dark, 0.15);
+            if (p.face == Face.TOP || p.side() && p.j == 0) {
+                return SPOT;
+            }
+            if (p.side() && p.fy < 0.45) {
+                c = mix(c, dark, 0.5);
+            }
+            return c;
+        }
+
+        /**
+         * Perfect Cell's crest and the Cell Jr.'s: a near-black shell, a lighter green ridge running up the front
+         * edge and over the top, a darker green rim down the back edge.
+         */
+        static int shell(Px p, int ridge, int ridgeDark, int black) {
+            double n = p.noise();
+            if (p.face == Face.FRONT || p.face == Face.TOP) {
+                int c = p.face == Face.TOP && p.fy > 0.6 ? ridgeDark : ridge;
+                return grain(p, c, 0.05);
+            }
+            if ((p.face == Face.RIGHT || p.face == Face.LEFT) && p.i == (p.face == Face.RIGHT ? p.fw - 1 : 0)) {
+                return grain(p, ridgeDark, 0.05); // the ridge wraps the front edge
+            }
+            if (p.face == Face.BACK && p.edge() == 0 && p.fw > 1) {
+                return grain(p, mix(black, ridgeDark, 0.5), 0.05);
+            }
+            int c = n < 0.15 ? SHELL_LIGHT : black;
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.8);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        // ---------------------------------------------------------------- wings
+
+        /**
+         * Folded wing cases on the upper back: each a plate from the shoulder blade (inner edge at the spine, outer
+         * edge swung back by WING_SPREAD), a thick fold ridge down the inner edge, a narrower lower plate splayed
+         * outward and a short tip - black-green with green rims.
+         */
+        static void wings(Part body) {
+            Part g = body.child("wings", 0, 1.0F, 2.25F);
+            for (int s = -1; s <= 1; s += 2) {
+                String n = s < 0 ? "wing_r" : "wing_l";
+                Part wing = g.child(n, 0.25F * s, 0, 0, 0, WING_SPREAD * -s, 0.1F * -s);
+                float x0 = s < 0 ? -5 : 0;
+                wing.box(n + "_plate", x0, 0, 0, 5, 7, 1, CellBuuParts::wing)
+                        .box(n + "_fold", s < 0 ? -1.5F : 0.5F, -0.5F, 0.5F, 1, 8, 2, CellBuuParts::wingFold)
+                        .box(n + "_shoulder", s < 0 ? -4 : 1, -0.5F, 0.25F, 3, 1, 1, CellBuuParts::wingFold);
+                Part low = wing.child(n + "_low", (s < 0 ? -3.5F : 3.5F), 7, 0, 0.05F, 0, 0.3F * -s);
+                low.box(n + "_low", -1, -0.5F, 0, 2, 4, 1, CellBuuParts::wing);
+                Part tip = low.child(n + "_tip", (s < 0 ? -0.5F : 0.5F), 3.5F, 0, 0.05F, 0, 0.3F * -s);
+                tip.box(n + "_tip", -0.5F, -0.5F, 0.25F, 1, 2, 1, CellBuuParts::wingFold);
+            }
+        }
+
+        /** Wing plate: black-green shell, lighter toward the shoulder, a green rim all round the visible (back) face. */
+        static int wing(Px p) {
+            if (p.face == Face.BACK) {
+                if (p.edge() == 0) {
+                    return grain(p, p.j == p.fh - 1 ? SHELL_RIM : PERFECT_DARK, 0.06);
+                }
+                int c = mix(SHELL_LIGHT, SHELL, p.fy);
+                // Wing veins: faint lighter diagonals.
+                if ((p.i + p.j) % 3 == 0 && p.noise() < 0.6) {
+                    c = shade(c, 1.25);
+                }
+                return grain(p, c, 0.05);
+            }
+            if (p.face == Face.FRONT) {
+                return grain(p, SHELL, 0.03);
+            }
+            return grain(p, SHELL_RIM, 0.06); // the edges read green
+        }
+
+        /** The fold ridge and tips: green-black with a light centre line. */
+        static int wingFold(Px p) {
+            if (p.face == Face.BACK || p.face == Face.TOP) {
+                return grain(p, p.noise() < 0.3 ? SHELL_LIGHT : PERFECT_DARK, 0.06);
+            }
+            return grain(p, SHELL, 0.05);
+        }
+
+        // ---------------------------------------------------------------- tail
+
+        /**
+         * Imperfect Cell's tail from the small of the back: hangs back and down, then curls up - four tube segments
+         * tapering 3x3 to 2x2, the stinger bulb and its needle. Green with a black band at each joint.
+         */
+        static void tail(Part body) {
+            Part g = body.child("tail", 0, 10, 2.25F, TAIL_BEND[0], 0, 0);
+            g.box("tail_1", -1.5F, -1.5F, 0, 3, 3, 4, p -> tail(p, 4));
+            Part s2 = g.child("tail_2", 0, 0, 4, TAIL_BEND[1], 0, 0);
+            s2.box("tail_2", -1.5F, -1.5F, -0.5F, 3, 3, 4, p -> tail(p, 3.5F));
+            Part s3 = s2.child("tail_3", 0, 0, 3.5F, TAIL_BEND[2], 0, 0);
+            s3.box("tail_3", -1, -1, -0.5F, 2, 2, 4, p -> tail(p, 3.5F));
+            Part s4 = s3.child("tail_4", 0, 0, 3.5F, TAIL_BEND[3], 0, 0);
+            s4.box("tail_4", -1, -1, -0.5F, 2, 2, 4, p -> tail(p, 3.5F));
+            Part s5 = s4.child("tail_5", 0, 0, 3.5F, TAIL_BEND[4], 0, 0);
+            s5.box("tail_5", -1, -1, -0.5F, 2, 2, 3, p -> tail(p, 2.5F));
+            Part bulb = s5.child("tail_bulb", 0, 0, 2.5F, TAIL_BEND[5], 0, 0);
+            bulb.box("tail_bulb", -1.5F, -1.5F, 0, 3, 3, 3, CellBuuParts::bulb)
+                    .box("tail_needle", -0.5F, -0.5F, 3, 1, 1, 2, p -> grain(p, SPOT, 0.08));
+        }
+
+        /** A tail segment: green, speckled, a black band in the last pixel before the joint, darker underneath. */
+        static int tail(Px p, float end) {
+            double n = p.noise();
+            int c = n < 0.1 ? SPOT : n < 0.2 ? IMP_DARK : IMP;
+            if (p.face != Face.FRONT && p.face != Face.BACK && p.z > p.box.z + end - 1.0) {
+                c = SPOT; // the band
+            }
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.75);
+            } else if (p.face == Face.TOP) {
+                c = shade(c, 1.08);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        /** The stinger bulb: black shell with green flecks, the needle's root green. */
+        static int bulb(Px p) {
+            double n = p.noise();
+            int c = n < 0.2 ? IMP_DARK : n < 0.3 ? IMP : SPOT;
+            if (p.face == Face.BACK && p.edge() == 0) {
+                c = IMP_DARK;
+            }
+            return grain(p, c, 0.05);
+        }
+
+        // ---------------------------------------------------------------- Buu's antennae
+
+        /** Fat Majin Buu: a short thick tentacle from the crown, bending forward and drooping at the tip. */
+        static void antennaFat(Part head) {
+            Part g = head.child("antenna_fat", 0, -8.5F, 0, 0.3F, 0, 0);
+            g.box("af_base", -1.5F, -2.5F, -1.5F, 3, 4, 3, p -> buu(p, FAT, FAT_DARK, FAT_LINE));
+            Part mid = g.child("af_mid", 0, -2.3F, 0, 0.6F, 0, 0);
+            mid.box("af_mid", -1, -2.5F, -1, 2, 3, 2, p -> buu(p, FAT, FAT_DARK, FAT_LINE));
+            Part tip = mid.child("af_tip", 0, -2.3F, 0, 0.8F, 0, 0);
+            tip.box("af_tip", -1, -2, -1, 2, 2, 2, p -> buu(p, FAT, FAT_DARK, FAT_LINE));
+        }
+
+        /** Super Buu: long and thin, swept back from the forehead, then rising at the end. */
+        static void antennaSuper(Part head) {
+            Part g = head.child("antenna_super", 0, -8.5F, -1, -0.9F, 0, 0);
+            g.box("as_base", -1, -2.5F, -1, 2, 4, 2, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+            Part mid = g.child("as_mid", 0, -2.3F, 0, 0.45F, 0, 0);
+            mid.box("as_mid", -1, -3, -1, 2, 3, 2, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+            Part tip = mid.child("as_tip", 0, -2.8F, 0, 0.55F, 0, 0);
+            tip.box("as_tip", -0.5F, -3.5F, -0.5F, 1, 4, 1, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+        }
+
+        /** Kid Buu: medium, rising nearly straight and curling back over the head. */
+        static void antennaKid(Part head) {
+            Part g = head.child("antenna_kid", 0, -8.5F, -0.5F, -0.1F, 0, 0);
+            g.box("ak_base", -1, -2.5F, -1, 2, 4, 2, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+            Part mid = g.child("ak_mid", 0, -2.3F, 0, -0.55F, 0, 0);
+            mid.box("ak_mid", -1, -3, -1, 2, 3, 2, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+            Part tip = mid.child("ak_tip", 0, -2.8F, 0, -0.9F, 0, 0);
+            tip.box("ak_tip", -0.5F, -2.5F, -0.5F, 1, 3, 1, p -> buu(p, BUU, BUU_DARK, BUU_LINE));
+        }
+
+        /** Rubbery pink: lit from the front and top, darker behind and below, a crease where each segment meets the next. */
+        static int buu(Px p, int pink, int dark, int line) {
+            int c = pink;
+            if (p.face == Face.BOTTOM) {
+                c = shade(dark, 0.9);
+            } else if (p.face == Face.BACK) {
+                c = dark;
+            } else if (p.face == Face.RIGHT || p.face == Face.LEFT) {
+                c = p.fx < 0.5 ? pink : mix(pink, dark, 0.5);
+            } else if (p.face == Face.TOP) {
+                c = shade(pink, 1.04);
+            }
+            if (p.side() && p.j == p.fh - 1 && p.fh > 2) {
+                c = mix(c, line, 0.6); // crease at the joint
+            }
+            return grain(p, c, 0.03);
         }
     }
 
