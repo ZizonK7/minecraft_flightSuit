@@ -243,6 +243,64 @@ public final class VillageWorkday {
         return best;
     }
 
+    // ---------------------------------------------------------------- miner
+
+    /** What a load from the mine is, how likely (weight), and how much (min-max). Diamonds only from a dug-out mine. */
+    private record Vein(Item item, int weight, int min, int max, boolean deep) {
+    }
+
+    private static final List<Vein> VEINS = List.of(
+            new Vein(Items.COAL, 240, 2, 4, false),
+            new Vein(Items.RAW_COPPER, 200, 2, 4, false),
+            new Vein(Items.RAW_IRON, 220, 1, 3, false),
+            new Vein(Items.REDSTONE, 100, 2, 4, false),
+            new Vein(Items.LAPIS_LAZULI, 60, 1, 3, false),
+            new Vein(Items.RAW_GOLD, 90, 1, 2, false),
+            new Vein(Items.AMETHYST_SHARD, 60, 1, 2, false),
+            new Vein(Items.DIAMOND, 15, 1, 1, true));
+
+    /**
+     * 2026-10-12 ("플레이어가 귀찮은 일을 대신"): each miner brings up some loads of ore every morning - coal, raw
+     * copper and iron mostly, redstone, lapis, raw gold, amethyst now and then, and a diamond rarely once a skilled
+     * one (★3+) works a mine of their own. The smiths smelt the raw ore the same morning (mine() runs first).
+     */
+    static void mine(VillageHallBlockEntity hall) {
+        if (hall.getLevel() == null) {
+            return;
+        }
+        net.minecraft.util.RandomSource random = hall.getLevel().random;
+        for (ResidentEntity miner : workers(hall, ResidentJob.MINER)) {
+            int loads = budget(hall, miner, ResidentJob.MINER, VillageTuning.MINE_BASE, VillageTuning.MINE_PER_STAR);
+            boolean deep = hall.works().workplaceOf(miner) != null && miner.talent(ResidentJob.MINER) >= VillageTuning.MINE_DEEP_STARS;
+            int total = 0;
+            for (Vein vein : VEINS) {
+                if (!vein.deep() || deep) {
+                    total += vein.weight();
+                }
+            }
+            Map<Item, Integer> made = new LinkedHashMap<>();
+            for (int i = 0; i < loads; i++) {
+                int roll = random.nextInt(total);
+                for (Vein vein : VEINS) {
+                    if (vein.deep() && !deep) {
+                        continue;
+                    }
+                    roll -= vein.weight();
+                    if (roll < 0) {
+                        made.merge(vein.item(), vein.min() + random.nextInt(vein.max() - vein.min() + 1), Integer::sum);
+                        break;
+                    }
+                }
+            }
+            for (Map.Entry<Item, Integer> entry : made.entrySet()) {
+                give(hall, entry.getKey(), entry.getValue());
+            }
+            Component what = list(made);
+            miner.setLastWork(Component.translatable("activity.flightsuit.mined", what));
+            hall.addNews(Component.translatable("news.flightsuit.mined", miner.getName(), what));
+        }
+    }
+
     // ---------------------------------------------------------------- rancher
 
     private record Herd(Class<? extends Animal> kind, EntityType<? extends Animal> type, Item feed, Item meat, Predicate<Item> altFeed) {

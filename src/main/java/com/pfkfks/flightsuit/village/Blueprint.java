@@ -211,6 +211,17 @@ public enum Blueprint {
             {"       ", "       ", "       ", "       ", "   j   "},
             {"       ", "       ", "       ", "       ", "   j   "},
             {"       ", "       ", "       ", "       ", "   j   "}
+    }),
+    /**
+     * 2026-10-12 the miner's mine head: a timber frame over a cobbled floor, rails running back into the shaft
+     * mouth in the hillside wall, ore barrels either side, a lantern under the slab roof.
+     */
+    MINE("mine", 1, false, new String[][]{
+            {"CCCCC", "CCCCC", "CCCCC", "CCCCC", "CCCCC"},
+            {"X.z.X", "..z..", "..z..", "r.z.r", "XC.CX"},
+            {"X...X", ".....", ".....", ".....", "XC.CX"},
+            {"X...X", ".....", "..h..", ".....", "XCCCX"},
+            {"ooooo", "ooooo", "ooooo", "ooooo", "ooooo"}
     });
 
     static {
@@ -283,6 +294,7 @@ public enum Blueprint {
             case STAGE -> ResidentJob.MUSICIAN;
             case WORKSHOP -> ResidentJob.ARCHITECT;
             case POWER_PLANT -> ResidentJob.ENGINEER;
+            case MINE -> ResidentJob.MINER;
             default -> null;
         };
     }
@@ -427,6 +439,8 @@ public enum Blueprint {
             case 'g' -> com.pfkfks.flightsuit.registry.ModBlocks.POWER_PLANT.get().defaultBlockState()
                     .setValue(com.pfkfks.flightsuit.block.PowerPlantBlock.FACING, Direction.NORTH);
             case 'i' -> com.pfkfks.flightsuit.registry.ModBlocks.CABLE.get().defaultBlockState();
+            // The mine: rails into the shaft.
+            case 'z' -> Blocks.RAIL.defaultBlockState();
             default -> Blocks.AIR.defaultBlockState();
         };
     }

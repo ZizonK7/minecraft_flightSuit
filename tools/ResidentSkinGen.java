@@ -40,7 +40,7 @@ public class ResidentSkinGen {
         File dir = new File(args[0]);
         dir.mkdirs();
         String[] jobs = args.length > 1 ? new String[]{args[1]} : new String[]{"farmer", "rancher", "cook", "architect", "teacher", "doctor",
-                "blacksmith", "merchant", "musician", "soldier", "engineer"};
+                "blacksmith", "merchant", "musician", "soldier", "engineer", "miner"};
         for (String job : jobs) {
             skin = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             pal = new HashMap<>();
@@ -58,6 +58,7 @@ public class ResidentSkinGen {
                 case "musician" -> musician();
                 case "soldier" -> soldier();
                 case "engineer" -> engineer();
+                case "miner" -> miner();
                 default -> throw new IllegalStateException(job);
             }
             File out = new File(dir, job + ".png");
@@ -122,6 +123,62 @@ public class ResidentSkinGen {
         ring(HAT, "YYYy");
         top(HAT, 'Y');
         face(HAT, Face.FRONT, "YYYYYYYY", "YYYYYYYY", "YYYYYYYY", "yQqqQqqQ");
+    }
+
+    /**
+     * 2026-10-12 the miner: a dented brown helmet with a lamp on the front, a soot-smudged face, a dark work shirt
+     * under brown dungarees with braces, a pick-handle tucked in the belt, dusty knees, heavy boots.
+     */
+    static void miner() {
+        tone(0xFFC98E62, 0xFF2A1E14, 0xFF4A3828);
+        hair(0xFF2A1E14);
+        colors("D", 0xFF4A4E58, "d", 0xFF383B44, "U", 0xFF6B4A2E, "u", 0xFF51371F, "M", 0xFF8A6A3A,
+                "H", 0xFF7A5634, "h", 0xFF5C3F24, "L", 0xFFFFF2A8, "l", 0xFFE0C060, "B", 0xFF2A1E14,
+                "b", 0xFF1C140C, "S", 0xFF7D7D78, "A", 0xFFA08060);
+        head("short", "beard", false);
+        wrapRows(BODY, "DDDDDDDDDuuu");
+        top(BODY, 'D');
+        // Dungarees: a bib over the shirt, braces up over the shoulders, a dusty patch, the belt with the pick handle.
+        face(BODY, Face.FRONT,
+                "DUDDDDUD",
+                "DUDDDDUD",
+                "DUUUUUUD",
+                "DUUUUUUD",
+                "DUUSUUUD",
+                "DUUUUUUD",
+                "DUUUUUSD",
+                "BBBBBBBB",
+                "UUUMUUUU",
+                "UUUMUUUU",
+                "UUUUUUUU",
+                "UUUUUUUU");
+        face(BODY, Face.BACK,
+                "DDUDDUDD",
+                "DDUDDUDD",
+                "DDDUUDDD",
+                "DDDUUDDD",
+                "DDDDDDDD",
+                "DDDDDDDD",
+                "DDDDDDDD",
+                "BBBBBBBB",
+                "UUUUUUUU",
+                "UUUUUUUU",
+                "UUUUUUUU",
+                "UUUUUUUU");
+        for (Box arm : new Box[]{R_ARM, L_ARM}) {
+            wrapRows(arm, "DDDDDDDDdSSS");
+            top(arm, 'D');
+            bottom(arm, 'S');
+        }
+        for (Box leg : new Box[]{R_LEG, L_LEG}) {
+            wrapRows(leg, "UUUUAUUUubbb");
+            top(leg, 'U');
+            bottom(leg, 'b');
+        }
+        // The helmet on the outer head layer, its lamp at the front.
+        ring(HAT, "HHHh");
+        top(HAT, 'H');
+        face(HAT, Face.FRONT, "HHHHHHHH", "HHHllHHH", "HHHLLHHH", "hhhhhhhh");
     }
 
     /** Straw hat, red plaid shirt with rolled sleeves, denim overalls, work boots. */

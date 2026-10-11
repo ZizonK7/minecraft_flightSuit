@@ -81,6 +81,10 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
     /** What set the alarm off (a monster's name), for the board. */
     private Component alarmCause = Component.empty();
     private long lastMorning = -1L;
+    /** The merchants' outside trading house (MerchantContacts) and the day the deal began / runs out (2026-10-12). */
+    private @Nullable MerchantContacts.Contact contact;
+    private long contactSince = -1L;
+    private long contactUntil = -1L;
     private long placedAt = -1L;
     private boolean firstWandererDone;
 
@@ -511,7 +515,47 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         return null;
     }
 
+    /** The house the merchants deal with now (null: none yet - no merchant). */
+    public @Nullable MerchantContacts.Contact contact() {
+        return contact;
+    }
+
+    /** The day the current deal began: a merchant's shelves are restocked when it changes. */
+    public long contactSince() {
+        return contactSince;
+    }
+
+    public long contactUntil() {
+        return contactUntil;
+    }
+
+    /** With a merchant in the village, a new trading house every CONTACT_DAYS days (on the board). */
+    private void renewContact() {
+        ResidentEntity best = null;
+        for (ResidentEntity merchant : residents()) {
+            if (merchant.getJob() == ResidentJob.MERCHANT && !merchant.isBaby() && !merchant.isDowned()
+                    && (best == null || merchant.talent(ResidentJob.MERCHANT) > best.talent(ResidentJob.MERCHANT))) {
+                best = merchant;
+            }
+        }
+        long day = level.getDayTime() / 24000L;
+        if (best == null || contact != null && day < contactUntil || !(level instanceof net.minecraft.server.level.ServerLevel server)) {
+            return;
+        }
+        MerchantContacts.Contact next = MerchantContacts.next(server, owner, contact, level.random);
+        if (next == null) {
+            return;
+        }
+        contact = next;
+        contactSince = day;
+        contactUntil = day + VillageTuning.CONTACT_DAYS;
+        addNews(Component.translatable("news.flightsuit.contact", best.getName(), Component.translatable(next.translationKey()),
+                VillageTuning.CONTACT_DAYS));
+        setChanged();
+    }
+
     private void marketDay() {
+        renewContact();
         for (ResidentEntity merchant : residents()) {
             if (merchant.getJob() != ResidentJob.MERCHANT || merchant.isBaby() || merchant.isDowned()) {
                 continue;
@@ -741,6 +785,8 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
             musician.setLastWork(Component.translatable("activity.flightsuit.played", concert));
         }
         concertBy = null;
+        // The miners' ore first, so the smiths smelt it the same morning.
+        VillageWorkday.mine(this);
         int smithStars = VillageWorkday.smith(this);
         VillageWorkday.ranch(this);
         VillageWorkday.engineer(this);
@@ -1079,6 +1125,11 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
         tag.putLong("AlarmUntil", alarmUntil);
         tag.putLong("LastMorning", lastMorning);
         tag.putBoolean("FirstWanderer", firstWandererDone);
+        if (contact != null) {
+            tag.putInt("Contact", contact.ordinal());
+            tag.putLong("ContactSince", contactSince);
+            tag.putLong("ContactUntil", contactUntil);
+        }
     }
 
     @Override
@@ -1110,6 +1161,11 @@ public class VillageHallBlockEntity extends BlockEntity implements MenuProvider 
             firstWandererDone = tag.getBoolean("FirstWanderer");
             // A reloaded village doesn't wait for "the first wanderer" again.
             placedAt = 0L;
+        }
+        if (tag.contains("Contact")) {
+            contact = MerchantContacts.Contact.byId(tag.getInt("Contact"));
+            contactSince = tag.getLong("ContactSince");
+            contactUntil = tag.getLong("ContactUntil");
         }
     }
 

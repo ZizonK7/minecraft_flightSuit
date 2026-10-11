@@ -86,7 +86,7 @@ import java.util.UUID;
  * Never dies outright: at zero health they go down, and unless someone gives them first aid (right-click
  * with food) within VillageTuning.DOWNED_TICKS they die for good.
  */
-public class ResidentEntity extends PathfinderMob {
+public class ResidentEntity extends PathfinderMob implements net.minecraft.world.item.trading.Merchant {
     private static final EntityDataAccessor<Integer> JOB = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> WANDERER = SynchedEntityData.defineId(ResidentEntity.class, EntityDataSerializers.BOOLEAN);
     /** Seconds left while downed (0 = up), for the name tag and the lying-down pose. */
@@ -106,6 +106,8 @@ public class ResidentEntity extends PathfinderMob {
     public static final int ACTION_TAKE_BLUEPRINT = 4;
     /** arg = queue index, -1 = the hall expansion. */
     public static final int ACTION_CANCEL = 5;
+    /** 2026-10-12: the merchant's shop - the outside trading house's goods (MerchantContacts). */
+    public static final int ACTION_TRADE = 6;
 
     private static final DustParticleOptions BLOOD = new DustParticleOptions(new Vector3f(0.75F, 0.05F, 0.05F), 1.0F);
 
@@ -486,6 +488,9 @@ public class ResidentEntity extends PathfinderMob {
         if (level().isClientSide) {
             return;
         }
+        if (trader != null && (!trader.isAlive() || trader.distanceToSqr(this) > 64.0D || trader.containerMenu == trader.inventoryMenu)) {
+            trader = null;
+        }
         if (downedTicks > 0) {
             tickDowned();
             return;
@@ -701,6 +706,7 @@ public class ResidentEntity extends PathfinderMob {
                     architectAction(player, hall, action, arg);
                 }
             }
+            case ACTION_TRADE -> openShop(player, hall);
             default -> {
             }
         }
@@ -769,7 +775,7 @@ public class ResidentEntity extends PathfinderMob {
 
     /** The jobs whose day is done by the hall each morning (VillageWorkday, the market) - their last day shows on the screen. */
     private static final java.util.Set<ResidentJob> WORKDAY_JOBS = java.util.EnumSet.of(ResidentJob.MERCHANT, ResidentJob.COOK,
-            ResidentJob.BLACKSMITH, ResidentJob.RANCHER, ResidentJob.MUSICIAN, ResidentJob.ENGINEER);
+            ResidentJob.BLACKSMITH, ResidentJob.RANCHER, ResidentJob.MUSICIAN, ResidentJob.ENGINEER, ResidentJob.MINER);
 
     /** What they got done last (the merchant's market, the cook's kitchen, ...), for the screen. Not saved. */
     private @Nullable Component lastWork;
@@ -855,6 +861,10 @@ public class ResidentEntity extends PathfinderMob {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        if (shop != null) {
+            tag.put("Shop", shop.createTag());
+            tag.putLong("ShopSince", shopSince);
+        }
         tag.putInt("Job", getJob().ordinal());
         tag.putBoolean("Wanderer", isWanderer());
         tag.putInt("Downed", downedTicks);
@@ -887,6 +897,10 @@ public class ResidentEntity extends PathfinderMob {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        if (tag.contains("Shop")) {
+            shop = new net.minecraft.world.item.trading.MerchantOffers(tag.getCompound("Shop"));
+            shopSince = tag.getLong("ShopSince");
+        }
         entityData.set(JOB, ResidentJob.byId(tag.getInt("Job")).ordinal());
         entityData.set(WANDERER, tag.getBoolean("Wanderer"));
         downedTicks = tag.getInt("Downed");
@@ -919,5 +933,100 @@ public class ResidentEntity extends PathfinderMob {
         entityData.set(PARENTS, tag.getString("Parents"));
         commander = tag.hasUUID("Commander") ? tag.getUUID("Commander") : null;
         applyJobBonus();
+    }
+
+    // ---------------------------------------------------------------- the merchant's shop (2026-10-12)
+
+    /** Who is at the counter, the shelves (MerchantContacts) and the deal they were stocked for (the hall's contactSince). */
+    private @Nullable Player trader;
+    private @Nullable net.minecraft.world.item.trading.MerchantOffers shop;
+    private long shopSince = Long.MIN_VALUE;
+
+    /** "가게" on the merchant's screen: the trading screen with this stretch's goods, if a deal has been struck. */
+    private void openShop(ServerPlayer player, VillageHallBlockEntity hall) {
+        if (getJob() != ResidentJob.MERCHANT || isBaby() || isWanderer()) {
+            return;
+        }
+        MerchantContacts.Contact contact = hall.contact();
+        if (contact == null) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.shop_no_contact", getName()), true);
+            return;
+        }
+        if (trader != null && trader != player) {
+            return;
+        }
+        restock(hall);
+        getNavigation().stop();
+        setTradingPlayer(player);
+        long left = Math.max(0L, hall.contactUntil() - level().getDayTime() / 24000L);
+        openTradingScreen(player, Component.translatable("screen.flightsuit.shop_title", getName(),
+                Component.translatable(contact.translationKey()), left), 1);
+    }
+
+    /** New shelves when the hall has struck a new deal since they were last stocked. */
+    private void restock(VillageHallBlockEntity hall) {
+        if (shop == null || shopSince != hall.contactSince()) {
+            MerchantContacts.Contact contact = hall.contact();
+            shop = contact == null ? new net.minecraft.world.item.trading.MerchantOffers()
+                    : MerchantContacts.offers(contact, talent(ResidentJob.MERCHANT), hall.works().workplaceOf(this) != null);
+            shopSince = hall.contactSince();
+        }
+    }
+
+    @Override
+    public void setTradingPlayer(@Nullable Player player) {
+        this.trader = player;
+    }
+
+    @Override
+    public @Nullable Player getTradingPlayer() {
+        return trader;
+    }
+
+    @Override
+    public net.minecraft.world.item.trading.MerchantOffers getOffers() {
+        if (shop == null) {
+            shop = new net.minecraft.world.item.trading.MerchantOffers();
+        }
+        return shop;
+    }
+
+    @Override
+    public void overrideOffers(net.minecraft.world.item.trading.MerchantOffers offers) {
+        this.shop = offers;
+    }
+
+    @Override
+    public void notifyTrade(net.minecraft.world.item.trading.MerchantOffer offer) {
+        offer.increaseUses();
+        playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
+    }
+
+    @Override
+    public void notifyTradeUpdated(ItemStack stack) {
+    }
+
+    @Override
+    public int getVillagerXp() {
+        return 0;
+    }
+
+    @Override
+    public void overrideXp(int xp) {
+    }
+
+    @Override
+    public boolean showProgressBar() {
+        return false;
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        return SoundEvents.VILLAGER_YES;
+    }
+
+    @Override
+    public boolean isClientSide() {
+        return level().isClientSide;
     }
 }

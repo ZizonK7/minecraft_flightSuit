@@ -376,6 +376,32 @@ public final class SuitTuning {
     public static final int RECOIL_JUMP_COST = 500;
     public static final int RECOIL_JUMP_COOLDOWN_TICKS = 40;
     public static final double RECOIL_JUMP_POWER = 1.1D;
+    /**
+     * 2026-10-12 Mark 6 on the move (MapleStory's Cannon Jump + Monkey Boost; the user: no flight, more dynamic):
+     * cannon jumps in a row before landing (the cooldown only counts from the ground) and the chained one's power;
+     * the monkey's kick at the top of a cannon jump. The leap is straight away from the aim (the user: "the opposite
+     * of where you aim" - intuitive, and hard to steer on purpose).
+     */
+    public static final int CANNON_JUMP_CHAIN = 2;
+    public static final double CANNON_JUMP_CHAIN_POWER = 0.85D;
+    public static final double MONKEY_KICK_FORWARD = 0.85D;
+    public static final double MONKEY_KICK_UP = 0.3D;
+    /**
+     * The landing slam (the user: falling is just falling - Z pressed as you touch down makes the shockwave and
+     * throws you off again, away from the aim like a cannon jump): from
+     * at least MIN_FALL blocks, Z within WINDOW blocks of the ground on the way down or LATE ticks after landing.
+     * Radius and damage grow with the fall, up to the caps.
+     */
+    public static final double CANNON_SLAM_MIN_FALL = 2.0D;
+    public static final double CANNON_SLAM_WINDOW = 2.5D;
+    public static final int CANNON_SLAM_LATE_TICKS = 4;
+    public static final int CANNON_SLAM_COST = 400;
+    public static final double CANNON_SLAM_RADIUS = 3.0D;
+    public static final double CANNON_SLAM_RADIUS_PER_BLOCK = 0.2D;
+    public static final double CANNON_SLAM_RADIUS_MAX = 7.0D;
+    public static final float CANNON_SLAM_DAMAGE = 6.0F;
+    public static final float CANNON_SLAM_DAMAGE_PER_BLOCK = 0.8F;
+    public static final float CANNON_SLAM_DAMAGE_MAX = 22.0F;
     public static final int MILITIA_COST = 1_500;
     public static final int MILITIA_COOLDOWN_TICKS = 400;
     public static final int MILITIA_COUNT = 3;

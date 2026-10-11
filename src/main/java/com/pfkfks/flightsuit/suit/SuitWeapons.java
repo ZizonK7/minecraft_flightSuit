@@ -133,6 +133,24 @@ public final class SuitWeapons {
         // Mark 1 unibeam charging; Mark 3 shadow step (SuitSkills): cooldown, and the step under way.
         int unibeamCharge;
         long stepReady;
+        /**
+         * Mark 6 on the move (2026-10-12): cannon jumps since leaving the ground, whether this airtime began with
+         * one, whether the monkey has given its kick, the height last tick, the top of this airtime, and the last
+         * landing (when, from how high) - for the landing slam timed with Z.
+         */
+        int cannonJumps;
+        boolean cannonAir;
+        boolean monkeyKicked;
+        boolean wasGrounded = true;
+        boolean descending;
+        double lastY;
+        Vec3 lastPos = Vec3.ZERO;
+        Vec3 travel = Vec3.ZERO;
+        /** When the last cannon jump threw them: the ground under the feet for a tick or two after is the take-off. */
+        long launchedAt = Long.MIN_VALUE / 2;
+        double airPeak;
+        long landedAt = Long.MIN_VALUE / 2;
+        double landedFall;
         int stepTicks;
         Vec3 stepFrom = Vec3.ZERO;
         Vec3 stepTo = Vec3.ZERO;

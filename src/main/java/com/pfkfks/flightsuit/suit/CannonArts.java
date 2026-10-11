@@ -20,7 +20,9 @@ import net.minecraft.world.phys.Vec3;
  * a monkey at heel (MonkeyEntity).
  * <ul>
  *   <li>right click held: cannonballs, one every CANNON_INTERVAL ticks, each shoving the gunner back a little;</li>
- *   <li>Z: the recoil jump - a ball fired at the ground throws the gunner up and back;</li>
+ *   <li>Z: the cannon jump - a ball fired at the ground throws the gunner into the air, twice in a row, the monkey
+ *   kicking them on at the top; pressed as they land from a height, the landing slam (2026-10-12: no flight, so
+ *   the gunner moves by recoil);</li>
  *   <li>X: Monkey Militia - three monkeys with popguns planted round the gunner for a while;</li>
  *   <li>C: the rolling cannon - three balls in a fan;</li>
  *   <li>V: the Big Huge Gigantic Cannonball - slow, straight, bowling through everything;</li>
@@ -28,6 +30,9 @@ import net.minecraft.world.phys.Vec3;
  * </ul>
  */
 public final class CannonArts {
+    /** Ticks after a cannon jump during which "on the ground" is still the take-off. */
+    private static final int LIFT_OFF_TICKS = 3;
+
     private CannonArts() {
     }
 
@@ -39,6 +44,60 @@ public final class CannonArts {
         if (player.tickCount % 20 == 3 && WornSuit.of(player).fullSet() && MonkeyEntity.of(player.serverLevel(), player).isEmpty()) {
             MonkeyEntity.heel(player.serverLevel(), player);
         }
+        tickAirtime(player, state);
+    }
+
+    /**
+     * Keeps count of the airtime (2026-10-12): the top of it, the landing and from how high - and at the top of a
+     * cannon jump, the monkey's kick forward (MapleStory's Monkey Boost).
+     */
+    private static void tickAirtime(ServerPlayer player, SuitWeapons.State state) {
+        // Just thrown: the client still reports the ground for a tick or two - that's the take-off, not a landing.
+        boolean ground = player.onGround() && player.level().getGameTime() - state.launchedAt > LIFT_OFF_TICKS;
+        double y = player.getY();
+        if (ground) {
+            if (!state.wasGrounded) {
+                state.landedAt = player.level().getGameTime();
+                state.landedFall = state.airPeak - y;
+            }
+            state.cannonJumps = 0;
+            state.cannonAir = false;
+            state.monkeyKicked = false;
+            state.airPeak = y;
+        } else {
+            state.airPeak = state.wasGrounded ? y : Math.max(state.airPeak, y);
+            if (state.cannonAir && !state.monkeyKicked && y < state.lastY - 0.01D) {
+                state.monkeyKicked = true;
+                monkeyKick(player, state);
+            }
+        }
+        state.descending = !ground && y < state.lastY - 0.01D;
+        state.wasGrounded = ground;
+        state.travel = player.position().subtract(state.lastPos).multiply(1.0D, 0.0D, 1.0D);
+        state.lastPos = player.position();
+        state.lastY = y;
+    }
+
+    /**
+     * The monkey's kick at the top of a cannon jump: a shove on the way the gunner is already going (they fly away
+     * from their aim, so not where they look) and a little up, if the monkey is about.
+     */
+    private static void monkeyKick(ServerPlayer player, SuitWeapons.State state) {
+        ServerLevel level = player.serverLevel();
+        java.util.Optional<MonkeyEntity> monkey = MonkeyEntity.of(level, player);
+        if (monkey.isEmpty()) {
+            return;
+        }
+        Vec3 going = state.travel.lengthSqr() > 1.0E-4D ? state.travel : player.getLookAngle().multiply(-1.0D, 0.0D, -1.0D);
+        going = going.lengthSqr() > 1.0E-4D ? going.normalize() : Vec3.ZERO;
+        Vec3 behind = player.position().subtract(going.scale(0.8D));
+        monkey.get().moveTo(behind.x, behind.y, behind.z, player.getYRot(), 0.0F);
+        player.setDeltaMovement(going.scale(SuitTuning.MONKEY_KICK_FORWARD).add(0.0D, SuitTuning.MONKEY_KICK_UP, 0.0D));
+        player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+        KiFx.burst(level, behind.add(0.0D, 0.6D, 0.0D), KiFx.FIRE, 0.6F, 6, KiFx.RING);
+        level.playSound(null, player.blockPosition(), SoundEvents.PANDA_AMBIENT, SoundSource.PLAYERS, 0.8F, 1.9F);
+        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_KNOCKBACK, SoundSource.PLAYERS, 0.6F, 1.4F);
     }
 
     /** Where the muzzle is: the cannon is held in both hands in front of the chest (SuitWeaponItem's arm pose), pointing where the gunner looks. */
@@ -48,10 +107,10 @@ public final class CannonArts {
         return player.getEyePosition().add(look.scale(1.1D)).add(right.scale(0.1D)).add(0.0D, -0.35D, 0.0D);
     }
 
-    private static void shoot(ServerPlayer player, Vec3 dir, float damage, double radius, boolean recoil) {
+    private static CannonballEntity shoot(ServerPlayer player, Vec3 dir, float damage, double radius, boolean recoil) {
         ServerLevel level = player.serverLevel();
         Vec3 from = muzzle(player);
-        CannonballEntity.fire(level, player, from, dir.scale(SuitTuning.CANNON_SPEED), damage, radius);
+        CannonballEntity ball = CannonballEntity.fire(level, player, from, dir.scale(SuitTuning.CANNON_SPEED), damage, radius);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, from.x, from.y, from.z, 4, 0.1D, 0.1D, 0.1D, 0.03D);
         level.sendParticles(ParticleTypes.FLAME, from.x, from.y, from.z, 6, 0.05D, 0.05D, 0.05D, 0.08D);
         KiFx.burst(level, from, KiFx.FIRE, 0.8F, 5, KiFx.FLASH);
@@ -61,6 +120,7 @@ public final class CannonArts {
             player.setDeltaMovement(player.getDeltaMovement().subtract(dir.scale(SuitTuning.CANNON_RECOIL)));
             player.hurtMarked = true;
         }
+        return ball;
     }
 
     // ---------------------------------------------------------------- cannon fire (right click held)
@@ -81,26 +141,129 @@ public final class CannonArts {
         shoot(player, dir, SuitTuning.CANNON_DAMAGE, SuitTuning.CANNON_RADIUS, true);
     }
 
-    // ---------------------------------------------------------------- recoil jump (Z)
+    // ---------------------------------------------------------------- cannon jump and landing slam (Z)
 
+    /**
+     * Z (2026-10-12, MapleStory's Cannon Jump): the cannon fires where they aim and the recoil throws the gunner the
+     * opposite way - look down to go up, look ahead to be thrown back, look down and behind to leap forward (the
+     * user: the opposite of the aim - intuitive, hard to master on purpose). Twice in a row before landing (the
+     * second a little weaker); the cooldown runs from the ground. Pressed as they touch down after a fall, it's the
+     * landing slam - which throws them off again.
+     */
     static void recoilJump(ServerPlayer player, SuitWeapons.State state) {
+        if (trySlam(player, state)) {
+            return;
+        }
         long now = player.level().getGameTime();
-        if (now < state.stepReady) {
+        boolean ground = player.onGround();
+        if (state.cannonJumps >= SuitTuning.CANNON_JUMP_CHAIN || state.cannonJumps == 0 && now < state.stepReady) {
             return;
         }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.RECOIL_JUMP_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.stepReady = now + SuitTuning.RECOIL_JUMP_COOLDOWN_TICKS;
-        // Fired down and a little forward: up and back it goes.
-        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
-        Vec3 dir = new Vec3(face.x * 0.5D, -1.0D, face.z * 0.5D).normalize();
-        shoot(player, dir, SuitTuning.CANNON_DAMAGE * 0.75F, SuitTuning.CANNON_RADIUS * 0.8D, false);
-        player.setDeltaMovement(face.scale(-SuitTuning.RECOIL_JUMP_POWER * 0.55D).add(0.0D, SuitTuning.RECOIL_JUMP_POWER, 0.0D));
+        if (state.cannonJumps == 0) {
+            state.stepReady = now + SuitTuning.RECOIL_JUMP_COOLDOWN_TICKS;
+        }
+        double power = SuitTuning.RECOIL_JUMP_POWER * (state.cannonJumps == 0 ? 1.0D : SuitTuning.CANNON_JUMP_CHAIN_POWER);
+        state.cannonJumps++;
+        // The monkey kicks once an airtime (reset on the ground), at the first top after a cannon jump.
+        state.cannonAir = true;
+        shoot(player, player.getLookAngle(), SuitTuning.CANNON_DAMAGE * 0.75F, SuitTuning.CANNON_RADIUS * 0.8D, false).keepBlocks();
+        launch(player, state, power, !ground);
+    }
+
+    /** The recoil: thrown straight away from the aim at {@code power}, keeping a little of what they had in the air. */
+    private static void launch(ServerPlayer player, SuitWeapons.State state, double power, boolean airborne) {
+        state.launchedAt = player.level().getGameTime();
+        state.wasGrounded = false;
+        Vec3 keep = airborne ? player.getDeltaMovement().multiply(0.3D, 0.0D, 0.3D) : Vec3.ZERO;
+        player.setDeltaMovement(keep.add(player.getLookAngle().scale(-power)));
         player.hurtMarked = true;
         player.fallDistance = 0.0F;
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SPIN_ATTACK, 0));
+    }
+
+    /**
+     * The landing slam: after a fall of SLAM_MIN_FALL or more, Z with the ground just under the feet on the way down
+     * (or a moment after touching down) - the cannon fired into the ground as they land, a shockwave that grows with
+     * the fall, and the gunner thrown off again away from the aim (a fresh cannon jump: one more in the air, a new
+     * monkey kick), so a well-timed run of them barely touches down. A plain landing stays a plain landing.
+     */
+    private static boolean trySlam(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        double fall;
+        if (player.onGround()) {
+            if (now - state.landedAt > SuitTuning.CANNON_SLAM_LATE_TICKS || state.landedFall < SuitTuning.CANNON_SLAM_MIN_FALL) {
+                return false;
+            }
+            fall = state.landedFall;
+        } else {
+            fall = state.airPeak - player.getY();
+            if (fall < SuitTuning.CANNON_SLAM_MIN_FALL || !state.descending || groundBelow(player) > SuitTuning.CANNON_SLAM_WINDOW) {
+                return false;
+            }
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.CANNON_SLAM_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return true;
+        }
+        // Spent: this landing can't slam twice.
+        state.landedAt = Long.MIN_VALUE / 2;
+        state.airPeak = player.getY();
+        ServerLevel level = player.serverLevel();
+        Vec3 at = player.onGround() ? player.position() : player.position().subtract(0.0D, groundBelow(player), 0.0D);
+        // Off again: a fresh cannon jump out of the slam.
+        state.cannonJumps = 1;
+        state.cannonAir = true;
+        state.monkeyKicked = false;
+        launch(player, state, SuitTuning.RECOIL_JUMP_POWER, !player.onGround());
+        double radius = Math.min(SuitTuning.CANNON_SLAM_RADIUS_MAX, SuitTuning.CANNON_SLAM_RADIUS + fall * SuitTuning.CANNON_SLAM_RADIUS_PER_BLOCK);
+        float damage = (float) Math.min(SuitTuning.CANNON_SLAM_DAMAGE_MAX, SuitTuning.CANNON_SLAM_DAMAGE + fall * SuitTuning.CANNON_SLAM_DAMAGE_PER_BLOCK);
+        for (net.minecraft.world.entity.LivingEntity victim : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                new net.minecraft.world.phys.AABB(at, at).inflate(radius, 2.0D, radius),
+                entity -> entity.isAlive() && entity != player && !SuitWeapons.isFriendly(player, entity)
+                        && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
+                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity))) {
+            Vec3 out = victim.position().subtract(at).multiply(1.0D, 0.0D, 1.0D);
+            if (out.length() > radius) {
+                continue;
+            }
+            float share = (float) (1.0D - 0.5D * out.length() / radius);
+            victim.invulnerableTime = 0;
+            victim.hurt(player.damageSources().playerAttack(player), damage * share);
+            Vec3 push = out.lengthSqr() < 1.0E-4D ? Vec3.ZERO : out.normalize();
+            victim.setDeltaMovement(push.scale(0.9D).add(0.0D, 0.6D, 0.0D));
+            victim.hurtMarked = true;
+        }
+        Vec3 ground = at.add(0.0D, 0.1D, 0.0D);
+        KiFx.burst(level, ground, KiFx.FIRE, (float) radius, 14, KiFx.RING);
+        KiFx.burst(level, ground.add(0.0D, 0.5D, 0.0D), KiFx.FIRE, (float) (radius * 0.5D), 12, KiFx.BLAST);
+        net.minecraft.world.level.block.state.BlockState floor = level.getBlockState(net.minecraft.core.BlockPos.containing(at).below());
+        if (!floor.isAir()) {
+            for (int i = 0; i < 24; i++) {
+                double angle = i * Math.PI / 12.0D;
+                level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, floor),
+                        at.x + Math.cos(angle) * radius * 0.6D, at.y + 0.2D, at.z + Math.sin(angle) * radius * 0.6D,
+                        4, 0.3D, 0.2D, 0.3D, 0.3D);
+            }
+        }
+        level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.3D, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.2F, 0.7F);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.8F, 0.6F);
+        com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(level, at, radius * 3.0D, 8);
+        player.displayClientMessage(Component.translatable("message.flightsuit.cannon_slam"), true);
+        return true;
+    }
+
+    /** How far below the feet the ground is (up to 6 blocks; 6 = nothing found). */
+    private static double groundBelow(ServerPlayer player) {
+        Vec3 from = player.position();
+        net.minecraft.world.phys.BlockHitResult hit = player.level().clip(new net.minecraft.world.level.ClipContext(from,
+                from.subtract(0.0D, 6.0D, 0.0D), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        return hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? 6.0D : from.y - hit.getLocation().y;
     }
 
     // ---------------------------------------------------------------- Monkey Militia (X)

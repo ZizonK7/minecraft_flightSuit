@@ -157,6 +157,13 @@ public class ResidentScreen extends Screen {
             addRenderableWidget(jobs);
             addRenderableWidget(build);
         }
+        if (shownJob == ResidentJob.MERCHANT) {
+            // 2026-10-12: the shop - the outside trading house's goods for this stretch (MerchantContacts).
+            addRenderableWidget(Button.builder(Component.translatable("screen.flightsuit.shop"), b -> send(ResidentEntity.ACTION_TRADE, 0))
+                    .bounds(left() + WIDTH - 54, top() + 6, 48, 16)
+                    .tooltip(Tooltip.create(Component.translatable("screen.flightsuit.shop_hint")))
+                    .build());
+        }
         if (buildTab) {
             initBuildTab(x);
         } else {
@@ -253,6 +260,10 @@ public class ResidentScreen extends Screen {
             }
             case ENGINEER -> {
                 return Component.translatable("screen.flightsuit.job_engineer", stars);
+            }
+            case MINER -> {
+                return Component.translatable("screen.flightsuit.job_miner", stars,
+                        VillageTuning.MINE_BASE + VillageTuning.MINE_PER_STAR * stars, VillageTuning.MINE_DEEP_STARS);
             }
             default -> {
             }

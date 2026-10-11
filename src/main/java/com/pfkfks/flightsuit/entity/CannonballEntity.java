@@ -42,6 +42,8 @@ public class CannonballEntity extends ThrowableProjectile {
     private float damage = 8.0F;
     private double radius = 3.0D;
     private boolean giant;
+    /** The cannon jump's ball (2026-10-12): it bursts but leaves the ground be - no hole at every leap. */
+    private boolean keepBlocks;
     private double range = 64.0D;
     private double travelled;
     private final Set<LivingEntity> bowled = new HashSet<>();
@@ -64,6 +66,12 @@ public class CannonballEntity extends ThrowableProjectile {
     }
 
     /** The big huge gigantic cannonball: bowls {@code range} blocks, {@code damage} to each it passes, {@code blast} at the end. */
+    /** This ball doesn't break blocks where it bursts. */
+    public CannonballEntity keepBlocks() {
+        keepBlocks = true;
+        return this;
+    }
+
     public static CannonballEntity giant(ServerLevel level, LivingEntity owner, Vec3 from, Vec3 velocity, float damage, double radius,
                                          double range) {
         CannonballEntity ball = fire(level, owner, from, velocity, damage, radius);
@@ -216,7 +224,9 @@ public class CannonballEntity extends ThrowableProjectile {
             victim.setDeltaMovement(victim.getDeltaMovement().add(0.0D, giant ? 0.5D : 0.3D, 0.0D));
             victim.hurtMarked = true;
         }
-        crater(level, at);
+        if (!keepBlocks) {
+            crater(level, at);
+        }
         KiFx.burst(level, at, KiFx.FIRE, (float) reach, giant ? 24 : 14, KiFx.BLAST);
         level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, giant ? 6 : 1, giant ? 1.5D : 0.0D, giant ? 1.0D : 0.0D, giant ? 1.5D : 0.0D, 0.0D);
         level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, giant ? 30 : 10, reach * 0.3D, 0.3D, reach * 0.3D, 0.03D);

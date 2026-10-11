@@ -93,6 +93,7 @@ public class FlightSuitMod {
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);
         com.pfkfks.flightsuit.registry.ModParticles.PARTICLE_TYPES.register(modEventBus);
+        com.pfkfks.flightsuit.town.VillageMoney.SERIALIZERS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerAttributes);

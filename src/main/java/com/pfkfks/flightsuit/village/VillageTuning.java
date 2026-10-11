@@ -78,6 +78,35 @@ public final class VillageTuning {
     public static final float HEAL_AMOUNT = 6.0F;
     public static final int HEAL_COOLDOWN = 200;
 
+    /**
+     * The miner (2026-10-12): loads of ore a morning = base + per star (a third more with the mine built); a mine
+     * of their own and this many stars, and a diamond can come up.
+     */
+    public static final int MINE_BASE = 3;
+    public static final int MINE_PER_STAR = 2;
+    public static final int MINE_DEEP_STARS = 3;
+
+    /**
+     * The merchant's outside contact (2026-10-12, village/MerchantContacts): a new trading house every this many
+     * days; each offer can be taken base + per star times (a third more with the market built).
+     */
+    public static final int CONTACT_DAYS = 3;
+    public static final int CONTACT_USES_BASE = 4;
+    public static final int CONTACT_USES_PER_STAR = 2;
+
+    /**
+     * Vanilla village chests (town/VillageMoney, 2026-10-12): the chance of wuzhu coins / dollars in a chest and how
+     * many - the houses, and the well-off (smiths, armourer, temple, mapmaker). Coins are 4 to the emerald, dollars 5.
+     */
+    public static final float VILLAGE_COIN_CHANCE = 0.4F;
+    public static final float VILLAGE_DOLLAR_CHANCE = 0.25F;
+    public static final int VILLAGE_COIN_MIN = 1;
+    public static final int VILLAGE_COIN_MAX = 4;
+    public static final float VILLAGE_COIN_CHANCE_RICH = 0.7F;
+    public static final float VILLAGE_DOLLAR_CHANCE_RICH = 0.5F;
+    public static final int VILLAGE_COIN_MIN_RICH = 3;
+    public static final int VILLAGE_COIN_MAX_RICH = 8;
+
     private VillageTuning() {
     }
 }

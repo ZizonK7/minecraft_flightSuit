@@ -21,7 +21,9 @@ public enum ResidentJob {
     MUSICIAN("musician", false),
     SOLDIER("soldier", true),
     /** M18: keeps the village's power plant and generators fed with coal from the hall's storage (EngineerWorkGoal). */
-    ENGINEER("engineer", true);
+    ENGINEER("engineer", true),
+    /** 2026-10-12: goes down the village's mine by day and brings up ore each morning (VillageWorkday.mine). */
+    MINER("miner", true);
 
     private static final ResidentJob[] VALUES = values();
 
@@ -73,6 +75,7 @@ public enum ResidentJob {
             case COOK -> new ItemStack(Items.BREAD);
             case RANCHER -> new ItemStack(Items.WHEAT);
             case ENGINEER -> new ItemStack(Items.COPPER_INGOT);
+            case MINER -> new ItemStack(Items.IRON_PICKAXE);
             default -> ItemStack.EMPTY;
         };
     }
