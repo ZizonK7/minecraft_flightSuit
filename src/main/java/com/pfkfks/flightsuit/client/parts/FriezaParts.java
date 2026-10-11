@@ -1,22 +1,27 @@
 package com.pfkfks.flightsuit.client.parts;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
+import com.pfkfks.flightsuit.planet.dbz.DbzAction;
 import com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 /**
  * M18 Frieza's parts: the first form's horns and shoulder pads and its thick tail, the final form's smooth tail.
- * Groups: {@code horns} under the head; {@code pads}, {@code tail}, {@code tail_final} under the body.
+ * Groups: {@code horns} under the head; {@code pads}, {@code tail}, {@code tail_final} under the body. Each tail is
+ * a chain of five segments (the group holds the root, then {@code tail_2}..{@code tail_5} / {@code tail_final_2}..),
+ * every one pivoted at the end of the one before, so bending them in turn curls the whole tail.
  *
  * Boxes, UVs and textures/entity/dbz/parts/frieza.png come from tools/ModelGen.java (parts_frieza).
  */
@@ -24,6 +29,9 @@ public class FriezaParts extends DbzPartsModel {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(new ResourceLocation(FlightSuitMod.MODID, "parts_frieza"), "main");
     private static final ResourceLocation TEXTURE = new ResourceLocation(FlightSuitMod.MODID, "textures/entity/dbz/parts/frieza.png");
     public static final List<String> GROUPS = List.of("horns", "pads", "tail", "tail_final");
+    /** Resting pitch of each tail's root and the bend each later segment adds (ModelGen FriezaParts.TAIL_BEND / TAIL_FINAL_BEND). */
+    private static final float[] TAIL_BEND = {-0.8F, 0.2F, 0.25F, 0.25F, 0.15F};
+    private static final float[] TAIL_FINAL_BEND = {-0.75F, 0.2F, 0.22F, 0.22F, 0.15F};
 
     public FriezaParts(ModelPart root) {
         super(root);
@@ -41,14 +49,37 @@ public class FriezaParts extends DbzPartsModel {
 
     @Override
     public void animate(DbzFighterEntity fighter, float ageInTicks) {
-        for (String name : new String[]{"tail", "tail_final"}) {
-            ModelPart tail = group(name);
-            if (tail == null) {
-                continue;
+        DbzAction action = fighter.getAction();
+        // The thick first-form tail swings slowly and heavily; the final form's is lighter and quicker.
+        sway(group("tail"), "tail_", TAIL_BEND, ageInTicks, action, 0.07F, 1.0F);
+        sway(group("tail_final"), "tail_final_", TAIL_FINAL_BEND, ageInTicks, action, 0.1F, 0.8F);
+    }
+
+    /**
+     * Poses one tail chain: a side-to-side sway from the root that each later segment follows a little later and a
+     * little smaller (a wave running down the tail), on top of the resting curl. Flying it streams out behind the
+     * prone body and ripples; knocked down it lies straight and flat.
+     */
+    private static void sway(@Nullable ModelPart root, String prefix, float[] bend, float ageInTicks, DbzAction action, float speed, float weight) {
+        ModelPart seg = root;
+        for (int k = 0; k < bend.length && seg != null; k++) {
+            float phase = ageInTicks * speed - k * 0.8F;
+            float lag = k == 0 ? 1.0F : 0.55F;
+            switch (action) {
+                case FLY -> {
+                    seg.xRot = (k == 0 ? 0.95F : 0.0F) + Mth.sin(phase * 2.5F) * 0.07F * lag;
+                    seg.yRot = Mth.sin(phase * 1.8F) * 0.09F * lag;
+                }
+                case DOWN -> {
+                    seg.xRot = 0.0F;
+                    seg.yRot = k == 0 ? 0.25F : 0.08F;
+                }
+                default -> {
+                    seg.xRot = bend[k] + Mth.sin(phase * 0.7F) * 0.05F * weight * lag;
+                    seg.yRot = Mth.sin(phase) * 0.2F * weight * lag;
+                }
             }
-            // A slow, heavy sway; lifted when flying.
-            tail.yRot = Mth.sin(ageInTicks * 0.09F) * 0.3F;
-            tail.xRot = fighter.getAction() == com.pfkfks.flightsuit.planet.dbz.DbzAction.FLY ? 1.0F : 0.5F + Mth.sin(ageInTicks * 0.07F) * 0.1F;
+            seg = seg.hasChild(prefix + (k + 2)) ? seg.getChild(prefix + (k + 2)) : null;
         }
     }
 
@@ -59,23 +90,67 @@ public class FriezaParts extends DbzPartsModel {
         PartDefinition root = mesh.getRoot();
         PartDefinition head = root.addOrReplaceChild("head", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        head.addOrReplaceChild("horns", CubeListBuilder.create()
-                .texOffs(36, 13).addBox(-5.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F) // horn_right
-                .texOffs(44, 13).addBox(3.0F, -1.0F, -1.0F, 2.0F, 1.0F, 2.0F), // horn_left
-                PartPose.offset(0.0F, -8.0F, 0.0F));
+        PartDefinition horns = head.addOrReplaceChild("horns", CubeListBuilder.create(),
+                PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition horn_right = horns.addOrReplaceChild("horn_right", CubeListBuilder.create()
+                .texOffs(24, 17).addBox(-3.0F, -1.0F, -1.0F, 3.0F, 2.0F, 2.0F), // horn_right_a
+                PartPose.offsetAndRotation(-3.5F, -6.5F, 0.0F, 0.0F, 0.0F, 0.3F));
+        horn_right.addOrReplaceChild("horn_right_tip", CubeListBuilder.create()
+                .texOffs(56, 17).addBox(-3.0F, -0.5F, -0.5F, 3.0F, 1.0F, 1.0F), // horn_right_b
+                PartPose.offsetAndRotation(-3.0F, 0.0F, 0.0F, 0.0F, 0.4F, 0.45F));
+        PartDefinition horn_left = horns.addOrReplaceChild("horn_left", CubeListBuilder.create()
+                .texOffs(34, 17).addBox(0.0F, -1.0F, -1.0F, 3.0F, 2.0F, 2.0F), // horn_left_a
+                PartPose.offsetAndRotation(3.5F, -6.5F, 0.0F, 0.0F, 0.0F, -0.3F));
+        horn_left.addOrReplaceChild("horn_left_tip", CubeListBuilder.create()
+                .texOffs(64, 17).addBox(0.0F, -0.5F, -0.5F, 3.0F, 1.0F, 1.0F), // horn_left_b
+                PartPose.offsetAndRotation(3.0F, 0.0F, 0.0F, 0.0F, -0.4F, -0.45F));
         PartDefinition body = root.addOrReplaceChild("body", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        body.addOrReplaceChild("pads", CubeListBuilder.create()
-                .texOffs(0, 13).addBox(-7.0F, -1.0F, -3.0F, 3.0F, 2.0F, 6.0F) // pad_right
-                .texOffs(18, 13).addBox(4.0F, -1.0F, -3.0F, 3.0F, 2.0F, 6.0F), // pad_left
+        PartDefinition pads = body.addOrReplaceChild("pads", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        body.addOrReplaceChild("tail", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-1.5F, -1.5F, 0.0F, 3.0F, 3.0F, 10.0F), // tail
-                PartPose.offsetAndRotation(0.0F, 10.0F, 2.0F, 0.5F, 0.0F, 0.0F));
-        body.addOrReplaceChild("tail_final", CubeListBuilder.create()
-                .texOffs(26, 0).addBox(-1.0F, -1.0F, 0.0F, 2.0F, 2.0F, 10.0F), // tail
-                PartPose.offsetAndRotation(0.0F, 10.0F, 2.0F, 0.5F, 0.0F, 0.0F));
-        return LayerDefinition.create(mesh, 64, 64);
+        pads.addOrReplaceChild("pad_right", CubeListBuilder.create()
+                .texOffs(20, 0).addBox(-5.5F, -0.5F, -3.0F, 6.0F, 3.0F, 6.0F) // pad_right_base
+                .texOffs(0, 10).addBox(-5.25F, -2.5F, -2.5F, 5.0F, 2.0F, 5.0F) // pad_right_mid
+                .texOffs(0, 17).addBox(-4.0F, -3.5F, -1.5F, 3.0F, 1.0F, 3.0F), // pad_right_cap
+                PartPose.offsetAndRotation(-4.0F, -1.0F, 0.0F, 0.0F, 0.0F, -0.12F));
+        pads.addOrReplaceChild("pad_left", CubeListBuilder.create()
+                .texOffs(44, 0).addBox(-0.5F, -0.5F, -3.0F, 6.0F, 3.0F, 6.0F) // pad_left_base
+                .texOffs(20, 10).addBox(0.25F, -2.5F, -2.5F, 5.0F, 2.0F, 5.0F) // pad_left_mid
+                .texOffs(12, 17).addBox(1.0F, -3.5F, -1.5F, 3.0F, 1.0F, 3.0F), // pad_left_cap
+                PartPose.offsetAndRotation(4.0F, -1.0F, 0.0F, 0.0F, 0.0F, 0.12F));
+        PartDefinition tail = body.addOrReplaceChild("tail", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-2.0F, -2.0F, -1.5F, 4.0F, 4.0F, 6.0F), // tail_seg_1
+                PartPose.offsetAndRotation(0.0F, 10.0F, 1.0F, -0.8F, 0.0F, 0.0F));
+        PartDefinition tail_2 = tail.addOrReplaceChild("tail_2", CubeListBuilder.create()
+                .texOffs(68, 0).addBox(-2.0F, -2.0F, -0.5F, 4.0F, 4.0F, 5.0F, new CubeDeformation(-0.2F)), // tail_seg_2
+                PartPose.offsetAndRotation(0.0F, 0.0F, 4.0F, 0.2F, 0.0F, 0.0F));
+        PartDefinition tail_3 = tail_2.addOrReplaceChild("tail_3", CubeListBuilder.create()
+                .texOffs(104, 0).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 5.0F, new CubeDeformation(0.1F)), // tail_seg_3
+                PartPose.offsetAndRotation(0.0F, 0.0F, 4.0F, 0.25F, 0.0F, 0.0F));
+        PartDefinition tail_4 = tail_3.addOrReplaceChild("tail_4", CubeListBuilder.create()
+                .texOffs(40, 10).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 4.0F, new CubeDeformation(-0.2F)), // tail_seg_4
+                PartPose.offsetAndRotation(0.0F, 0.0F, 4.0F, 0.25F, 0.0F, 0.0F));
+        tail_4.addOrReplaceChild("tail_5", CubeListBuilder.create()
+                .texOffs(82, 10).addBox(-1.0F, -1.0F, -0.5F, 2.0F, 2.0F, 4.0F) // tail_seg_5
+                .texOffs(44, 17).addBox(-0.5F, -0.5F, 2.5F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.2F)), // tail_tip
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.15F, 0.0F, 0.0F));
+        PartDefinition tail_final = body.addOrReplaceChild("tail_final", CubeListBuilder.create()
+                .texOffs(86, 0).addBox(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 6.0F), // tail_final_seg_1
+                PartPose.offsetAndRotation(0.0F, 10.0F, 1.0F, -0.75F, 0.0F, 0.0F));
+        PartDefinition tail_final_2 = tail_final.addOrReplaceChild("tail_final_2", CubeListBuilder.create()
+                .texOffs(54, 10).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 4.0F, new CubeDeformation(-0.15F)), // tail_final_seg_2
+                PartPose.offsetAndRotation(0.0F, 0.0F, 4.0F, 0.2F, 0.0F, 0.0F));
+        PartDefinition tail_final_3 = tail_final_2.addOrReplaceChild("tail_final_3", CubeListBuilder.create()
+                .texOffs(68, 10).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 4.0F, new CubeDeformation(-0.3F)), // tail_final_seg_3
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.22F, 0.0F, 0.0F));
+        PartDefinition tail_final_4 = tail_final_3.addOrReplaceChild("tail_final_4", CubeListBuilder.create()
+                .texOffs(94, 10).addBox(-1.0F, -1.0F, -0.5F, 2.0F, 2.0F, 4.0F, new CubeDeformation(0.1F)), // tail_final_seg_4
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.22F, 0.0F, 0.0F));
+        tail_final_4.addOrReplaceChild("tail_final_5", CubeListBuilder.create()
+                .texOffs(106, 10).addBox(-1.0F, -1.0F, -0.5F, 2.0F, 2.0F, 4.0F, new CubeDeformation(-0.1F)) // tail_final_seg_5
+                .texOffs(50, 17).addBox(-0.5F, -0.5F, 2.5F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.1F)), // tail_final_tip
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.15F, 0.0F, 0.0F));
+        return LayerDefinition.create(mesh, 128, 64);
     }
     // </ModelGen:parts_frieza>
 }

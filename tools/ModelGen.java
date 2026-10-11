@@ -2332,21 +2332,165 @@ public class ModelGen {
     }
     /**
      * Frieza: the first form's horns ("horns", head), shoulder pads ("pads", body) and thick tail ("tail", body), and
-     * the final form's smooth tail ("tail_final", body). TODO (M18 agent).
+     * the final form's smooth tail ("tail_final", body). Colours follow the skins (white F4F2F4, purple 8A3AAA, the
+     * first form's brown straps 8A5A3A). The tails are chains: the group holds the root segment, then "tail_2".."tail_5"
+     * (or "tail_final_2"..) each pivoted at the end of the one before, bent by TAIL_BEND / TAIL_FINAL_BEND -
+     * client/parts/FriezaParts.animate keeps those bends and sways on top of them.
      */
     static final class FriezaParts {
-        static final int SHELL = 0xFF5B2E8E, SHELL_DARK = 0xFF3E1E66, WHITE = 0xFFEDEBF2, WHITE_DARK = 0xFFC9C5D4, HORN = 0xFF2E2630;
+        static final int SHELL = 0xFF8A3AAA, SHELL_DARK = 0xFF5C2476, SHELL_DEEP = 0xFF3A1450, SHELL_LIGHT = 0xFFAE64CC, SHELL_RIM = 0xFFD6A4EA;
+        static final int STRAP = 0xFF8A5A3A, STRAP_DARK = 0xFF5A3A24;
+        static final int WHITE = 0xFFF4F2F4, BAND = 0xFF9A50B8;
+        static final int HORN = 0xFF26222A, HORN_LIGHT = 0xFF4E4856, HORN_DEEP = 0xFF131016;
+        /** Root pitch, then the bend each later segment adds (radians; negative hangs down-back). Mirrored in the model class. */
+        static final float[] TAIL_BEND = {-0.8F, 0.2F, 0.25F, 0.25F, 0.15F};
+        static final float[] TAIL_FINAL_BEND = {-0.75F, 0.2F, 0.22F, 0.22F, 0.15F};
 
         static Model build() {
-            Model m = Parts.partsModel("parts_frieza", 64, 64);
-            Parts.head(m).child("horns", 0, -8, 0).box("horn_right", -5, -1, -1, 2, 1, 2, p -> grain(p, HORN, 0.04))
-                    .mirrored("horn_left", -5, -1, -1, 2, 1, 2, p -> grain(p, HORN, 0.04));
+            Model m = Parts.partsModel("parts_frieza", 128, 64);
+            // Preview rows: the first form's set, then the final form's tail on its own.
+            m.previewGroups.add("horns,pads,tail");
+            m.previewGroups.add("tail_final");
+            Part head = Parts.head(m);
+            Part horns = head.child("horns", 0, 0, 0);
+            horn(horns, false);
+            horn(horns, true);
+
             Part body = Parts.body(m);
-            body.child("pads", 0, 0, 0).box("pad_right", -7, -1, -3, 3, 2, 6, p -> grain(p, SHELL, 0.04))
-                    .mirrored("pad_left", -7, -1, -3, 3, 2, 6, p -> grain(p, SHELL, 0.04));
-            body.child("tail", 0, 10, 2, 0.5F, 0, 0).box("tail", -1.5F, -1.5F, 0, 3, 3, 10, p -> grain(p, WHITE, 0.04));
-            body.child("tail_final", 0, 10, 2, 0.5F, 0, 0).box("tail", -1, -1, 0, 2, 2, 10, p -> grain(p, WHITE, 0.04));
+            Part pads = body.child("pads", 0, 0, 0);
+            pad(pads, false);
+            pad(pads, true);
+
+            // First form: thick, segmented, two purple bands. Lengths pivot to pivot 4,4,4,3,3 (+ a 2 px tip).
+            tail(body, "tail", TAIL_BEND, new int[]{4, 4, 4, 3, 3}, new int[]{4, 4, 3, 3, 2},
+                    new float[]{0, -0.2F, 0.1F, -0.2F, 0}, new boolean[]{false, true, false, true, false}, 0.2F);
+            // Final form: slimmer and smoother, pure white. 4,3,3,3,3 (+ tip).
+            tail(body, "tail_final", TAIL_FINAL_BEND, new int[]{4, 3, 3, 3, 3}, new int[]{3, 3, 3, 2, 2},
+                    new float[]{0, -0.15F, -0.3F, 0.1F, -0.1F}, new boolean[5], 0.1F);
             return m;
+        }
+
+        /** One horn: a 2x2 root box jutting sideways and a little up, a 1x1 tip box bending further up and back. */
+        static void horn(Part horns, boolean left) {
+            float s = left ? 1 : -1;
+            String side = left ? "left" : "right";
+            Part root = horns.child("horn_" + side, s * 3.5F, -6.5F, 0, 0, 0, -s * 0.3F);
+            root.box("horn_" + side + "_a", left ? 0 : -3, -1, -1, 3, 2, 2, p -> hornPaint(p, left, false));
+            Part tip = root.child("horn_" + side + "_tip", s * 3, 0, 0, 0, -s * 0.4F, -s * 0.45F);
+            tip.box("horn_" + side + "_b", left ? 0 : -3, -0.5F, -0.5F, 3, 1, 1, p -> hornPaint(p, left, true));
+        }
+
+        static int hornPaint(Px p, boolean left, boolean tip) {
+            // Keratin: dark with growth rings across its length, a lit ridge on top, the end faces a touch greyer.
+            double along = Math.abs(p.x);
+            int c = HORN;
+            if (((int) Math.floor(along + 0.5)) % 2 == 1) {
+                c = mix(HORN, HORN_DEEP, 0.5);
+            }
+            if (p.face == Face.TOP) {
+                c = mix(c, HORN_LIGHT, tip ? 0.55 : 0.4);
+            } else if (p.face == Face.BOTTOM) {
+                c = mix(c, HORN_DEEP, 0.5);
+            } else if (p.face == (left ? Face.LEFT : Face.RIGHT)) {
+                c = HORN_LIGHT;
+            } else if (p.side()) {
+                c = shade(c, 1.12 - p.fy * 0.25);
+            }
+            return grain(p, c, 0.04);
+        }
+
+        /**
+         * One shoulder dome over the arm's top (its centre 6.5 px out from the body's middle): a wide base around the
+         * shoulder, a narrower middle tier and a small cap, the whole thing tilted so its outer edge dips over the
+         * shoulder. Pad space is the body's shifted to the pivot (x +-4, y -1).
+         */
+        static void pad(Part pads, boolean left) {
+            float s = left ? 1 : -1;
+            String side = left ? "left" : "right";
+            Part pad = pads.child("pad_" + side, s * 4, -1, 0, 0, 0, s * 0.12F);
+            pad.box("pad_" + side + "_base", left ? -0.5F : -5.5F, -0.5F, -3, 6, 3, 6, p -> padPaint(p, left, 0));
+            pad.box("pad_" + side + "_mid", left ? 0.25F : -5.25F, -2.5F, -2.5F, 5, 2, 5, p -> padPaint(p, left, 1));
+            pad.box("pad_" + side + "_cap", left ? 1 : -4, -3.5F, -1.5F, 3, 1, 3, p -> padPaint(p, left, 2));
+        }
+
+        static int padPaint(Px p, boolean left, int tier) {
+            // A glossy purple dome lit from above, the outside and a little from the front. The shading runs down
+            // the whole dome's height (p.y, not each tier's own), so the three steps read as one curved shell; a
+            // highlight sits where the middle tier faces the light. The base's foot row and underside are the brown
+            // strap the dome is buckled to.
+            if (p.face == Face.BOTTOM) {
+                return grain(p, tier == 0 ? STRAP_DARK : SHELL_DEEP, 0.04);
+            }
+            if (p.face == Face.TOP) {
+                double r = Math.max(Math.abs(p.fx - 0.5), Math.abs(p.fy - 0.5)) * 2;
+                int c = tier == 2 ? (r < 0.5 ? SHELL_RIM : mix(SHELL_LIGHT, SHELL_RIM, 0.6)) : tier == 1 ? mix(SHELL_LIGHT, SHELL_RIM, 0.3) : mix(SHELL_LIGHT, SHELL_RIM, 0.1);
+                return grain(p, c, 0.03);
+            }
+            boolean outer = p.face == (left ? Face.LEFT : Face.RIGHT);
+            boolean inner = p.face == (left ? Face.RIGHT : Face.LEFT);
+            double outward = outer ? 1 : inner ? -1 : 0;
+            double forward = p.face == Face.FRONT ? 1 : p.face == Face.BACK ? -1 : 0;
+            if (tier == 0 && p.j == p.fh - 1) {
+                return grain(p, shade(STRAP, 0.82 + outward * 0.14), 0.05);
+            }
+            // Top of the cap (y -3.5) bright, the foot of the base (y 2.5) deep in shadow.
+            double lit = 1.0 - (p.y + 3.5) / 6.0 * 0.55 + outward * 0.16 + forward * 0.06;
+            if (tier == 1 && p.j == 0 && (outer || p.face == Face.FRONT) && (p.face == Face.FRONT ? (left ? p.fx : 1 - p.fx) : 1 - p.fx) > 0.4) {
+                lit += 0.35;
+            }
+            int c = lit > 1.0 ? mix(SHELL_LIGHT, SHELL_RIM, Math.min(1.0, (lit - 1.0) * 2.5)) : mix(SHELL_DEEP, SHELL_LIGHT, lit);
+            if (p.j == 0 && tier == 2) {
+                c = mix(c, SHELL_RIM, 0.25);
+            }
+            return grain(p, c, 0.03);
+        }
+
+        /**
+         * A tail chain under the body from the small of the back: segment k is {@code len[k]} long pivot to pivot,
+         * {@code size[k]} square (plus {@code inflate[k]}), bent by {@code bend[k]} from the one before; each box
+         * starts 0.5 px back inside its parent so the bends never open a gap, and a rounded tip ends the chain.
+         */
+        static void tail(Part body, String name, float[] bend, int[] len, int[] size, float[] inflate, boolean[] band, float tipInflate) {
+            Part seg = body.child(name, 0, 10, 1, bend[0], 0, 0);
+            boolean first = name.equals("tail");
+            for (int k = 0; k < len.length; k++) {
+                if (k > 0) {
+                    seg = seg.child(name + "_" + (k + 1), 0, 0, len[k - 1], bend[k], 0, 0);
+                }
+                float half = size[k] / 2.0F;
+                float z0 = k == 0 ? -1.5F : -0.5F;
+                int d = len[k] + (k == 0 ? 2 : 1);
+                boolean ring = band[k];
+                int segment = k;
+                seg.box(name + "_seg_" + (k + 1), -half, -half, z0, size[k], size[k], d, inflate[k], p -> tailPaint(p, first, ring, segment));
+            }
+            seg.box(name + "_tip", -0.5F, -0.5F, len[len.length - 1] - 0.5F, 1, 1, 2, tipInflate, p -> tailPaint(p, first, false, 9));
+        }
+
+        static int tailPaint(Px p, boolean first, boolean band, int segment) {
+            // A round white tail lit from above: top bright, flanks falling off downward, underside in shadow. The
+            // far end face of each segment is the ring where the next, thinner one starts; the first form carries a
+            // purple band around two of its segments and a crease just past each ring.
+            double lit;
+            switch (p.face) {
+                case TOP -> lit = 1.0;
+                case BOTTOM -> lit = 0.74;
+                case RIGHT, LEFT -> lit = 0.98 - p.fy * 0.22;
+                case BACK -> lit = 0.84;
+                default -> lit = 0.9;
+            }
+            if (first && p.side() && p.z > 0.2 && p.z < 1.0 && segment > 0 && segment < 9) {
+                lit -= 0.06;
+            }
+            int c = WHITE;
+            if (first && band && p.z > 1.4 && p.z < 2.6 && p.face != Face.BACK && p.face != Face.FRONT) {
+                c = BAND;
+                lit += 0.05;
+            }
+            if (segment == 9) {
+                lit -= 0.04;
+            }
+            return grain(p, shade(c, lit), first ? 0.03 : 0.02);
         }
     }
 
