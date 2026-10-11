@@ -159,14 +159,18 @@ public final class CutsceneRunner {
             finish(run, true);
             return run;
         }
-        for (DbzFighterEntity fighter : level.getEntitiesOfClass(DbzFighterEntity.class, new AABB(BlockPos.containing(anchor)).inflate(VIEW_RANGE),
-                f -> f.isAlive() && !f.isNoAi() && !run.actors.containsValue(f))) {
-            fighter.setNoAi(true);
-            fighter.getNavigation().stop();
-            run.paused.add(fighter);
+        if (!scene.free()) {
+            for (DbzFighterEntity fighter : level.getEntitiesOfClass(DbzFighterEntity.class, new AABB(BlockPos.containing(anchor)).inflate(VIEW_RANGE),
+                    f -> f.isAlive() && !f.isNoAi() && !run.actors.containsValue(f))) {
+                fighter.setNoAi(true);
+                fighter.getNavigation().stop();
+                run.paused.add(fighter);
+            }
         }
         for (ServerPlayer viewer : run.viewers) {
-            run.holdAt.put(viewer.getUUID(), viewer.position());
+            if (!scene.free()) {
+                run.holdAt.put(viewer.getUUID(), viewer.position());
+            }
             ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> viewer), CutsceneS2CPacket.start(id, anchor, yaw));
         }
         RUNNING.add(run);
@@ -274,6 +278,9 @@ public final class CutsceneRunner {
             }
         }
         for (ServerPlayer viewer : run.viewers) {
+            if (run.scene.free()) {
+                continue;
+            }
             Vec3 hold = run.holdAt.get(viewer.getUUID());
             if (hold != null && viewer.position().distanceToSqr(hold) > 0.25D) {
                 viewer.teleportTo(run.level, hold.x, hold.y, hold.z, viewer.getYRot(), viewer.getXRot());

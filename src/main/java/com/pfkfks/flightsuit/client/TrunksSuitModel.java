@@ -30,15 +30,21 @@ public final class TrunksSuitModel {
         PartDefinition root = mesh.getRoot();
         PartDefinition head = root.addOrReplaceChild("head", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        head.addOrReplaceChild("head_piece_head", CubeListBuilder.create()
+        PartDefinition head_piece_head = head.addOrReplaceChild("head_piece_head", CubeListBuilder.create()
                 .texOffs(0, 0).addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(0.75F)) // head
                 .texOffs(32, 0).addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(1.0F)) // hat
-                .texOffs(64, 15).addBox(-4.5F, -10.0F, -4.5F, 9.0F, 1.0F, 9.0F) // crown
+                .texOffs(86, 27).addBox(-4.5F, -10.0F, -4.5F, 9.0F, 1.0F, 9.0F) // crown
                 .texOffs(64, 0).addBox(-5.5F, -9.0F, -4.0F, 1.0F, 7.0F, 8.0F) // hair_right
                 .texOffs(82, 0).addBox(4.5F, -9.0F, -4.0F, 1.0F, 7.0F, 8.0F) // hair_left
-                .texOffs(100, 15).addBox(-5.0F, -9.0F, 4.5F, 10.0F, 8.0F, 1.0F) // hair_back
-                .texOffs(118, 41).addBox(-4.0F, -9.0F, -5.5F, 3.0F, 3.0F, 1.0F) // lock_right
-                .texOffs(64, 47).addBox(1.0F, -9.0F, -5.5F, 3.0F, 3.0F, 1.0F), // lock_left
+                .texOffs(82, 38).addBox(-5.0F, -9.0F, 4.5F, 10.0F, 8.0F, 1.0F) // hair_back
+                .texOffs(88, 64).addBox(-4.0F, -9.0F, -5.5F, 3.0F, 3.0F, 1.0F) // lock_right
+                .texOffs(96, 64).addBox(1.0F, -9.0F, -5.5F, 3.0F, 3.0F, 1.0F), // lock_left
+                PartPose.offset(0.0F, 0.0F, 0.0F));
+        head_piece_head.addOrReplaceChild("mane", CubeListBuilder.create()
+                .texOffs(64, 15).addBox(-5.0F, -13.0F, -3.0F, 10.0F, 3.0F, 9.0F) // mane_crown
+                .texOffs(102, 15).addBox(-5.0F, -10.0F, 4.5F, 10.0F, 10.0F, 2.0F) // mane_top
+                .texOffs(64, 27).addBox(-4.5F, 0.0F, 5.0F, 9.0F, 9.0F, 2.0F) // mane_mid
+                .texOffs(64, 38).addBox(-3.5F, 9.0F, 5.5F, 7.0F, 8.0F, 2.0F), // mane_low
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         head.addOrReplaceChild("chest_piece_head", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
@@ -55,19 +61,19 @@ public final class TrunksSuitModel {
         PartDefinition chest_piece_body = body.addOrReplaceChild("chest_piece_body", CubeListBuilder.create()
                 .texOffs(16, 16).addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, new CubeDeformation(0.4F)) // body
                 .texOffs(16, 32).addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, new CubeDeformation(0.65F)) // jacket
-                .texOffs(72, 47).addBox(-5.0F, -2.0F, 2.0F, 10.0F, 2.0F, 1.0F) // collar_back
-                .texOffs(112, 33).addBox(-5.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F) // collar_right
-                .texOffs(64, 41).addBox(4.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F), // collar_left
+                .texOffs(104, 64).addBox(-5.0F, -2.0F, 2.0F, 10.0F, 2.0F, 1.0F) // collar_back
+                .texOffs(88, 56).addBox(-5.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F) // collar_right
+                .texOffs(98, 56).addBox(4.0F, -2.0F, -2.0F, 1.0F, 2.0F, 4.0F), // collar_left
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         PartDefinition sheath = chest_piece_body.addOrReplaceChild("sheath", CubeListBuilder.create()
                 .texOffs(100, 0).addBox(-1.0F, -5.0F, -0.5F, 2.0F, 14.0F, 1.0F) // scabbard
-                .texOffs(94, 47).addBox(-1.5F, 9.0F, -1.0F, 3.0F, 1.0F, 2.0F) // chape
-                .texOffs(104, 47).addBox(-1.5F, -6.0F, -1.0F, 3.0F, 1.0F, 2.0F), // throat
+                .texOffs(64, 68).addBox(-1.5F, 9.0F, -1.0F, 3.0F, 1.0F, 2.0F) // chape
+                .texOffs(74, 68).addBox(-1.5F, -6.0F, -1.0F, 3.0F, 1.0F, 2.0F), // throat
                 PartPose.offsetAndRotation(0.0F, 4.5F, 3.4F, 0.0F, 0.0F, -0.55F));
         sheath.addOrReplaceChild("hilt", CubeListBuilder.create()
-                .texOffs(78, 41).addBox(-2.5F, -7.0F, -1.5F, 5.0F, 1.0F, 3.0F) // guard
-                .texOffs(74, 41).addBox(-0.5F, -12.0F, -0.5F, 1.0F, 5.0F, 1.0F) // grip
-                .texOffs(114, 47).addBox(-1.0F, -13.0F, -1.0F, 2.0F, 1.0F, 2.0F), // pommel
+                .texOffs(112, 56).addBox(-2.5F, -7.0F, -1.5F, 5.0F, 1.0F, 3.0F) // guard
+                .texOffs(108, 56).addBox(-0.5F, -12.0F, -0.5F, 1.0F, 5.0F, 1.0F) // grip
+                .texOffs(84, 68).addBox(-1.0F, -13.0F, -1.0F, 2.0F, 1.0F, 2.0F), // pommel
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         body.addOrReplaceChild("legs_piece_body", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
@@ -80,7 +86,7 @@ public final class TrunksSuitModel {
         right_arm.addOrReplaceChild("chest_piece_right_arm", CubeListBuilder.create()
                 .texOffs(40, 16).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.4F)) // arm
                 .texOffs(40, 32).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.65F)) // sleeve
-                .texOffs(64, 25).addBox(-4.0F, 5.0F, -3.0F, 6.0F, 2.0F, 6.0F), // cuff_right
+                .texOffs(104, 38).addBox(-4.0F, 5.0F, -3.0F, 6.0F, 2.0F, 6.0F), // cuff_right
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         right_arm.addOrReplaceChild("legs_piece_right_arm", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
@@ -93,7 +99,7 @@ public final class TrunksSuitModel {
         left_arm.addOrReplaceChild("chest_piece_left_arm", CubeListBuilder.create()
                 .texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.4F)) // arm
                 .texOffs(48, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.65F)) // sleeve
-                .texOffs(88, 25).addBox(-2.0F, 5.0F, -3.0F, 6.0F, 2.0F, 6.0F), // cuff_left
+                .texOffs(64, 48).addBox(-2.0F, 5.0F, -3.0F, 6.0F, 2.0F, 6.0F), // cuff_left
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         left_arm.addOrReplaceChild("legs_piece_left_arm", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
@@ -112,8 +118,8 @@ public final class TrunksSuitModel {
         right_leg.addOrReplaceChild("feet_piece_right_leg", CubeListBuilder.create()
                 .texOffs(0, 24).addBox(-2.0F, 8.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.5F)) // shin
                 .texOffs(0, 40).addBox(-2.0F, 8.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.75F)) // shin_pants
-                .texOffs(64, 33).addBox(-3.0F, 7.0F, -3.0F, 6.0F, 2.0F, 6.0F) // boot_cuff_right
-                .texOffs(94, 41).addBox(-2.0F, 10.0F, -4.0F, 4.0F, 2.0F, 2.0F), // toe_right
+                .texOffs(88, 48).addBox(-3.0F, 7.0F, -3.0F, 6.0F, 2.0F, 6.0F) // boot_cuff_right
+                .texOffs(64, 64).addBox(-2.0F, 10.0F, -4.0F, 4.0F, 2.0F, 2.0F), // toe_right
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         PartDefinition left_leg = root.addOrReplaceChild("left_leg", CubeListBuilder.create(),
                 PartPose.offset(1.9F, 12.0F, 0.0F));
@@ -128,10 +134,10 @@ public final class TrunksSuitModel {
         left_leg.addOrReplaceChild("feet_piece_left_leg", CubeListBuilder.create()
                 .texOffs(16, 56).addBox(-2.0F, 8.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.5F)) // shin
                 .texOffs(0, 56).addBox(-2.0F, 8.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.75F)) // shin_pants
-                .texOffs(88, 33).addBox(-3.0F, 7.0F, -3.0F, 6.0F, 2.0F, 6.0F) // boot_cuff_left
-                .texOffs(106, 41).addBox(-2.0F, 10.0F, -4.0F, 4.0F, 2.0F, 2.0F), // toe_left
+                .texOffs(64, 56).addBox(-3.0F, 7.0F, -3.0F, 6.0F, 2.0F, 6.0F) // boot_cuff_left
+                .texOffs(76, 64).addBox(-2.0F, 10.0F, -4.0F, 4.0F, 2.0F, 2.0F), // toe_left
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        return LayerDefinition.create(mesh, 128, 64);
+        return LayerDefinition.create(mesh, 128, 128);
     }
     // </ModelGen:trunks_mk5>
 }

@@ -137,8 +137,8 @@ public final class ScrapArts {
     }
 
     /**
-     * Burning: coal every tick, and every few ticks everything in the cone ahead takes a lick of fire and catches.
-     * Nothing but flesh burns - the suit's owner has a village to keep (so no fire on blocks).
+     * Burning: coal every tick, and every few ticks everything in the cone ahead takes a lick of fire and catches - and
+     * so does the ground and whatever it hits (the user's call: a flamethrower that doesn't burn is no flamethrower).
      */
     static void tickFlame(ServerPlayer player, SuitWeapons.State state) {
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLAME_DRAIN)) {
@@ -173,6 +173,24 @@ public final class ScrapArts {
             target.invulnerableTime = 0;
             target.hurt(player.damageSources().playerAttack(player), damage);
             target.setSecondsOnFire(SuitTuning.FLAME_BURN_SECONDS);
+        }
+        // And the world burns (M18 feedback): the face the flame licks, or the ground under the cone, catches fire.
+        if (level.random.nextFloat() < SuitTuning.FLAME_IGNITE_CHANCE) {
+            Vec3 far = from.add(look.scale(SuitTuning.FLAME_REACH));
+            BlockHitResult hit = level.clip(new ClipContext(from, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            BlockPos at;
+            if (hit.getType() == HitResult.Type.BLOCK) {
+                at = hit.getBlockPos().relative(hit.getDirection());
+            } else {
+                at = BlockPos.containing(from.add(look.scale(1.5D + level.random.nextDouble() * (SuitTuning.FLAME_REACH - 1.5D))));
+                for (int i = 0; i < 4 && level.getBlockState(at.below()).isAir(); i++) {
+                    at = at.below();
+                }
+            }
+            if (level.isEmptyBlock(at) && net.minecraft.world.level.block.BaseFireBlock.canBePlacedAt(level, at, net.minecraft.core.Direction.UP)
+                    && level.mayInteract(player, at)) {
+                level.setBlock(at, net.minecraft.world.level.block.BaseFireBlock.getState(level, at), 11);
+            }
         }
     }
 

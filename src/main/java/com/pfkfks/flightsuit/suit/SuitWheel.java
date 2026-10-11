@@ -281,7 +281,13 @@ public final class SuitWheel {
         return true;
     }
 
-    /** House Party Protocol: every healthy docked suit in this dimension flies out to you, up to capacity. */
+    /** How long the House Party's suits hunt on their own before they come back to heel. */
+    private static final long HUNT_TICKS = 6000L;
+
+    /**
+     * House Party Protocol: every healthy docked suit in this dimension flies out, up to capacity - and (M18 feedback:
+     * "they go off and fight on their own, not just round me") sweeps the country round where you called for a while.
+     */
     private static void houseParty(ServerPlayer player) {
         int out = Companions.owned(player, COMPANION_RANGE).size();
         int launched = 0;
@@ -296,8 +302,14 @@ public final class SuitWheel {
             if (station == null || !station.hasSuit() || anyBroken(station.getParts().values())) {
                 continue;
             }
-            deployFromStation(player, station);
+            SuitCompanionEntity suit = deployFromStation(player, station);
+            if (suit != null) {
+                suit.startHunt(player.position(), HUNT_TICKS);
+            }
             launched++;
+        }
+        for (SuitCompanionEntity suit : Companions.owned(player, COMPANION_RANGE)) {
+            suit.startHunt(player.position(), HUNT_TICKS);
         }
         player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.0F, 0.7F);
         player.displayClientMessage(Component.translatable(launched > 0 ? "message.flightsuit.house_party" : "message.flightsuit.house_party_none",
@@ -313,25 +325,26 @@ public final class SuitWheel {
      * {@link #HORIZON} would take too long: the suit shows up high on the horizon in that direction instead,
      * where it's only a speck, and streaks in from there.
      */
-    private static void deployFromStation(ServerPlayer player, SuitStationBlockEntity station) {
+    private static SuitCompanionEntity deployFromStation(ServerPlayer player, SuitStationBlockEntity station) {
         Map<EquipmentSlot, ItemStack> parts = station.takeAll();
         if (parts.isEmpty()) {
-            return;
+            return null;
         }
         Vec3 origin = station.dockPoint();
         Vec3 toOrigin = origin.subtract(player.position());
         ServerLevel level = player.serverLevel();
         if (toOrigin.length() <= HORIZON) {
             Vec3 front = Vec3.atLowerCornerOf(station.getBlockState().getValue(SuitStationBlock.FACING).getNormal());
-            SuitCompanionEntity.spawnArriving(player, parts, origin, front.scale(0.6D).add(0.0D, 0.8D, 0.0D).normalize());
+            SuitCompanionEntity suit = SuitCompanionEntity.spawnArriving(player, parts, origin, front.scale(0.6D).add(0.0D, 0.8D, 0.0D).normalize());
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, origin.x, origin.y, origin.z, 20, 0.3D, 0.2D, 0.3D, 0.1D);
             level.playSound(null, BlockPos.containing(origin), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.2F);
-            return;
+            return suit;
         }
         Vec3 horizon = player.position().add(toOrigin.normalize().scale(HORIZON));
         double height = Math.min(player.getY() + 30.0D, level.getMaxBuildHeight() - 4.0D);
-        SuitCompanionEntity.spawnArriving(player, parts, new Vec3(horizon.x, height, horizon.z), null);
+        SuitCompanionEntity suit = SuitCompanionEntity.spawnArriving(player, parts, new Vec3(horizon.x, height, horizon.z), null);
         level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.5F, 0.6F);
+        return suit;
     }
 
     /** A capsule suit unfolds right where it's aimed and joins as a companion. */

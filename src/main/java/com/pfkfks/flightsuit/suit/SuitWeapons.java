@@ -77,8 +77,8 @@ public final class SuitWeapons {
     public static final byte FIRE_CARDS = 3;
     /** M17: the Hulkbuster's flurry of punches. */
     public static final byte FIRE_PUNCH = 5;
-    /** M18 Mark 4: the Hylian shield raised (right click held with the Master Sword in hand). */
-    public static final byte FIRE_SHIELD = 7;
+    /** M18 Mark 4: the spin attack charging (right click held with the Master Sword in hand; the shield is Z). */
+    public static final byte FIRE_SPIN = 7;
     /** M18 Mark 5: charging a ki slash. */
     public static final byte FIRE_CHARGE = 8;
     /** M18 Mark 7: the staff's beam - healing an ally or shooting holy arrows at a foe. */
@@ -126,6 +126,10 @@ public final class SuitWeapons {
         long chainUntil;
         byte chainLast;
         long shieldRaisedAt;
+        /** M18 feedback: the Hylian shield up (Z held); the spin attack charging (right click held) and its cooldown. */
+        boolean shieldHeld;
+        int spinCharge;
+        long spinReady;
         // Mark 1 unibeam charging; Mark 3 shadow step (SuitSkills): cooldown, and the step under way.
         int unibeamCharge;
         long stepReady;
@@ -169,9 +173,16 @@ public final class SuitWeapons {
         final java.util.Set<LivingEntity> flashHit = new java.util.HashSet<>();
         boolean superSaiyan;
         long ssjLockedUntil;
-        /** M18 Mark 5: the ki slash charging (right click held); the ki volley's shots left. */
+        /** M18 Mark 5: the ki slash charging (right click held). */
         int chargeTicks;
-        int volleyLeft;
+        /** M18 feedback Mark 5: the Dragon Fist under way (-1: not), its heading, whether he was golden before, who it has hit. */
+        int dragonTicks = -1;
+        Vec3 dragonDir = Vec3.ZERO;
+        Vec3 dragonLast = Vec3.ZERO;
+        boolean dragonHadSsj;
+        boolean ssj3;
+        final java.util.Set<LivingEntity> dragonHit = new java.util.HashSet<>();
+        com.pfkfks.flightsuit.entity.DragonFistEntity dragon;
         // M17 Mark 3 (PhantomArts): stealing, and the stolen skill's cooldown and charge.
         long stealReady;
         int stealTicks;
@@ -294,7 +305,7 @@ public final class SuitWeapons {
                     case STANDARD -> fireMissiles(player, state);
                     case STEALTH -> MarkArts.drill(player, state);
                     case PHANTOM -> PhantomCards.judgmentDraw(player, state);
-                    case HERO -> HeroArts.spinAttack(player, state);
+                    case HERO -> HeroArts.bow(player, state);
                     case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
                     case SWORDSMAN -> SwordArts.burningAttack(player, state);
                     case CANNONEER -> CannonArts.militia(player, state);
@@ -335,7 +346,7 @@ public final class SuitWeapons {
                     case PHANTOM -> PhantomArts.useStolen(player, state);
                     case HERO -> HeroArts.boomerang(player, state);
                     case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
-                    case SWORDSMAN -> SwordArts.volley(player, state);
+                    case SWORDSMAN -> SwordArts.dragonFist(player, state);
                     case CANNONEER -> CannonArts.monkeyRush(player, state);
                     case BISHOP -> BishopArts.heavensDoor(player, state);
                 }
@@ -366,7 +377,7 @@ public final class SuitWeapons {
             case SCRAP -> FIRE_FLAME;
             case STEALTH -> FIRE_CRYO;
             case PHANTOM -> FIRE_CARDS;
-            case HERO -> FIRE_SHIELD;
+            case HERO -> FIRE_SPIN;
             case HULKBUSTER -> FIRE_PUNCH;
             case SWORDSMAN -> FIRE_CHARGE;
             case CANNONEER -> FIRE_CANNON;
@@ -381,8 +392,8 @@ public final class SuitWeapons {
         if (isBeam(state.firing)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6F,
                     state.firing == FIRE_CRYO ? 1.9F : state.firing == FIRE_HOLY ? 1.4F : 1.6F);
-        } else if (state.firing == FIRE_SHIELD) {
-            HeroArts.raiseShield(player, state);
+        } else if (state.firing == FIRE_SPIN) {
+            HeroArts.startSpinCharge(player, state);
         } else if (state.firing == FIRE_CHARGE) {
             SwordArts.startCharge(player, state);
         } else if (state.firing == FIRE_FLAME) {
@@ -400,8 +411,8 @@ public final class SuitWeapons {
         ModNetwork.sendToTrackingAndSelf(player, new BeamStateS2CPacket(player.getId(), FIRE_NONE));
         if (isBeam(was)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.4F, 1.8F);
-        } else if (was == FIRE_SHIELD) {
-            HeroArts.lowerShield(player);
+        } else if (was == FIRE_SPIN) {
+            HeroArts.releaseSpin(player, state);
         } else if (was == FIRE_CHARGE) {
             SwordArts.releaseCharge(player, state);
         } else if (was == FIRE_FLAME) {
@@ -426,7 +437,7 @@ public final class SuitWeapons {
                 switch (state.firing) {
                     case FIRE_CARDS -> PhantomCards.tickStream(player, state);
                     case FIRE_PUNCH -> HulkbusterArts.tickFlurry(player, state);
-                    case FIRE_SHIELD -> HeroArts.tickShield(player, state);
+                    case FIRE_SPIN -> HeroArts.tickSpinCharge(player, state);
                     case FIRE_CHARGE -> SwordArts.tickCharge(player, state);
                     case FIRE_HOLY -> BishopArts.tickHoly(player, state);
                     case FIRE_CANNON -> CannonArts.tickCannon(player, state);

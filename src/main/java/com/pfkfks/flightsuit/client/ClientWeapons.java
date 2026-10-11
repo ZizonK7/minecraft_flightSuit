@@ -125,6 +125,8 @@ public final class ClientWeapons {
         holding = false;
         FIRING_BEFORE.clear();
         com.pfkfks.flightsuit.suit.SwordArts.GOLDEN.clear();
+        com.pfkfks.flightsuit.suit.SwordArts.SSJ3.clear();
+        DragonFistRenderer.reset();
         com.pfkfks.flightsuit.suit.CandyShrink.CLIENT.clear();
         HeroRenderer.reset();
     }

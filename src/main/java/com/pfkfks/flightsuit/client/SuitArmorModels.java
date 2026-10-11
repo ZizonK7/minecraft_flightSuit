@@ -165,6 +165,7 @@ public final class SuitArmorModels {
             SuitModel model = (player ? CUSTOM_BAKED : CUSTOM_OTHER).get(suitId).get(slot);
             // Trunks: the hilt leaves his back while the sword is in his hand.
             model.setSwordDrawn(wearer.getMainHandItem().is(com.pfkfks.flightsuit.registry.ModItems.TRUNKS_SWORD.get()));
+            model.setSsj3(com.pfkfks.flightsuit.suit.SwordArts.SSJ3.contains(wearer.getId()));
             return model;
         }
         return player ? BAKED.get(slot) : BAKED_OTHER.get(slot);

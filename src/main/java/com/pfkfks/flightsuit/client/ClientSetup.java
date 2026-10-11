@@ -79,6 +79,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.VERONICA_POD.get(), VeronicaPodRenderer::new);
         event.registerEntityRenderer(ModEntities.CUTSCENE_CAMERA.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(ModEntities.SHENRON.get(), ShenronRenderer::new);
+        event.registerEntityRenderer(ModEntities.DRAGON_FIST.get(), DragonFistRenderer::new);
         event.registerEntityRenderer(ModEntities.TOWNSFOLK.get(), TownsfolkRenderer::new);
         event.registerEntityRenderer(ModEntities.CANNONBALL.get(), CannonballRenderer::new);
         event.registerEntityRenderer(ModEntities.MONKEY.get(), MonkeyRenderer::new);

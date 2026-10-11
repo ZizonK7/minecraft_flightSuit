@@ -69,6 +69,7 @@ public final class ClientPacketHandler {
     /** Golden hair on or off (Super Saiyan), candy-small or back (the stolen candy beam). */
     public static void handleEntityFx(EntityFxS2CPacket packet) {
         java.util.Set<Integer> set = packet.effect == EntityFxS2CPacket.GOLDEN ? com.pfkfks.flightsuit.suit.SwordArts.GOLDEN
+                : packet.effect == EntityFxS2CPacket.SSJ3 ? com.pfkfks.flightsuit.suit.SwordArts.SSJ3
                 : com.pfkfks.flightsuit.suit.CandyShrink.CLIENT;
         if (packet.on) {
             set.add(packet.entityId);

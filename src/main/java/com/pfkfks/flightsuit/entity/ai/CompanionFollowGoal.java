@@ -35,7 +35,7 @@ public class CompanionFollowGoal extends Goal {
     @Override
     public boolean canUse() {
         Player owner = suit.getOwner();
-        return owner != null && owner.isAlive() && !owner.isSpectator() && !suit.isBusy() && suit.getTarget() == null;
+        return owner != null && owner.isAlive() && !owner.isSpectator() && !suit.isBusy() && suit.getTarget() == null && !suit.isHunting();
     }
 
     @Override

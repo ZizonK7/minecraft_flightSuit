@@ -189,10 +189,23 @@ public final class MarkArts {
         Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
         Vec3 pod = eye.add(right.scale(0.45D * side)).add(0.0D, 0.15D, 0.0D).add(look.scale(0.2D));
         Vec3 dir = target.getBoundingBox().getCenter().subtract(pod).normalize();
-        ServerPlayer shooter = player;
-        KiShots.fire(level, player, KiShots.Style.KI, pod, dir, 2.4D, SuitTuning.SHOULDER_RANGE + 4.0D, SuitTuning.SHOULDER_DAMAGE, 0.0D,
-                entity -> !SuitWeapons.isFriendly(shooter, entity));
-        level.playSound(null, player.blockPosition(), SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 0.5F, 1.7F + side * 0.1F);
+        // A round, not a ki ball (M18 feedback): hitscan, drawn as a thin hot tracer from the pod to where it struck.
+        Vec3 far = pod.add(dir.scale(SuitTuning.SHOULDER_RANGE + 4.0D));
+        BlockHitResult block = level.clip(new ClipContext(pod, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        Vec3 end = block.getType() == HitResult.Type.MISS ? far : block.getLocation();
+        net.minecraft.world.phys.EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(level, player, pod, end,
+                new AABB(pod, end).inflate(0.4D), entity -> entity instanceof LivingEntity && entity.isAlive() && !entity.isSpectator()
+                        && entity.isPickable() && !SuitWeapons.isFriendly(player, entity));
+        if (hit != null) {
+            end = hit.getLocation();
+            LivingEntity victim = (LivingEntity) hit.getEntity();
+            victim.invulnerableTime = 0;
+            victim.hurt(player.damageSources().playerAttack(player), SuitTuning.SHOULDER_DAMAGE);
+            KiFx.burst(level, end, 0xFFE9A0, 0.5F, 4, KiFx.SPARK);
+        }
+        KiFx.beam(level, pod, end, 0xFFE9A0, 0.06F, 4, KiFx.BEAM_THIN, null, KiFx.AT_POS, null);
+        KiFx.burst(level, pod, 0xFFE9A0, 0.35F, 3, KiFx.FLASH);
+        level.playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 0.45F, 1.7F + side * 0.1F);
     }
 
     /** Monsters within {@code radius} glow for {@code ticks}; how many. */

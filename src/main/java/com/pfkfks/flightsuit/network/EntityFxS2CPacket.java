@@ -14,6 +14,8 @@ import java.util.function.Supplier;
 public class EntityFxS2CPacket {
     public static final byte GOLDEN = 0;
     public static final byte CANDY = 1;
+    /** M18 feedback: Super Saiyan 3 (the Dragon Fist) - the mane and the lightning. */
+    public static final byte SSJ3 = 2;
 
     public final int entityId;
     public final byte effect;

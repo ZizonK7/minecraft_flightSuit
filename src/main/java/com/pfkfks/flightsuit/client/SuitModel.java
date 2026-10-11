@@ -23,6 +23,9 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
     /** Trunks: the sword's hilt on his back (null for suits without one), hidden while the sword is in his hand. */
     private final ModelPart hilt;
     private boolean swordDrawn;
+    /** Trunks: the Super Saiyan 3 mane down the back (null for other suits), shown only then (M18 feedback). */
+    private final ModelPart mane;
+    private boolean ssj3;
 
     public SuitModel(ModelPart root, float[][] shifts, EquipmentSlot slot) {
         super(root, shifts);
@@ -34,6 +37,15 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
             }
         }
         hilt = hiltOf(pieces[1][1]);
+        mane = childOf(pieces[0][0], "mane");
+    }
+
+    private static ModelPart childOf(ModelPart part, String name) {
+        try {
+            return part.getChild(name);
+        } catch (java.util.NoSuchElementException missing) {
+            return null;
+        }
     }
 
     private static ModelPart hiltOf(ModelPart chest) {
@@ -47,6 +59,10 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
     /** Set just before rendering for the wearer at hand (SuitArmorModels.forWearer). */
     public void setSwordDrawn(boolean drawn) {
         swordDrawn = drawn;
+    }
+
+    public void setSsj3(boolean on) {
+        ssj3 = on;
     }
 
     private void showPieces(EquipmentSlot only) {
@@ -63,6 +79,9 @@ public class SuitModel extends ShiftedHumanoidModel<LivingEntity> {
         showPieces(slot);
         if (hilt != null) {
             hilt.visible = !swordDrawn;
+        }
+        if (mane != null) {
+            mane.visible = ssj3;
         }
         super.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
     }

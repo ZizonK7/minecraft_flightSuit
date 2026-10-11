@@ -588,7 +588,8 @@ public final class KiFxClient {
             }
             int colour = auraOf(e);
             if (colour != 0) {
-                aura(c, e, colour, pt, time, e instanceof DbzFighterEntity f && f.getCharacter() == DbzCharacter.GOHAN_TEEN_SSJ2);
+                aura(c, e, colour, pt, time, e instanceof DbzFighterEntity f && f.getCharacter() == DbzCharacter.GOHAN_TEEN_SSJ2
+                        || com.pfkfks.flightsuit.suit.SwordArts.SSJ3.contains(e.getId()));
             }
         }
     }

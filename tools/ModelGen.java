@@ -1564,7 +1564,11 @@ public class ModelGen {
         static BufferedImage golden(Model m) {
             BufferedImage out = new BufferedImage(m.tex.getWidth(), m.tex.getHeight(), BufferedImage.TYPE_INT_ARGB);
             out.getGraphics().drawImage(m.tex, 0, 0, null);
-            for (Box b : helmet.boxes) {
+            java.util.List<Box> hairBoxes = new java.util.ArrayList<>(helmet.boxes);
+            for (Part child : helmet.children) {
+                hairBoxes.addAll(child.boxes);
+            }
+            for (Box b : hairBoxes) {
                 for (int y = b.v; y < b.v + b.uvH() && y < out.getHeight(); y++) {
                     for (int x = b.u; x < b.u + b.uvW() && x < out.getWidth(); x++) {
                         int argb = out.getRGB(x, y);
@@ -1586,7 +1590,7 @@ public class ModelGen {
         }
 
         static Model build() throws IOException {
-            Model m = new Model("trunks_mk5", 128, 64);
+            Model m = new Model("trunks_mk5", 128, 128);
             m.skin = ImageIO.read(reference("trunks_mk5_skin_source.png"));
             m.packX = 64;
             Map<String, Part> limbs = humanoid(m);
@@ -1603,6 +1607,13 @@ public class ModelGen {
                     .box("hair_back", -5, -9, 4.5F, 10, 8, 1, Trunks::hair)
                     .box("lock_right", -4, -9, -5.5F, 3, 3, 1, Trunks::hair)
                     .mirrored("lock_left", -4, -9, -5.5F, 3, 3, 1, Trunks::hair);
+            // M18 feedback: the Super Saiyan 3 mane for the Dragon Fist - a taller crown swept back and hair down to
+            // the waist, its own part so SuitModel shows it only then (gold in the _ssj texture like the rest).
+            helmet.child("mane", 0, 0, 0)
+                    .box("mane_crown", -5, -13, -3, 10, 3, 9, Trunks::hair)
+                    .box("mane_top", -5, -10, 4.5F, 10, 10, 2, Trunks::hair)
+                    .box("mane_mid", -4.5F, 0, 5, 9, 9, 2, Trunks::hair)
+                    .box("mane_low", -3.5F, 9, 5.5F, 7, 8, 2, Trunks::hair);
 
             // Chest: jacket body and arms from the skin, a stand-up collar, rolled sleeve cuffs, and the sword on
             // his back - hilt over the right shoulder, sheath down to the left hip.

@@ -80,6 +80,17 @@ public final class CounterHandler {
             setShield(player, false);
             return;
         }
+        if (suitClass == SuitClass.HERO) {
+            // M18 feedback: Z is the Hylian shield - up while held (the perfect guard is timed from the press, HeroArts).
+            SuitWeapons.State state = SuitWeapons.state(player);
+            if (action == PRESS) {
+                HeroArts.setShield(player, state, true);
+            } else if (action == RELEASE) {
+                HeroArts.setShield(player, state, false);
+            }
+            setShield(player, false);
+            return;
+        }
         if (suitClass == SuitClass.HULKBUSTER) {
             // Tap: the parry as ever; held: armour mode instead of the nano shield.
             switch (action) {

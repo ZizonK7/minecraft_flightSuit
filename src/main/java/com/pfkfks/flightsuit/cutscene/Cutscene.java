@@ -117,9 +117,12 @@ public final class Cutscene {
     private final List<Shot> shots;
     private final List<Act> acts;
     private final int length;
+    /** M18: a free scene steers the camera only - the watchers aren't held or hidden, nobody near is paused. */
+    private final boolean free;
 
-    private Cutscene(String id, List<Cast> cast, List<Shot> shots, List<Act> acts) {
+    private Cutscene(String id, List<Cast> cast, List<Shot> shots, List<Act> acts, boolean free) {
         this.id = id;
+        this.free = free;
         this.cast = Collections.unmodifiableList(cast);
         this.shots = Collections.unmodifiableList(shots);
         List<Act> sorted = new ArrayList<>(acts);
@@ -142,6 +145,10 @@ public final class Cutscene {
 
     public List<Shot> shots() {
         return shots;
+    }
+
+    public boolean free() {
+        return free;
     }
 
     public List<Act> acts() {
@@ -215,6 +222,7 @@ public final class Cutscene {
         private final List<Cast> cast = new ArrayList<>();
         private final List<Shot> shots = new ArrayList<>();
         private final List<Act> acts = new ArrayList<>();
+        private boolean free;
         private int shotStart;
         private int shotTicks = -1;
         private Vec3 camFrom = new Vec3(0, 3, -8);
@@ -407,13 +415,19 @@ public final class Cutscene {
             return act("", Kind.SHAKE, Vec3.ZERO, null, ticks, 0, null, null);
         }
 
+        /** The camera only: the watchers keep moving and are drawn (a suit's big move, SuitCutscenes). */
+        public Builder free() {
+            free = true;
+            return this;
+        }
+
         public Cutscene build() {
             closeShot();
             shotTicks = -1;
             if (shots.isEmpty()) {
                 throw new IllegalStateException("cutscene " + id + " has no shots");
             }
-            return new Cutscene(id, cast, shots, acts);
+            return new Cutscene(id, cast, shots, acts, free);
         }
     }
 }

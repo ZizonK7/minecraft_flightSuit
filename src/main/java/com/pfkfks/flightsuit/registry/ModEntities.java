@@ -182,6 +182,16 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("townsfolk"));
 
+    /** The Dragon Fist's golden dragon (SwordArts, M18 feedback): rides the puncher for a few seconds; never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.DragonFistEntity>> DRAGON_FIST = ENTITY_TYPES.register("dragon_fist",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.DragonFistEntity>of(com.pfkfks.flightsuit.entity.DragonFistEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 1.0F)
+                    .noSave()
+                    .fireImmune()
+                    .clientTrackingRange(10)
+                    .updateInterval(2)
+                    .build("dragon_fist"));
+
     /** Shenron, summoned by the Dragon Balls (DragonBalls) - never saved; huge, so seen from far off. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.dbz.ShenronEntity>> SHENRON = ENTITY_TYPES.register("shenron",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.dbz.ShenronEntity>of(com.pfkfks.flightsuit.planet.dbz.ShenronEntity::new, MobCategory.MISC)

@@ -32,8 +32,8 @@ import java.util.Set;
  * the first thing it meets, hurting everything round the burst and shoving it back. The giant one (the ultimate)
  * is five times the size, flies straight and slow, bowls through whatever it meets - each foe hurt once - and
  * bursts big where it stops. Whatever a ball strikes head-on takes the hit (the splash is for foes); where it bursts,
- * soft blocks go too - the giant one cracks stone (never inside the shooter's own village). Never hurts the
- * shooter's side (SuitWeapons.isFriendly).
+ * soft blocks go too - the giant one cracks stone (the shooter's own village included: that's the price, the
+ * user's call). Never hurts the shooter's side (SuitWeapons.isFriendly).
  */
 public class CannonballEntity extends ThrowableProjectile {
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(CannonballEntity.class, EntityDataSerializers.FLOAT);
@@ -224,14 +224,11 @@ public class CannonballEntity extends ThrowableProjectile {
         discard();
     }
 
-    /** The blocks the burst takes with it: soft ones round an ordinary ball, stone round the giant one. Not in a village of the owner's. */
+    /** The blocks the burst takes with it: soft ones round an ordinary ball, stone round the giant one. */
     private void crater(ServerLevel level, Vec3 at) {
         double reach = giant ? SuitTuning.CANNON_BREAK_RADIUS * 2.0D : SuitTuning.CANNON_BREAK_RADIUS;
         float maxHardness = giant ? SuitTuning.BHGC_BREAK_HARDNESS : SuitTuning.CANNON_BREAK_HARDNESS;
         net.minecraft.core.BlockPos centre = net.minecraft.core.BlockPos.containing(at);
-        if (com.pfkfks.flightsuit.village.Villages.containing(level, centre) != null) {
-            return;
-        }
         int r = (int) Math.ceil(reach);
         int broken = 0;
         for (net.minecraft.core.BlockPos pos : net.minecraft.core.BlockPos.betweenClosed(centre.offset(-r, -r, -r), centre.offset(r, r, r))) {

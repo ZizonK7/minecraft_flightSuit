@@ -12,6 +12,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -79,7 +81,7 @@ public final class SwordArts {
         if (cutting(player, state)) {
             cutProjectiles(player);
         }
-        tickVolley(player, state);
+        tickDragon(player, state);
     }
 
     /** True for a moment after each cut (M18: the sword's an item, a cut is a click) - when ki and arrows get cut. */
@@ -552,46 +554,187 @@ public final class SwordArts {
 
     // ---------------------------------------------------------------- ki volley (B, M18)
 
-    static void volley(ServerPlayer player, SuitWeapons.State state) {
+    // ---------------------------------------------------------------- the Dragon Fist (B, M18 feedback)
+
+    /** Who is Super Saiyan 3 right now (client side: the long mane on the Trunks suit, lightning in the aura). */
+    public static final Set<Integer> SSJ3 = ConcurrentHashMap.newKeySet();
+
+    /**
+     * The Dragon Fist (DESIGN.md M18 1차 피드백: "기탄 연사를 용권으로, 컷신, 초사이어인 3"): a short free cutscene
+     * (SuitCutscenes.DRAGON_FIST - the camera only, he keeps moving) while he powers up to Super Saiyan 3, then he
+     * flies forward in a golden dragon (DragonFistEntity) and everything along the way takes the bite once.
+     */
+    static void dragonFist(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
-        if (now < state.skill3Ready || state.volleyLeft > 0) {
+        if (now < state.skill3Ready || state.dragonTicks >= 0) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.VOLLEY_COST)) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.DRAGON_FIST_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill3Ready = now + SuitTuning.VOLLEY_COOLDOWN_TICKS;
-        state.volleyLeft = SuitTuning.VOLLEY_SHOTS;
+        state.skill3Ready = now + SuitTuning.DRAGON_FIST_COOLDOWN_TICKS;
+        state.dragonTicks = 0;
+        state.dragonHadSsj = state.superSaiyan;
+        state.dragonHit.clear();
+        state.dragonDir = player.getLookAngle();
+        state.dragonLast = player.position();
+        if (!state.superSaiyan) {
+            setSuperSaiyan(player, state, true);
+        }
         SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        com.pfkfks.flightsuit.cutscene.CutsceneRunner.play(level, SuitCutscenes.DRAGON_FIST, player.position(), player.getYRot(),
+                java.util.Map.of(), actors -> {
+                }, true, java.util.List.of(player));
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.BURNING_ATTACK, 0));
+        level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 0.6F);
+        KiFx.charge(level, player, KiFx.GOLD, 1.6F, SuitTuning.DRAGON_FIST_RISE_TICKS - 4, KiFx.AT_CHEST);
+        player.displayClientMessage(Component.translatable("message.flightsuit.dragon_fist_charge"), true);
     }
 
-    /** One blast every few ticks from alternating palms, at whatever's under the crosshair. */
-    private static void tickVolley(ServerPlayer player, SuitWeapons.State state) {
-        if (state.volleyLeft <= 0 || player.tickCount % SuitTuning.VOLLEY_INTERVAL != 0) {
+    public static boolean isDragonFisting(ServerPlayer player) {
+        SuitWeapons.State state = SuitWeapons.existing(player);
+        return state != null && state.dragonTicks >= 0;
+    }
+
+    private static void tickDragon(ServerPlayer player, SuitWeapons.State state) {
+        if (state.dragonTicks < 0) {
             return;
         }
-        state.volleyLeft--;
+        if (!player.isAlive() || SuitWeapons.armedClass(player) != SuitClass.SWORDSMAN) {
+            endDragon(player, state);
+            return;
+        }
+        int t = state.dragonTicks++;
+        int rise = SuitTuning.DRAGON_FIST_RISE_TICKS;
+        int dashEnd = rise + SuitTuning.DRAGON_FIST_DASH_TICKS;
         ServerLevel level = player.serverLevel();
-        Vec3 look = player.getLookAngle();
-        Vec3 right = new Vec3(-look.z, 0.0D, look.x).normalize();
-        int side = state.volleyLeft % 2 == 0 ? 1 : -1;
-        Vec3 palm = player.getEyePosition().add(look.scale(0.5D)).add(right.scale(0.3D * side)).add(0.0D, -0.25D, 0.0D);
-        SuitWeapons.Aim aim = SuitWeapons.aim(player, 40.0D);
-        Vec3 dir = aim.end().subtract(palm).normalize();
-        KiShots.fire(level, player, KiShots.Style.KI, palm, dir, 2.2D, 40.0D, SuitTuning.VOLLEY_DAMAGE * power(state), 0.8D,
-                entity -> !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity == aim.target())
-                        && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity));
-        player.swing(side > 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND, true);
+        player.fallDistance = 0.0F;
+        if (t < rise) {
+            // Powering up: rooted, the light gathering, Super Saiyan 3 at the fifth tick.
+            player.setDeltaMovement(Vec3.ZERO);
+            player.hurtMarked = true;
+            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 8, 6, false, false, false));
+            if (t == 5) {
+                setSsj3(player, state, true);
+                transformBurst(level, player);
+                KiFx.pillar(level, player, player.position(), KiFx.GOLD, 30.0F, rise);
+                level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.8F, 1.2F);
+                level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 0.5F, 1.8F);
+                player.displayClientMessage(Component.translatable("message.flightsuit.ssj3"), true);
+            } else if (t > 5 && t % 4 == 0) {
+                KiFx.burst(level, player.position().add(0.0D, 1.0D, 0.0D), KiFx.GOLD, 1.0F + (t - 5) * 0.03F, 6, KiFx.SPARK);
+            }
+            if (t == 30) {
+                level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.6F, 1.5F);
+            }
+            if (t == rise - 2) {
+                KiFx.burst(level, player.position().add(0.0D, 1.0D, 0.0D), KiFx.GOLD, 2.6F, 8, KiFx.FLASH);
+            }
+            return;
+        }
+        if (t == rise) {
+            state.dragonDir = player.getLookAngle();
+            state.dragonLast = player.position();
+            state.dragon = com.pfkfks.flightsuit.entity.DragonFistEntity.ride(level, player, SuitTuning.DRAGON_FIST_DASH_TICKS);
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SWORD_THRUST, 0));
+            level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.2F, 1.4F);
+            level.playSound(null, player.blockPosition(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.6F);
+            KiFx.burst(level, hands(player), KiFx.GOLD, 2.0F, 8, KiFx.RING);
+            player.displayClientMessage(Component.translatable("message.flightsuit.dragon_fist"), true);
+        }
+        if (t < dashEnd) {
+            Vec3 before = player.position();
+            if (t > rise + 3 && before.distanceToSqr(state.dragonLast) < 0.09D) {
+                // Into a wall: the dash ends here.
+                state.dragonTicks = dashEnd;
+            }
+            state.dragonLast = before;
+            player.setDeltaMovement(state.dragonDir.scale(SuitTuning.DRAGON_FIST_SPEED));
+            player.hurtMarked = true;
+            Vec3 ahead = before.add(state.dragonDir.scale(SuitTuning.DRAGON_FIST_SPEED + 1.5D));
+            for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(before, ahead).inflate(SuitTuning.DRAGON_FIST_RADIUS),
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity)
+                            && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
+                            && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity) && !state.dragonHit.contains(entity))) {
+                bite(player, state, level, victim, 1.0F);
+            }
+            if (t % 3 == 0) {
+                KiFx.burst(level, player.position().add(0.0D, 1.0D, 0.0D), KiFx.GOLD, 1.0F, 5, KiFx.SPARK);
+            }
+            return;
+        }
+        if (t == dashEnd) {
+            // The dragon lands: a burst that bites once more, round him.
+            player.setDeltaMovement(Vec3.ZERO);
+            player.hurtMarked = true;
+            if (state.dragon != null) {
+                state.dragon.finishNow();
+            }
+            Vec3 at = player.position().add(0.0D, 1.0D, 0.0D);
+            KiFx.burst(level, at, KiFx.GOLD, 5.0F, 16, KiFx.BLAST);
+            KiFx.burst(level, at, KiFx.GOLD, 7.0F, 12, KiFx.RING);
+            com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(level, at, 32.0D, 10);
+            level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.5F, 0.7F);
+            level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.0F, 1.6F);
+            for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(5.0D),
+                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity)
+                            && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)
+                            && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity) && !state.dragonHit.contains(entity))) {
+                bite(player, state, level, victim, 0.5F);
+            }
+            return;
+        }
+        if (t < SuitTuning.DRAGON_FIST_TOTAL_TICKS) {
+            player.setDeltaMovement(player.getDeltaMovement().multiply(0.4D, 1.0D, 0.4D));
+            return;
+        }
+        endDragon(player, state);
+    }
+
+    /** One bite of the dragon: a big hit (bosses more), thrown up and away in a golden burst. */
+    private static void bite(ServerPlayer player, SuitWeapons.State state, ServerLevel level, LivingEntity victim, float share) {
+        state.dragonHit.add(victim);
+        float damage = SuitTuning.DRAGON_FIST_DAMAGE * share;
+        if (victim.getMaxHealth() >= 100.0F) {
+            damage *= SuitTuning.DRAGON_FIST_BOSS_MULTIPLIER;
+        }
+        victim.invulnerableTime = 0;
+        victim.hurt(player.damageSources().playerAttack(player), damage);
+        Vec3 push = victim.position().subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+        push = push.lengthSqr() < 1.0E-4D ? state.dragonDir : push.normalize();
+        victim.setDeltaMovement(push.scale(0.8D).add(state.dragonDir.scale(0.5D)).add(0.0D, 0.7D, 0.0D));
+        victim.hurtMarked = true;
+        KiFx.burst(level, victim.getBoundingBox().getCenter(), KiFx.GOLD, 1.6F, 8, KiFx.BLAST);
+        level.playSound(null, victim.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.8F, 1.3F);
+    }
+
+    private static void endDragon(ServerPlayer player, SuitWeapons.State state) {
+        state.dragonTicks = -1;
+        state.dragonHit.clear();
+        state.dragon = null;
+        setSsj3(player, state, false);
+        if (!state.dragonHadSsj && state.superSaiyan) {
+            setSuperSaiyan(player, state, false);
+        }
+    }
+
+    /** Super Saiyan 3 on or off: the clients grow the mane and put lightning in the aura. */
+    static void setSsj3(ServerPlayer player, SuitWeapons.State state, boolean on) {
+        if (state.ssj3 == on) {
+            return;
+        }
+        state.ssj3 = on;
+        ModNetwork.sendToTrackingAndSelf(player, new EntityFxS2CPacket(player.getId(), EntityFxS2CPacket.SSJ3, on));
     }
 
     // ---------------------------------------------------------------- damage hooks
 
-    /** Nothing touches him in the middle of the flash slash. */
+    /** Nothing touches him in the middle of the flash slash or the Dragon Fist. */
     static void onAttack(LivingAttackEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && isFlashing(player)) {
+        if (event.getEntity() instanceof ServerPlayer player && (isFlashing(player) || isDragonFisting(player))) {
             event.setCanceled(true);
         }
     }

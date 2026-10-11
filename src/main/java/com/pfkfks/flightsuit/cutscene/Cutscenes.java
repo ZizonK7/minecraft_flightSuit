@@ -22,6 +22,7 @@ public final class Cutscenes {
         if (!loaded) {
             loaded = true;
             com.pfkfks.flightsuit.planet.dbz.DbzCutscenes.registerAll();
+            com.pfkfks.flightsuit.suit.SuitCutscenes.registerAll();
         }
     }
 

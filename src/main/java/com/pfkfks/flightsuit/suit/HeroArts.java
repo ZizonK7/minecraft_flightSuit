@@ -34,12 +34,14 @@ import com.pfkfks.flightsuit.fx.KiFx;
 
 /**
  * Mark 4, the Hero of Twilight (after Twilight Princess's hero). A swordsman rather than a gunner:
- * - Master Sword (hold right click): a slash across the front every few ticks; at full health every slash also
- *   looses a sword beam that flies straight on (the old Zelda rule);
- * - spin attack (X): one sweep all the way round; at full health the great spin, wider and harder;
+ * - Master Sword (left click): a cut across the front; at full health (or a full chain) every cut also looses a
+ *   sword beam that flies straight on (the old Zelda rule);
+ * - spin attack (right click held, then let go - M18 feedback): one sweep all the way round; held to a full charge
+ *   (or at full health) the great spin, wider and harder;
+ * - the Hero's Bow (X, M18 feedback): a light arrow straight at the crosshair;
  * - clawshot (C): the claw flies at the crosshair - into a block, it reels you there; into a monster, it drags the
  *   monster to you (a big one pulls you to it instead, and you land a slash on arrival). C again lets go;
- * - Hylian shield (right click held): projectiles from the front glance off; a melee blow met within a few ticks of
+ * - Hylian shield (Z held - M18 feedback, "the famous shield"): projectiles from the front glance off; a melee blow met within a few ticks of
  *   raising it is a perfect guard (free, the attacker staggers, two links), a late one still half lands.
  * After the first M18 test ("hard but strong" came out just strong): the chain. Every move that differs from the
  * one before it, within CHAIN_WINDOW_TICKS, adds a link; the sword's damage grows CHAIN_STEP per link (CHAIN_MAX
@@ -62,6 +64,7 @@ public final class HeroArts {
     static final byte MOVE_CLAW = 3;
     static final byte MOVE_BOOMERANG = 4;
     static final byte MOVE_GUARD = 5;
+    static final byte MOVE_BOW = 6;
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
 
@@ -186,8 +189,11 @@ public final class HeroArts {
             state.triforceUntil = 0L;
             state.chain = 0;
             state.chainLast = 0;
+            state.shieldHeld = false;
+            state.spinCharge = 0;
             return;
         }
+        tickShieldHeld(player, state);
         long now = player.level().getGameTime();
         if (state.chain > 0 && now > state.chainUntil) {
             breakChain(player, state, false);
@@ -250,35 +256,109 @@ public final class HeroArts {
         }
     }
 
-    // ---------------------------------------------------------------- Hylian shield raised (right click held, M18)
+    // ---------------------------------------------------------------- Hylian shield (Z held, M18 feedback)
 
-    static void raiseShield(ServerPlayer player, SuitWeapons.State state) {
-        state.shieldRaisedAt = player.level().getGameTime();
-        player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.7F, 1.2F);
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
-    }
-
-    static void lowerShield(ServerPlayer player) {
-        player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.4F, 0.9F);
+    /** Z down: the shield comes up (the perfect guard is timed from this moment); Z up: it comes down. */
+    static void setShield(ServerPlayer player, SuitWeapons.State state, boolean on) {
+        if (state.shieldHeld == on) {
+            return;
+        }
+        if (on && (SuitWeapons.armedClass(player) != SuitClass.HERO || SuitUpManager.isSuitingUp(player) || !player.isAlive())) {
+            return;
+        }
+        state.shieldHeld = on;
+        if (on) {
+            state.shieldRaisedAt = player.level().getGameTime();
+            player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.7F, 1.2F);
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+        } else {
+            player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.4F, 0.9F);
+        }
     }
 
     /** Held up: a slow walk behind it; it costs a little to keep up and falls when the power's gone. */
-    static void tickShield(ServerPlayer player, SuitWeapons.State state) {
+    private static void tickShieldHeld(ServerPlayer player, SuitWeapons.State state) {
+        if (!state.shieldHeld) {
+            return;
+        }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.HYLIAN_HOLD_DRAIN)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            SuitWeapons.handle(player, SuitWeapons.PRIMARY_STOP);
+            setShield(player, state, false);
             return;
         }
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 2, false, false, false));
-        if (state.firingTicks % 20 == 1) {
+        if ((player.level().getGameTime() - state.shieldRaisedAt) % 20 == 10) {
             ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
         }
     }
 
-    /** True while the hero holds the shield up (SuitWeapons.FIRE_SHIELD). */
+    /** True while the hero holds the shield up (Z). */
     static boolean shieldUp(ServerPlayer player) {
         SuitWeapons.State state = SuitWeapons.existing(player);
-        return state != null && state.firing == SuitWeapons.FIRE_SHIELD;
+        return state != null && state.shieldHeld;
+    }
+
+    // ---------------------------------------------------------------- spin attack (right click held, M18 feedback)
+
+    /** The sword drawn back, light gathering on it (the old Zelda charge). */
+    static void startSpinCharge(ServerPlayer player, SuitWeapons.State state) {
+        state.spinCharge = 0;
+        KiFx.charge(player.serverLevel(), player, 0x9AD8FF, 0.7F, SuitTuning.GREAT_SPIN_CHARGE_TICKS, KiFx.AT_HANDS);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.4F, 2.0F);
+    }
+
+    static void tickSpinCharge(ServerPlayer player, SuitWeapons.State state) {
+        state.spinCharge++;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 1, false, false, false));
+        if (state.spinCharge == SuitTuning.GREAT_SPIN_CHARGE_TICKS) {
+            // Full: the great spin is ready.
+            KiFx.burst(player.serverLevel(), hand(player), 0x9AD8FF, 0.9F, 8, KiFx.SPARK);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.6F);
+        }
+    }
+
+    /** Let go: a spin if it was held long enough (the great spin at a full charge), nothing for a tap. */
+    static void releaseSpin(ServerPlayer player, SuitWeapons.State state) {
+        KiFx.stopCharge(player.serverLevel(), player);
+        int charge = state.spinCharge;
+        state.spinCharge = 0;
+        if (charge < SuitTuning.SPIN_CHARGE_TICKS) {
+            return;
+        }
+        spin(player, state, charge >= SuitTuning.GREAT_SPIN_CHARGE_TICKS);
+    }
+
+    // ---------------------------------------------------------------- the Hero's Bow (X, M18 feedback)
+
+    /** A light arrow straight at the crosshair - the ranged answer of a suit that can't fly. */
+    static void bow(ServerPlayer player, SuitWeapons.State state) {
+        long now = player.level().getGameTime();
+        if (now < state.skill1Ready) {
+            SuitWeapons.cooldownMessage(player, state.skill1Ready - now);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BOW_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        state.skill1Ready = now + SuitTuning.BOW_COOLDOWN_TICKS;
+        link(player, state, MOVE_BOW);
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        Vec3 from = hand(player);
+        SuitWeapons.Aim aim = SuitWeapons.aim(player, SuitTuning.BOW_RANGE);
+        Vec3 end = aim.end();
+        Vec3 dir = end.subtract(from).normalize();
+        if (aim.target() != null) {
+            hit(player, aim.target(), SuitTuning.BOW_DAMAGE * power(player, state), 0.4D, dir);
+            KiFx.burst(level, end, 0xBFE9FF, 0.8F, 6, KiFx.SPARK);
+            level.playSound(null, end.x, end.y, end.z, SoundEvents.ARROW_HIT, SoundSource.PLAYERS, 0.8F, 1.3F);
+        } else {
+            KiFx.burst(level, end, 0xBFE9FF, 0.4F, 4, KiFx.SPARK);
+        }
+        KiFx.beam(level, from, end, 0xBFE9FF, 0.07F, 5, KiFx.BEAM_THIN, null, KiFx.AT_POS, null);
+        level.playSound(null, player.blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F, 1.1F);
+        player.swing(InteractionHand.OFF_HAND, true);
     }
 
     // ---------------------------------------------------------------- the Triforce (V, M18)
@@ -439,11 +519,11 @@ public final class HeroArts {
 
     // ---------------------------------------------------------------- spin attack (X)
 
-    static void spinAttack(ServerPlayer player, SuitWeapons.State state) {
+    /** The spin: all the way round; the great spin (a full charge, full health, the Triforce, a full chain) wider and harder. */
+    static void spin(ServerPlayer player, SuitWeapons.State state, boolean charged) {
         long now = player.level().getGameTime();
-        if (now < state.skill1Ready) {
-            player.displayClientMessage(Component.translatable("message.flightsuit.skill_cooldown",
-                    String.format("%.1f", (state.skill1Ready - now) / 20.0F)), true);
+        if (now < state.spinReady) {
+            SuitWeapons.cooldownMessage(player, state.spinReady - now);
             return;
         }
         if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SPIN_COST)) {
@@ -451,11 +531,10 @@ public final class HeroArts {
             return;
         }
         link(player, state, MOVE_SPIN);
-        boolean great = empowered(player, state);
+        boolean great = charged || empowered(player, state);
         double radius = great ? SuitTuning.GREAT_SPIN_RADIUS : SuitTuning.SPIN_RADIUS;
         float damage = (great ? SuitTuning.GREAT_SPIN_DAMAGE : SuitTuning.SPIN_DAMAGE) * power(player, state);
-        state.skill1Ready = now + SuitTuning.SPIN_COOLDOWN_TICKS;
-        SuitWeapons.sendStatus(player, state);
+        state.spinReady = now + SuitTuning.SPIN_COOLDOWN_TICKS;
         state.spinTicks = SPIN_SWEEP_TICKS;
         state.spinRadius = radius;
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SPIN_ATTACK, 0));

@@ -153,7 +153,8 @@ public class SuitCompanionEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new CompanionCombatGoal(this));
-        this.goalSelector.addGoal(2, new CompanionFollowGoal(this));
+        this.goalSelector.addGoal(2, new com.pfkfks.flightsuit.entity.ai.CompanionHuntGoal(this));
+        this.goalSelector.addGoal(3, new CompanionFollowGoal(this));
         this.targetSelector.addGoal(1, new CompanionTargetGoal(this));
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this).setAlertOthers());
     }
@@ -162,6 +163,31 @@ public class SuitCompanionEntity extends PathfinderMob {
 
     public UUID getOwnerId() {
         return ownerId;
+    }
+
+    // ---------------------------------------------------------------- the hunt (House Party, M18 feedback)
+
+    private boolean hunting;
+    private Vec3 huntCentre;
+    private long huntUntil;
+
+    /** Sent out to sweep the country round {@code centre} for {@code ticks} (CompanionHuntGoal). */
+    public void startHunt(Vec3 centre, long ticks) {
+        hunting = true;
+        huntCentre = centre;
+        huntUntil = level().getGameTime() + ticks;
+    }
+
+    public void stopHunt() {
+        hunting = false;
+    }
+
+    public boolean isHunting() {
+        return hunting && isAlive();
+    }
+
+    public Vec3 huntCentre() {
+        return huntCentre;
     }
 
     public Player getOwner() {
@@ -339,6 +365,9 @@ public class SuitCompanionEntity extends PathfinderMob {
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
+        if (hunting && (level().getGameTime() > huntUntil || !isPowered() || homeTicks >= 0)) {
+            stopHunt();
+        }
         if (clawPos != null) {
             tickClaw();
         }
@@ -622,7 +651,7 @@ public class SuitCompanionEntity extends PathfinderMob {
         // Parked: owner gone or far away and nothing to do - land and idle without spending power.
         Player owner = getOwner();
         LivingEntity anchor = getAnchor();
-        boolean active = getTarget() != null || boarding || arriving || held || homeTicks >= 0
+        boolean active = getTarget() != null || boarding || arriving || held || homeTicks >= 0 || hunting
                 || (anchor != null && distanceToSqr(anchor) < PARK_DISTANCE * PARK_DISTANCE);
         if (!active) {
             setNoGravity(false);
@@ -770,6 +799,13 @@ public class SuitCompanionEntity extends PathfinderMob {
         if (ownerId != null) {
             tag.putUUID("Owner", ownerId);
         }
+        if (hunting && huntCentre != null) {
+            tag.putBoolean("Hunting", true);
+            tag.putDouble("HuntX", huntCentre.x);
+            tag.putDouble("HuntY", huntCentre.y);
+            tag.putDouble("HuntZ", huntCentre.z);
+            tag.putLong("HuntUntil", huntUntil);
+        }
     }
 
     @Override
@@ -777,6 +813,11 @@ public class SuitCompanionEntity extends PathfinderMob {
         super.readAdditionalSaveData(tag);
         if (tag.hasUUID("Owner")) {
             ownerId = tag.getUUID("Owner");
+        }
+        if (tag.getBoolean("Hunting")) {
+            hunting = true;
+            huntCentre = new Vec3(tag.getDouble("HuntX"), tag.getDouble("HuntY"), tag.getDouble("HuntZ"));
+            huntUntil = tag.getLong("HuntUntil");
         }
     }
 }

@@ -94,7 +94,7 @@ public final class SuitTuning {
     public static final double SWORD_BEAM_SPEED = 1.6D;
     public static final double SWORD_BEAM_RANGE = 32.0D;
     public static final int SPIN_COST = 1_000;
-    public static final int SPIN_COOLDOWN_TICKS = 80;
+    public static final int SPIN_COOLDOWN_TICKS = 40;
     public static final double SPIN_RADIUS = 4.5D;
     public static final float SPIN_DAMAGE = 7.0F;
     /** Great spin (at full health): wider and harder. */
@@ -114,6 +114,14 @@ public final class SuitTuning {
     public static final double CLAW_DRAG_MAX_VOLUME = 2.0D;
     public static final int CLAW_MAX_REEL_TICKS = 50;
     public static final int HYLIAN_BLOCK_COST = 40;
+    /** M18 feedback: Z is the shield, right click held charges the spin - this long for a spin, this long for the great one. */
+    public static final int SPIN_CHARGE_TICKS = 10;
+    public static final int GREAT_SPIN_CHARGE_TICKS = 30;
+    /** The Hero's Bow (X): a light arrow straight at the crosshair. */
+    public static final int BOW_COST = 300;
+    public static final int BOW_COOLDOWN_TICKS = 20;
+    public static final double BOW_RANGE = 40.0D;
+    public static final float BOW_DAMAGE = 6.0F;
     /** Half-angle of the front the Hylian shield covers. */
     public static final double HYLIAN_BLOCK_ANGLE_DEG = 70.0D;
 
@@ -231,6 +239,8 @@ public final class SuitTuning {
     public static final double FLAME_ARC_DEG = 40.0D;
     public static final float FLAME_DAMAGE = 2.0F;
     public static final int FLAME_BURN_SECONDS = 4;
+    /** Each hit of the flame: the chance fire catches where it lands (M18 feedback: it has to burn). */
+    public static final float FLAME_IGNITE_CHANCE = 0.4F;
     /** The scrap shot (X): a fan of hot iron scraps, each pellet a hit of its own, close up. */
     public static final int SCRAP_SHOT_COST = 500;
     public static final int SCRAP_SHOT_COOLDOWN_TICKS = 50;
@@ -319,11 +329,17 @@ public final class SuitTuning {
     public static final float CHARGE_SLASH_MULTIPLIER = 2.5F;
     public static final float CHARGE_WAVE_DAMAGE = 12.0F;
     public static final double CHARGE_WAVE_RANGE = 24.0D;
-    public static final int VOLLEY_COST = 1_000;
-    public static final int VOLLEY_COOLDOWN_TICKS = 120;
-    public static final int VOLLEY_SHOTS = 5;
-    public static final int VOLLEY_INTERVAL = 3;
-    public static final float VOLLEY_DAMAGE = 4.0F;
+    /** The Dragon Fist (B, M18 feedback in place of the ki volley): RISE ticks of powering up to Super Saiyan 3, then
+     * DASH ticks flying forward at SPEED in a golden dragon, everything within RADIUS of the way taking DAMAGE once. */
+    public static final int DRAGON_FIST_COST = 4_000;
+    public static final int DRAGON_FIST_COOLDOWN_TICKS = 1_200;
+    public static final int DRAGON_FIST_RISE_TICKS = 50;
+    public static final int DRAGON_FIST_DASH_TICKS = 22;
+    public static final int DRAGON_FIST_TOTAL_TICKS = 100;
+    public static final double DRAGON_FIST_SPEED = 1.3D;
+    public static final double DRAGON_FIST_RADIUS = 3.0D;
+    public static final float DRAGON_FIST_DAMAGE = 36.0F;
+    public static final float DRAGON_FIST_BOSS_MULTIPLIER = 1.5F;
 
     // Mark 44 (HulkbusterArts, M18): armour mode (Z held), the jackhammer (V), block throwing (B).
     public static final int ARMOUR_MODE_DRAIN = 30;

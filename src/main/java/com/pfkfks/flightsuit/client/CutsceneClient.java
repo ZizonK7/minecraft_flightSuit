@@ -171,6 +171,10 @@ public final class CutsceneClient {
         if (e instanceof com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity fighter && fighter.isActing()) {
             return;
         }
+        if (scene.free()) {
+            // A suit's own scene: the player is the show.
+            return;
+        }
         net.minecraft.world.phys.AABB box = e.getBoundingBox().inflate(0.4D);
         if (e instanceof net.minecraft.world.entity.player.Player || box.contains(viewEye) || box.clip(viewEye, viewLook).isPresent()) {
             event.setCanceled(true);

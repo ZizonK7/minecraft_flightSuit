@@ -67,10 +67,13 @@ public class CompanionTargetGoal extends TargetGoal {
         if (suit.getTarget() != null || suit.getRandom().nextInt(10) != 0) {
             return null;
         }
-        LivingEntity ward = suit.getAnchor();
-        List<Mob> threats = suit.level().getEntitiesOfClass(Mob.class, ward.getBoundingBox().inflate(GUARD_RADIUS),
+        // Hunting (House Party, M18 feedback): anything hostile in sight round itself; at heel: whatever closes on the owner.
+        boolean hunting = suit.isHunting();
+        LivingEntity ward = CompanionHuntGoal.ward(suit);
+        double radius = hunting ? CompanionHuntGoal.HUNT_SCAN : GUARD_RADIUS;
+        List<Mob> threats = suit.level().getEntitiesOfClass(Mob.class, ward.getBoundingBox().inflate(radius),
                 mob -> com.pfkfks.flightsuit.suit.SuitWeapons.isHostile(suit, mob) && mob.isAlive() && !RaidMember.isNoThreat(mob) && valid(mob, owner)
-                        && (mob.getTarget() == ward || mob.distanceToSqr(ward) < 8.0D * 8.0D));
+                        && (hunting ? suit.hasLineOfSight(mob) : mob.getTarget() == ward || mob.distanceToSqr(ward) < 8.0D * 8.0D));
         Mob closest = null;
         for (Mob mob : threats) {
             if (closest == null || mob.distanceToSqr(ward) < closest.distanceToSqr(ward)) {
