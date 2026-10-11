@@ -387,7 +387,7 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
 
     /** M18: a word for whoever comes close - by how the town feels about them (DESIGN.md 5차 피드백 "나를 알아보기"). */
     private void greet() {
-        if (trader != null || isSleeping() || underAttack()) {
+        if (trader != null || getPose() == Pose.SLEEPING || underAttack()) {
             return;
         }
         Player player = level().getNearestPlayer(this, 4.0D);
@@ -431,11 +431,6 @@ public class TownsfolkEntity extends PathfinderMob implements Merchant {
         if (getPose() == Pose.SLEEPING) {
             setDeltaMovement(getDeltaMovement().multiply(0.0D, 1.0D, 0.0D));
         }
-    }
-
-    @Override
-    public boolean isSleeping() {
-        return getPose() == Pose.SLEEPING;
     }
 
     /** Lunchtime for those who aren't serving it: a meal in hand at the tavern, a bite now and then. */
