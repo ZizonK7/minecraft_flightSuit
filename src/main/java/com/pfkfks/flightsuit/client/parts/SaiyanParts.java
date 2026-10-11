@@ -5,6 +5,7 @@ import com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
@@ -12,11 +13,13 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * M18 the Saiyans' tails (Raditz, Vegeta, young Gohan): a furred tail from the small of the back that sways behind
- * them and curls up when they fly. Group {@code tail} under the body.
+ * M18 the Saiyans' tails (Raditz, Vegeta, young Gohan): a furred tail from the small of the back, five nested segments
+ * (tail > seg2 > seg3 > seg4 > tip) that hang down and curl back up at the end, swaying behind them, streaming
+ * back in flight and lying flat when down. Group {@code tail} under the body.
  *
  * Boxes, UVs and textures/entity/dbz/parts/saiyan.png come from tools/ModelGen.java (parts_saiyan).
  */
@@ -24,9 +27,31 @@ public class SaiyanParts extends DbzPartsModel {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(new ResourceLocation(FlightSuitMod.MODID, "parts_saiyan"), "main");
     private static final ResourceLocation TEXTURE = new ResourceLocation(FlightSuitMod.MODID, "textures/entity/dbz/parts/saiyan.png");
     public static final List<String> GROUPS = List.of("tail");
+    /** The tail's segments from the base out: the group itself, then its nested children (names from ModelGen). */
+    private static final String[] SEGMENTS = {"tail", "seg2", "seg3", "seg4", "tip"};
+    /** Rest pose (x rotation) of each segment - the same as ModelGen's SaiyanParts.REST: hanging down, curling up. */
+    private static final float[] REST = {-0.95F, 0.3F, 0.4F, 0.45F, 0.45F};
+
+    private final ModelPart[] segments;
 
     public SaiyanParts(ModelPart root) {
         super(root);
+        this.segments = chain();
+    }
+
+    /** Walks tail > seg2 > seg3 > seg4 > tip; stops early (shorter array) if a name is missing. */
+    private ModelPart[] chain() {
+        ModelPart at = group(SEGMENTS[0]);
+        if (at == null) {
+            return new ModelPart[0];
+        }
+        List<ModelPart> out = new ArrayList<>();
+        out.add(at);
+        for (int i = 1; i < SEGMENTS.length && at.hasChild(SEGMENTS[i]); i++) {
+            at = at.getChild(SEGMENTS[i]);
+            out.add(at);
+        }
+        return out.toArray(new ModelPart[0]);
     }
 
     @Override
@@ -41,16 +66,32 @@ public class SaiyanParts extends DbzPartsModel {
 
     @Override
     public void animate(DbzFighterEntity fighter, float ageInTicks) {
-        ModelPart tail = group("tail");
-        if (tail == null) {
+        if (segments.length == 0) {
             return;
         }
-        // Sways side to side, lifted behind when flying, hanging when down.
-        tail.yRot = Mth.sin(ageInTicks * 0.14F) * 0.35F;
         switch (fighter.getAction()) {
-            case FLY -> tail.xRot = 1.1F + Mth.sin(ageInTicks * 0.2F) * 0.1F;
-            case DOWN -> tail.xRot = 0.1F;
-            default -> tail.xRot = 0.55F + Mth.sin(ageInTicks * 0.1F) * 0.12F;
+            case FLY -> {
+                // Streams out behind the body, a ripple running down its length.
+                for (int i = 0; i < segments.length; i++) {
+                    float wave = Mth.sin(ageInTicks * 0.35F - i * 0.9F);
+                    segments[i].xRot = (i == 0 ? 0.15F : 0.04F) + wave * (0.07F + i * 0.03F);
+                    segments[i].yRot = Mth.sin(ageInTicks * 0.2F - i * 0.7F) * 0.06F;
+                }
+            }
+            case DOWN -> {
+                // Lies flat along the ground, bent a little to one side.
+                for (int i = 0; i < segments.length; i++) {
+                    segments[i].xRot = i == 0 ? 0.05F : 0.0F;
+                    segments[i].yRot = i == 0 ? 0.2F : 0.18F;
+                }
+            }
+            default -> {
+                // Hangs behind in its resting curl and swings side to side, each segment a little behind the last.
+                for (int i = 0; i < segments.length; i++) {
+                    segments[i].xRot = REST[i] + Mth.sin(ageInTicks * 0.1F - i * 0.5F) * (0.05F + i * 0.02F);
+                    segments[i].yRot = Mth.sin(ageInTicks * 0.14F - i * 0.6F) * (i == 0 ? 0.3F : 0.16F);
+                }
+            }
         }
     }
 
@@ -63,9 +104,31 @@ public class SaiyanParts extends DbzPartsModel {
                 PartPose.offset(0.0F, 0.0F, 0.0F));
         PartDefinition body = root.addOrReplaceChild("body", CubeListBuilder.create(),
                 PartPose.offset(0.0F, 0.0F, 0.0F));
-        body.addOrReplaceChild("tail", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(-1.0F, -1.0F, 0.0F, 2.0F, 2.0F, 8.0F), // tail
-                PartPose.offsetAndRotation(0.0F, 10.0F, 2.0F, 0.6F, 0.0F, 0.0F));
+        PartDefinition tail = body.addOrReplaceChild("tail", CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-1.5F, -1.5F, -1.0F, 3.0F, 3.0F, 5.0F), // tail_base
+                PartPose.offsetAndRotation(0.0F, 10.0F, 1.5F, -0.95F, 0.0F, 0.0F));
+        tail.addOrReplaceChild("ruff", CubeListBuilder.create()
+                .texOffs(30, 0).addBox(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 3.0F, new CubeDeformation(-0.25F)), // tail_ruff
+                PartPose.offsetAndRotation(0.0F, 0.0F, 1.5F, 0.0F, 0.0F, 0.7854F));
+        PartDefinition seg2 = tail.addOrReplaceChild("seg2", CubeListBuilder.create()
+                .texOffs(16, 0).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 4.0F, new CubeDeformation(-0.25F)), // tail_seg2
+                PartPose.offsetAndRotation(0.0F, 0.0F, 4.0F, 0.3F, 0.0F, 0.0F));
+        PartDefinition seg3 = seg2.addOrReplaceChild("seg3", CubeListBuilder.create()
+                .texOffs(42, 0).addBox(-1.0F, -1.0F, -0.5F, 2.0F, 2.0F, 4.0F), // tail_seg3
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.4F, 0.0F, 0.0F));
+        seg3.addOrReplaceChild("fluff3", CubeListBuilder.create()
+                .texOffs(36, 8).addBox(-1.0F, -1.0F, -1.0F, 2.0F, 2.0F, 2.0F), // tail_fluff3
+                PartPose.offsetAndRotation(0.0F, 0.0F, 1.5F, 0.0F, 0.0F, 0.7854F));
+        PartDefinition seg4 = seg3.addOrReplaceChild("seg4", CubeListBuilder.create()
+                .texOffs(0, 8).addBox(-1.0F, -1.0F, -0.5F, 2.0F, 2.0F, 4.0F, new CubeDeformation(-0.1F)), // tail_seg4
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.45F, 0.0F, 0.0F));
+        PartDefinition tip = seg4.addOrReplaceChild("tip", CubeListBuilder.create()
+                .texOffs(12, 8).addBox(-1.5F, -1.5F, -0.5F, 3.0F, 3.0F, 3.0F, new CubeDeformation(-0.15F)), // tail_tip
+                PartPose.offsetAndRotation(0.0F, 0.0F, 3.0F, 0.45F, 0.0F, 0.0F));
+        tip.addOrReplaceChild("tuft", CubeListBuilder.create()
+                .texOffs(24, 8).addBox(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 3.0F, new CubeDeformation(-0.2F)) // tail_tuft
+                .texOffs(44, 8).addBox(-1.0F, -1.0F, 1.2F, 2.0F, 2.0F, 1.0F, new CubeDeformation(-0.05F)), // tail_tip_end
+                PartPose.offsetAndRotation(0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.7854F));
         return LayerDefinition.create(mesh, 64, 32);
     }
     // </ModelGen:parts_saiyan>

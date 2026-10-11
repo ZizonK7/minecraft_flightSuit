@@ -2042,17 +2042,92 @@ public class ModelGen {
     }
 
     /**
-     * Saiyan tails (Raditz, Vegeta, young Gohan): group "tail" under the body. TODO (M18 agent): a furred tail from
-     * the small of the back - three or four segments getting thinner, curling up at the tip.
+     * Saiyan tails (Raditz, Vegeta, young Gohan): group "tail" under the body. A furred brown tail from the small
+     * of the back, five segments nested one in the next (tail > seg2 > seg3 > seg4 > tip, each pivoted at the far end
+     * of the one before, so the chain curls as one): thick at the base, thinner in the middle, a bushy tip. It hangs
+     * down behind and curls back up at the end; SaiyanParts.animate() sways the segments by those names.
      */
     static final class SaiyanParts {
         static final int FUR = 0xFF6B4423, FUR_DARK = 0xFF4A2E17, FUR_LIGHT = 0xFF8A5A30;
+        static final int FUR_DEEP = 0xFF33200E, FUR_TIP = 0xFF9E6E3E;
+        /** Rest pose of each segment (x rotation, radians): down from the back, then curling back up to the tip. */
+        static final float[] REST = {-0.95F, 0.3F, 0.4F, 0.45F, 0.45F};
+        /** Length of each segment from its pivot to the next one's (the tip's box runs a little further). */
+        static final float[] LENGTH = {4, 3, 3, 3, 3};
 
         static Model build() {
             Model m = Parts.partsModel("parts_saiyan", 64, 32);
-            Part tail = Parts.body(m).child("tail", 0, 10, 2, 0.6F, 0, 0);
-            tail.box("tail", -1, -1, 0, 2, 2, 8, p -> Parts.fur(p, FUR, FUR_DARK, FUR_LIGHT));
+            // Rooted half a pixel inside the small of the back so no gap opens when it swings.
+            Part seg1 = Parts.body(m).child("tail", 0, 10, 1.5F, REST[0], 0, 0);
+            seg1.box("tail_base", -1.5F, -1.5F, -1, 3, 3, 5, SaiyanParts::fur);
+            fluff(seg1, "ruff", "tail_ruff", 1.5F, 3, -0.25F);
+
+            Part seg2 = seg1.child("seg2", 0, 0, LENGTH[0], REST[1], 0, 0);
+            seg2.box("tail_seg2", -1.5F, -1.5F, -0.5F, 3, 3, 4, -0.25F, SaiyanParts::fur);
+
+            Part seg3 = seg2.child("seg3", 0, 0, LENGTH[1], REST[2], 0, 0);
+            seg3.box("tail_seg3", -1, -1, -0.5F, 2, 2, 4, SaiyanParts::fur);
+            fluff(seg3, "fluff3", "tail_fluff3", 1.5F, 2, 0);
+
+            Part seg4 = seg3.child("seg4", 0, 0, LENGTH[2], REST[3], 0, 0);
+            seg4.box("tail_seg4", -1, -1, -0.5F, 2, 2, 4, -0.1F, SaiyanParts::fur);
+
+            // The tip: back to 3x3, a fluffed cross-section and a small nub at the very end.
+            Part tip = seg4.child("tip", 0, 0, LENGTH[3], REST[4], 0, 0);
+            tip.box("tail_tip", -1.5F, -1.5F, -0.5F, 3, 3, 3, -0.15F, SaiyanParts::tipFur);
+            Part tuft = fluff(tip, "tuft", "tail_tuft", 1, 3, -0.2F);
+            // The very end, turned with the tuft so it closes to a soft point rather than a knob.
+            tuft.box("tail_tip_end", -1, -1, 1.2F, 2, 2, 1, -0.05F, SaiyanParts::tipFur);
             return m;
+        }
+
+        /**
+         * A second box of the segment's thickness turned 45 degrees about its axis: its corners poke out between the
+         * main box's faces, so the cross-section reads as a soft tuft of fur rather than a square rod.
+         */
+        static Part fluff(Part seg, String name, String boxName, float at, int size, float inflate) {
+            Part f = seg.child(name, 0, 0, at, 0, 0, 0.7854F);
+            float h = size / 2.0F;
+            f.box(boxName, -h, -h, -h, size, size, size, inflate, name.equals("tuft") ? SaiyanParts::tipFur : SaiyanParts::fur);
+            return f;
+        }
+
+        /** Tufted fur: streaks running the length of the tail, lit along the spine, dark along the underside. */
+        static int fur(Px p) {
+            int c = (int) Math.floor(p.x * 1.3 + p.y * 0.9 + 40) % 3 == 0 ? FUR_DARK : FUR;
+            double n = p.noise();
+            if (n < 0.1) {
+                c = FUR_LIGHT;
+            } else if (n > 0.93) {
+                c = FUR_DEEP;
+            }
+            // Tuft ends: a few texels lit a touch brighter, scattered along the length.
+            if (p.noise(3) < 0.15) {
+                c = shade(c, 1.1);
+            }
+            if (p.face == Face.BOTTOM) {
+                c = shade(c, 0.68);
+            } else if (p.face == Face.TOP) {
+                c = shade(c, 1.15);
+            } else if (p.face == Face.RIGHT || p.face == Face.LEFT) {
+                c = shade(c, 1.12 - p.fy * 0.4);
+            } else {
+                // End caps, tucked into the joints.
+                c = shade(c, 0.85);
+            }
+            return grain(p, c, 0.06);
+        }
+
+        /** The bushier tip: the same fur with more light tufts and a warmer brown. */
+        static int tipFur(Px p) {
+            int c = fur(p);
+            if (p.noise(5) < 0.22 && p.face != Face.BOTTOM) {
+                c = grain(p, p.noise(7) < 0.5 ? FUR_TIP : FUR_LIGHT, 0.05);
+            }
+            if (p.box.name.equals("tail_tip_end") && p.face == Face.BACK) {
+                c = grain(p, FUR_DARK, 0.06);
+            }
+            return c;
         }
     }
 
