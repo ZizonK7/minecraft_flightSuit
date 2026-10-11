@@ -97,6 +97,22 @@ public final class CutsceneClient {
         cameraTypeBefore = minecraft.options.getCameraType();
         minecraft.options.setCameraType(CameraType.FIRST_PERSON);
         minecraft.setCameraEntity(camera);
+        lockYaw = minecraft.player.getYRot();
+        lockPitch = minecraft.player.getXRot();
+    }
+
+    /** A free scene: where the player was looking when it began, kept so the mouse can't turn them behind the camera. */
+    private static float lockYaw;
+    private static float lockPitch;
+
+    private static void holdLook(Minecraft minecraft) {
+        if (scene == null || !scene.free() || minecraft.player == null) {
+            return;
+        }
+        minecraft.player.setYRot(lockYaw);
+        minecraft.player.setXRot(lockPitch);
+        minecraft.player.yRotO = lockYaw;
+        minecraft.player.xRotO = lockPitch;
     }
 
     private static void end(Minecraft minecraft) {
@@ -281,17 +297,26 @@ public final class CutsceneClient {
             if (minecraft.getCameraEntity() != camera && camera != null) {
                 minecraft.setCameraEntity(camera);
             }
+            holdLook(minecraft);
             place(minecraft, event.renderTickTime);
         }
     }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
         Minecraft minecraft = Minecraft.getInstance();
         if (scene == null || minecraft.level == null) {
+            return;
+        }
+        if (scene.free() && camera != null && minecraft.player != null) {
+            // A free scene (M18 3rd feedback): through the game's tick the player is their own camera again - the
+            // game only takes the keys and sends the position to the server for the camera entity
+            // (LocalPlayer#isControlledCamera), so otherwise a move the scene shows (the Dragon Fist's dash) went on
+            // here alone and the server never saw it. The frames still look through the scene's camera.
+            holdLook(minecraft);
+            minecraft.setCameraEntity(event.phase == TickEvent.Phase.START ? minecraft.player : camera);
+        }
+        if (event.phase != TickEvent.Phase.END) {
             return;
         }
         // The jump key skips (once); and if the server's end never came, we stop by ourselves.
@@ -328,6 +353,14 @@ public final class CutsceneClient {
     public static void onRenderHand(RenderHandEvent event) {
         if (scene != null) {
             event.setCanceled(true);
+        }
+    }
+
+    /** The scene's camera sees at the plain field of view (not narrowed or widened by the player's speed, say rooted in place). */
+    @SubscribeEvent
+    public static void onFov(net.minecraftforge.client.event.ViewportEvent.ComputeFov event) {
+        if (scene != null && event.usedConfiguredFov()) {
+            event.setFOV(Minecraft.getInstance().options.fov().get());
         }
     }
 

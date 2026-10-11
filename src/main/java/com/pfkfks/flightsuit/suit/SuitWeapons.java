@@ -305,7 +305,7 @@ public final class SuitWeapons {
                     case STANDARD -> fireMissiles(player, state);
                     case STEALTH -> MarkArts.drill(player, state);
                     case PHANTOM -> PhantomCards.judgmentDraw(player, state);
-                    case HERO -> HeroArts.bow(player, state);
+                    case HERO -> HeroArts.spinAttack(player, state);
                     case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
                     case SWORDSMAN -> SwordArts.burningAttack(player, state);
                     case CANNONEER -> CannonArts.militia(player, state);

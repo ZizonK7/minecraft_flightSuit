@@ -61,10 +61,11 @@
 - JEI: `build.gradle`의 BlameJared 저장소 필터에 `mezz.jei`와 `net.mezzdev.config` 둘 다 있어야 함 (버전 `gradle.properties`의 `jei_version`).
 - 테스트 중 치트(`/time set` 등)로 막힌 상황은 코드로 막지 말고 월드를 넘기는 명령을 알려 줄 것 (사용자 결정).
 
-## 진행 상태 (2026-10-11)
+## 진행 상태 (2026-10-12)
 
+- **M18 3차 테스트 피드백 반영, main 푸시 (2026-10-12, 인게임 테스트 전)**: 용권 시야(자유 컷신 중 서버 위치 안 감)·초사이어인 3 보이기, 포탄 구덩이 키움, 용사 영웅 모드(받는 피해 2배), 용사 `X` 활 → 회전 베기 롤백. 확인 항목은 `docs/TEST_PLAN.md`, 판단은 DESIGN.md 5장 "M18 3차". **다음 작업**: 게임 흐름(바닐라로 시작 → 자원 모아 슈트 / 마을 돌며 자원) 점검.
 - **M18 완료, main 반영 (2026-10-12)** (지시서 `docs/WORK_ORDER_M18.md`, 결정 원본 DESIGN.md 5장 "5차 피드백", 1·2차 테스트 피드백 항목도 5장). 묶음 A·B·C는 인게임 확인, 2차 피드백 반영분(용권·Z 방패·활·총력 사냥·화염 발화)과 묶음 D·E는 `docs/TEST_PLAN.md`에 확인 항목으로 남음. **다음 후보**: 월드 생성 구조물 가안(DESIGN.md 6장 맨 위), Mark 1·2 궁극기 다듬기, 성채끼리의 전쟁.
-- 자유 컷신: `Cutscene.of(id).free()` = 카메라만 (플레이어를 붙잡지도 숨기지도 않음, 근처 인물 정지 없음). 슈트 기술용은 `suit/SuitCutscenes`. 트랭크스 초사이어인 3 갈기는 `TrunksSuitModel`의 `mane` 파트(`SuitModel.setSsj3`), 용은 `entity/DragonFistEntity` + `client/DragonFistRenderer`(자취 기반), 금빛 텍스처는 `java tools/GoldDragon.java .`.
+- 자유 컷신: `Cutscene.of(id).free()` = 카메라만 (플레이어를 붙잡지도 숨기지도 않음, 근처 인물 정지 없음). 바닐라는 카메라 엔티티가 플레이어가 아니면 입력·위치 전송을 안 하므로(`LocalPlayer#isControlledCamera`), `CutsceneClient`가 게임 틱 동안만 플레이어를 카메라로 되돌리고 시선·시야각은 고정함. 슈트 기술용은 `suit/SuitCutscenes`. 트랭크스 초사이어인 3 갈기는 `TrunksSuitModel`의 `mane` 파트(`SuitModel.setSsj3`), 용은 `entity/DragonFistEntity` + `client/DragonFistRenderer`(자취 기반), 금빛 텍스처는 `java tools/GoldDragon.java .`.
 - 적 판정: 자동 조준·동료·원숭이는 `SuitWeapons.isHostile(착용자, 대상)` (수비대는 `WarTargets.isPlayerFoe` - 전투 중이거나 관계 -50 이하일 때만). `instanceof Enemy`를 새로 쓰지 말 것.
 - 성채 봉화 연기: `FortressManager.signalSmoke` → `SignalSmokeS2CPacket`(400칸). 일기토: `GeneralEntity.startSpar`, 표적 규칙은 `WarTargets`(대련 상대만), 수치 `WarTuning.SPAR_*`.
 - 마을 직업을 더할 때: `ResidentJob` 끝에 추가(순서로 저장됨), 스킨 `tools/ResidentSkinGen.java <dir> <job>`, 작업장은 `Blueprint.workplaceOf`, 일은 `village/ai/*Goal` + 아침 집계는 `VillageWorkday`, 화면 설명 `ResidentScreen.effect`.

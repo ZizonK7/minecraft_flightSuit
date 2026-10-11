@@ -426,6 +426,11 @@ public final class SwordArts {
     }
 
     static void setSuperSaiyan(ServerPlayer player, SuitWeapons.State state, boolean on) {
+        setSuperSaiyan(player, state, on, true);
+    }
+
+    /** {@code burst}: the pillar of light on turning (not for the Dragon Fist, whose own turning would be hidden by it). */
+    static void setSuperSaiyan(ServerPlayer player, SuitWeapons.State state, boolean on, boolean burst) {
         if (state.superSaiyan == on) {
             return;
         }
@@ -442,7 +447,9 @@ public final class SwordArts {
         SuitWeapons.sendStatus(player, state);
         ServerLevel level = player.serverLevel();
         if (on) {
-            transformBurst(level, player);
+            if (burst) {
+                transformBurst(level, player);
+            }
             player.displayClientMessage(Component.translatable("message.flightsuit.ssj_on"), true);
         } else {
             level.sendParticles(ParticleTypes.CLOUD, player.getX(), player.getY() + 1.0D, player.getZ(), 12, 0.4D, 0.6D, 0.4D, 0.05D);
@@ -578,10 +585,11 @@ public final class SwordArts {
         state.dragonTicks = 0;
         state.dragonHadSsj = state.superSaiyan;
         state.dragonHit.clear();
-        state.dragonDir = player.getLookAngle();
+        // Level along where he faces now: the camera scene is laid out along this line (M18 3rd feedback).
+        state.dragonDir = Vec3.directionFromRotation(0.0F, player.getYRot());
         state.dragonLast = player.position();
         if (!state.superSaiyan) {
-            setSuperSaiyan(player, state, true);
+            setSuperSaiyan(player, state, true, false);
         }
         SuitWeapons.sendStatus(player, state);
         ServerLevel level = player.serverLevel();
@@ -590,7 +598,7 @@ public final class SwordArts {
                 }, true, java.util.List.of(player));
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.BURNING_ATTACK, 0));
         level.playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 0.6F);
-        KiFx.charge(level, player, KiFx.GOLD, 1.6F, SuitTuning.DRAGON_FIST_RISE_TICKS - 4, KiFx.AT_CHEST);
+        KiFx.charge(level, player, KiFx.GOLD, 0.9F, SuitTuning.DRAGON_FIST_RISE_TICKS - 4, KiFx.AT_CHEST);
         player.displayClientMessage(Component.translatable("message.flightsuit.dragon_fist_charge"), true);
     }
 
@@ -618,9 +626,18 @@ public final class SwordArts {
             player.hurtMarked = true;
             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 8, 6, false, false, false));
             if (t == 5) {
+                // No pillar of light here (M18 3rd feedback: it hid the mane) - a flash, a ring along the ground,
+                // the dust blown out, and the camera sees him change.
                 setSsj3(player, state, true);
-                transformBurst(level, player);
-                KiFx.pillar(level, player, player.position(), KiFx.GOLD, 30.0F, rise);
+                Vec3 feet = player.position();
+                KiFx.burst(level, feet.add(0.0D, 1.0D, 0.0D), KiFx.GOLD, 1.6F, 6, KiFx.FLASH);
+                KiFx.burst(level, feet.add(0.0D, 0.1D, 0.0D), KiFx.GOLD, 4.0F, 14, KiFx.RING);
+                for (int i = 0; i < 24; i++) {
+                    double angle = i * Math.PI / 12.0D;
+                    level.sendParticles(ParticleTypes.CLOUD, feet.x + Math.cos(angle) * 0.8D, feet.y + 0.2D, feet.z + Math.sin(angle) * 0.8D,
+                            0, Math.cos(angle), 0.05D, Math.sin(angle), 0.7D);
+                }
+                level.playSound(null, player.blockPosition(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 0.8F, 1.3F);
                 level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.8F, 1.2F);
                 level.playSound(null, player.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 0.5F, 1.8F);
                 player.displayClientMessage(Component.translatable("message.flightsuit.ssj3"), true);
@@ -636,7 +653,7 @@ public final class SwordArts {
             return;
         }
         if (t == rise) {
-            state.dragonDir = player.getLookAngle();
+            // Straight down the line the camera scene follows (set when he began).
             state.dragonLast = player.position();
             state.dragon = com.pfkfks.flightsuit.entity.DragonFistEntity.ride(level, player, SuitTuning.DRAGON_FIST_DASH_TICKS);
             ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SWORD_THRUST, 0));

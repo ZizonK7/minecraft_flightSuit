@@ -224,15 +224,26 @@ public class CannonballEntity extends ThrowableProjectile {
         discard();
     }
 
-    /** The blocks the burst takes with it: soft ones round an ordinary ball, stone round the giant one. */
+    /**
+     * The blocks the burst takes with it: earth, stone, ores and planks round an ordinary ball, harder stuff round the
+     * giant one (M18 3rd feedback "더 시원시원": a bigger, ragged crater dug in where the ball was going, chunks of
+     * the blocks sprayed out, the ground shaking under the big one).
+     */
     private void crater(ServerLevel level, Vec3 at) {
         double reach = giant ? SuitTuning.CANNON_BREAK_RADIUS * 2.0D : SuitTuning.CANNON_BREAK_RADIUS;
         float maxHardness = giant ? SuitTuning.BHGC_BREAK_HARDNESS : SuitTuning.CANNON_BREAK_HARDNESS;
-        net.minecraft.core.BlockPos centre = net.minecraft.core.BlockPos.containing(at);
-        int r = (int) Math.ceil(reach);
+        // Dug in a little along the flight, so the crater bites into the face it struck rather than the air before it.
+        Vec3 flight = getDeltaMovement();
+        Vec3 centreAt = flight.lengthSqr() > 1.0E-4D ? at.add(flight.normalize().scale(reach * 0.35D)) : at;
+        net.minecraft.core.BlockPos centre = net.minecraft.core.BlockPos.containing(centreAt);
+        int r = (int) Math.ceil(reach + 0.5D);
         int broken = 0;
+        int sprays = giant ? 40 : 14;
         for (net.minecraft.core.BlockPos pos : net.minecraft.core.BlockPos.betweenClosed(centre.offset(-r, -r, -r), centre.offset(r, r, r))) {
-            if (Vec3.atCenterOf(pos).distanceTo(at) > reach) {
+            // A ragged rim: each block's own bit more or less.
+            double edge = reach + (random.nextDouble() - 0.5D) * 0.9D;
+            Vec3 middle = Vec3.atCenterOf(pos);
+            if (middle.distanceTo(centreAt) > edge) {
                 continue;
             }
             net.minecraft.world.level.block.state.BlockState block = level.getBlockState(pos);
@@ -242,10 +253,21 @@ public class CannonballEntity extends ThrowableProjectile {
                 continue;
             }
             level.destroyBlock(pos, false, this);
+            if (broken < sprays) {
+                // Chunks of it thrown up and out.
+                level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, block),
+                        middle.x, middle.y, middle.z, giant ? 14 : 10, 0.4D, 0.4D, 0.4D, 0.35D);
+            }
             broken++;
         }
         if (broken > 0) {
-            level.playSound(null, at.x, at.y, at.z, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 1.0F, 0.7F);
+            level.playSound(null, at.x, at.y, at.z, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 1.4F, 0.6F);
+            level.playSound(null, at.x, at.y, at.z, SoundEvents.ZOMBIE_BREAK_WOODEN_DOOR, SoundSource.PLAYERS, 0.7F, 0.6F);
+            level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, centreAt.x, centreAt.y, centreAt.z, giant ? 16 : 5,
+                    reach * 0.4D, 0.3D, reach * 0.4D, 0.02D);
+        }
+        if (giant || broken > 0) {
+            com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(level, at, giant ? 32.0D : 10.0D, giant ? 16 : 4);
         }
     }
 }

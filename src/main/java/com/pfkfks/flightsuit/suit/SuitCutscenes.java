@@ -18,14 +18,17 @@ public final class SuitCutscenes {
     }
 
     /**
-     * Trunks' Dragon Fist (SwordArts.dragonFist): low in front while he powers up to Super Saiyan 3 (50 ticks), a
-     * wide shot from the side following the golden dragon down its 28-block path (28), then close on him where he
-     * lands (22). 100 ticks, the same clock as the move.
+     * Trunks' Dragon Fist (SwordArts.dragonFist): from behind his shoulder as he turns Super Saiyan 3 - the mane
+     * falls down his back at the fifth tick - circling round (26), then low in front looking up at him (24); a wide
+     * shot from the side following the golden dragon down its 28-block path (28), then close on him where he lands
+     * (22). 100 ticks, the same clock as the move. (M18 3rd feedback: the front-only view never showed the mane.)
      */
     static Cutscene dragonFist() {
         return Cutscene.of(DRAGON_FIST).free()
-                .shot(50).cam(-2.6, 0.5, 3.4).camTo(-1.8, 1.3, 2.3).look(0, 0.9, 0).lookTo(0, 1.7, 0)
-                .at(5).shake(12).at(44).shake(6)
+                .shot(26).cam(-1.9, 1.4, -2.9).camTo(-3.1, 1.6, -0.6).look(0, 1.6, 0).lookTo(0, 1.7, 0)
+                .at(5).shake(12)
+                .shot(24).cam(-2.3, 0.6, 3.0).camTo(-1.7, 1.2, 2.3).look(0, 1.1, 0).lookTo(0, 1.7, 0)
+                .at(18).shake(6)
                 .shot(28).linear().cam(11, 4.5, 6).camTo(13, 5.5, 20).look(0, 1.5, 0).lookTo(0, 1.5, 28)
                 .shot(22).cam(-5, 2.6, 34).camTo(-3, 2.0, 31.5).look(0, 1.5, 28).lookTo(0, 1.2, 28)
                 .build();

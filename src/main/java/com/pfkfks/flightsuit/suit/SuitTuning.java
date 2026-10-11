@@ -82,6 +82,8 @@ public final class SuitTuning {
     public static final float DUEL_LOSS_WEAR = 0.3F;
 
     // Mark 4 hero: Master Sword (hold right click), spin attack (X), clawshot (C), Hylian shield (passive).
+    /** Hero Mode (the hard suit, M18 3rd feedback): every blow that lands on the hero counts double, as in Zelda's Hero Mode. */
+    public static final float HERO_DAMAGE_TAKEN = 2.0F;
     /** Ticks between slashes while the button is held. */
     public static final int SWORD_INTERVAL = 6;
     public static final int SWORD_COST = 30;
@@ -114,14 +116,9 @@ public final class SuitTuning {
     public static final double CLAW_DRAG_MAX_VOLUME = 2.0D;
     public static final int CLAW_MAX_REEL_TICKS = 50;
     public static final int HYLIAN_BLOCK_COST = 40;
-    /** M18 feedback: Z is the shield, right click held charges the spin - this long for a spin, this long for the great one. */
+    /** M18 feedback: Z is the shield, right click held charges the spin - this long for a spin, this long for the great one (X spins at once). */
     public static final int SPIN_CHARGE_TICKS = 10;
     public static final int GREAT_SPIN_CHARGE_TICKS = 30;
-    /** The Hero's Bow (X): a light arrow straight at the crosshair. */
-    public static final int BOW_COST = 300;
-    public static final int BOW_COOLDOWN_TICKS = 20;
-    public static final double BOW_RANGE = 40.0D;
-    public static final float BOW_DAMAGE = 6.0F;
     /** Half-angle of the front the Hylian shield covers. */
     public static final double HYLIAN_BLOCK_ANGLE_DEG = 70.0D;
 
@@ -369,10 +366,13 @@ public final class SuitTuning {
     public static final double CANNON_RADIUS = 3.0D;
     public static final float CANNON_DAMAGE = 8.0F;
     public static final double CANNON_RECOIL = 0.25D;
-    /** Where a ball bursts, blocks within this radius and up to this hardness go (the giant one: twice the radius, harder). */
-    public static final double CANNON_BREAK_RADIUS = 1.3D;
-    public static final float CANNON_BREAK_HARDNESS = 1.5F;
-    public static final float BHGC_BREAK_HARDNESS = 5.0F;
+    /**
+     * Where a ball bursts, blocks within this radius and up to this hardness go (the giant one: twice the radius, harder).
+     * M18 3rd feedback ("더 시원시원"): wider, and cobblestone, deepslate and ores go too (hardness 3).
+     */
+    public static final double CANNON_BREAK_RADIUS = 2.3D;
+    public static final float CANNON_BREAK_HARDNESS = 3.0F;
+    public static final float BHGC_BREAK_HARDNESS = 6.0F;
     public static final int RECOIL_JUMP_COST = 500;
     public static final int RECOIL_JUMP_COOLDOWN_TICKS = 40;
     public static final double RECOIL_JUMP_POWER = 1.1D;

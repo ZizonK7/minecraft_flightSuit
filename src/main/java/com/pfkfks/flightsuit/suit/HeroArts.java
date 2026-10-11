@@ -36,9 +36,8 @@ import com.pfkfks.flightsuit.fx.KiFx;
  * Mark 4, the Hero of Twilight (after Twilight Princess's hero). A swordsman rather than a gunner:
  * - Master Sword (left click): a cut across the front; at full health (or a full chain) every cut also looses a
  *   sword beam that flies straight on (the old Zelda rule);
- * - spin attack (right click held, then let go - M18 feedback): one sweep all the way round; held to a full charge
- *   (or at full health) the great spin, wider and harder;
- * - the Hero's Bow (X, M18 feedback): a light arrow straight at the crosshair;
+ * - spin attack (X at once, or right click held, then let go - M18 feedback): one sweep all the way round; held to
+ *   a full charge (or at full health) the great spin, wider and harder;
  * - clawshot (C): the claw flies at the crosshair - into a block, it reels you there; into a monster, it drags the
  *   monster to you (a big one pulls you to it instead, and you land a slash on arrival). C again lets go;
  * - Hylian shield (Z held - M18 feedback, "the famous shield"): projectiles from the front glance off; a melee blow met within a few ticks of
@@ -64,7 +63,6 @@ public final class HeroArts {
     static final byte MOVE_CLAW = 3;
     static final byte MOVE_BOOMERANG = 4;
     static final byte MOVE_GUARD = 5;
-    static final byte MOVE_BOW = 6;
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
 
@@ -328,37 +326,14 @@ public final class HeroArts {
         spin(player, state, charge >= SuitTuning.GREAT_SPIN_CHARGE_TICKS);
     }
 
-    // ---------------------------------------------------------------- the Hero's Bow (X, M18 feedback)
+    // ---------------------------------------------------------------- spin attack at once (X)
 
-    /** A light arrow straight at the crosshair - the ranged answer of a suit that can't fly. */
-    static void bow(ServerPlayer player, SuitWeapons.State state) {
-        long now = player.level().getGameTime();
-        if (now < state.skill1Ready) {
-            SuitWeapons.cooldownMessage(player, state.skill1Ready - now);
-            return;
-        }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BOW_COST)) {
-            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            return;
-        }
-        state.skill1Ready = now + SuitTuning.BOW_COOLDOWN_TICKS;
-        link(player, state, MOVE_BOW);
-        SuitWeapons.sendStatus(player, state);
-        ServerLevel level = player.serverLevel();
-        Vec3 from = hand(player);
-        SuitWeapons.Aim aim = SuitWeapons.aim(player, SuitTuning.BOW_RANGE);
-        Vec3 end = aim.end();
-        Vec3 dir = end.subtract(from).normalize();
-        if (aim.target() != null) {
-            hit(player, aim.target(), SuitTuning.BOW_DAMAGE * power(player, state), 0.4D, dir);
-            KiFx.burst(level, end, 0xBFE9FF, 0.8F, 6, KiFx.SPARK);
-            level.playSound(null, end.x, end.y, end.z, SoundEvents.ARROW_HIT, SoundSource.PLAYERS, 0.8F, 1.3F);
-        } else {
-            KiFx.burst(level, end, 0xBFE9FF, 0.4F, 4, KiFx.SPARK);
-        }
-        KiFx.beam(level, from, end, 0xBFE9FF, 0.07F, 5, KiFx.BEAM_THIN, null, KiFx.AT_POS, null);
-        level.playSound(null, player.blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F, 1.1F);
-        player.swing(InteractionHand.OFF_HAND, true);
+    /**
+     * X: the spin straight away, no charge (M18 3rd feedback: the bow that had taken X went back to the spin). The
+     * great spin at full health, in the Triforce or on a full chain; held right click still charges one.
+     */
+    static void spinAttack(ServerPlayer player, SuitWeapons.State state) {
+        spin(player, state, false);
     }
 
     // ---------------------------------------------------------------- the Triforce (V, M18)
@@ -535,6 +510,9 @@ public final class HeroArts {
         double radius = great ? SuitTuning.GREAT_SPIN_RADIUS : SuitTuning.SPIN_RADIUS;
         float damage = (great ? SuitTuning.GREAT_SPIN_DAMAGE : SuitTuning.SPIN_DAMAGE) * power(player, state);
         state.spinReady = now + SuitTuning.SPIN_COOLDOWN_TICKS;
+        // X's cooldown on the HUD is the spin's, however it was started.
+        state.skill1Ready = state.spinReady;
+        SuitWeapons.sendStatus(player, state);
         state.spinTicks = SPIN_SWEEP_TICKS;
         state.spinRadius = radius;
         ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.SPIN_ATTACK, 0));
@@ -819,10 +797,16 @@ public final class HeroArts {
                 0.1D, 0.1D, 0.1D, 0.2D);
     }
 
-    /** A blow that lands: a late guard halves it (for a little power); whatever gets through breaks the chain. */
+    /**
+     * A blow that lands: Hero Mode doubles it (the hard suit); a late guard halves it (for a little power); whatever
+     * gets through breaks the chain.
+     */
     static void onHurt(LivingHurtEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.HERO) {
             return;
+        }
+        if (!event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            event.setAmount(event.getAmount() * SuitTuning.HERO_DAMAGE_TAKEN);
         }
         SuitWeapons.State state = SuitWeapons.existing(player);
         if (state == null) {
