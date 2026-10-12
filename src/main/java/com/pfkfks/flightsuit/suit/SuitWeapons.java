@@ -78,8 +78,8 @@ public final class SuitWeapons {
     public static final byte FIRE_CARDS = 3;
     /** M17: the Hulkbuster's flurry of punches. */
     public static final byte FIRE_PUNCH = 5;
-    /** M18 Mark 4: the spin attack charging (right click held with the Master Sword in hand; the shield is Z). */
-    public static final byte FIRE_SPIN = 7;
+    /** Mark 4: the bow drawn (right click held with the Master Sword in hand - 2026-10-12, once the spin charging). */
+    public static final byte FIRE_BOW = 7;
     /** M18 Mark 5: charging a ki slash. */
     public static final byte FIRE_CHARGE = 8;
     /** M18 Mark 7: the staff's beam - healing an ally or shooting holy arrows at a foe. */
@@ -130,9 +130,9 @@ public final class SuitWeapons {
         long chainUntil;
         byte chainLast;
         long shieldRaisedAt;
-        /** M18 feedback: the Hylian shield up (Z held); the spin attack charging (right click held) and its cooldown. */
+        /** M18 feedback: the Hylian shield up (Z held); 2026-10-12 the bow drawn (right click held, ticks); the spin's cooldown. */
         boolean shieldHeld;
-        int spinCharge;
+        int bowDraw;
         long spinReady;
         // Mark 1 unibeam charging; Mark 3 shadow step (SuitSkills): cooldown, and the step under way.
         int unibeamCharge;
@@ -289,13 +289,21 @@ public final class SuitWeapons {
     /**
      * What the wearer's weapons may pick out on their own: a monster - but a kingdom's soldier only if that kingdom
      * fights the wearer (WarTargets.isPlayerFoe; a companion suit asks for its owner). Garrisons at peace are left be.
+     * The story's fighters (Dragon Ball, Battleworld - DbzFighterEntity isn't a Monster) count on the other side while
+     * they fight (2026-10-12 feedback: the spin, missiles and companions passed the Doombots by).
      */
     public static boolean isHostile(LivingEntity who, Entity entity) {
         if (entity instanceof com.pfkfks.flightsuit.war.RaidMember member && entity instanceof Mob mob) {
             UUID id = who instanceof SuitCompanionEntity companion && companion.getOwner() != null ? companion.getOwner().getUUID() : who.getUUID();
             return com.pfkfks.flightsuit.war.WarTargets.isPlayerFoe(mob, id, member);
         }
-        return entity instanceof Enemy;
+        return entity instanceof Enemy || isStoryFoe(entity);
+    }
+
+    /** A Dragon Ball / Battleworld foe in the fight (not one standing in a cutscene). Safe on either side. */
+    public static boolean isStoryFoe(Entity entity) {
+        return entity instanceof com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity fighter && fighter.getCharacter().isFoe()
+                && fighter.isFighting() && !fighter.isActing();
     }
 
     /** Beams (repulsor, cryo, the bishop's staff) hum while they fire and are drawn as a ribbon by the clients. */
@@ -422,7 +430,7 @@ public final class SuitWeapons {
             case SCRAP -> FIRE_FLAME;
             case STEALTH -> FIRE_CRYO;
             case PHANTOM -> FIRE_CARDS;
-            case HERO -> FIRE_SPIN;
+            case HERO -> FIRE_BOW;
             case HULKBUSTER -> FIRE_PUNCH;
             case SWORDSMAN -> FIRE_CHARGE;
             case CANNONEER -> FIRE_CANNON;
@@ -437,8 +445,8 @@ public final class SuitWeapons {
         if (isBeam(state.firing)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6F,
                     state.firing == FIRE_CRYO ? 1.9F : state.firing == FIRE_HOLY ? 1.4F : 1.6F);
-        } else if (state.firing == FIRE_SPIN) {
-            HeroArts.startSpinCharge(player, state);
+        } else if (state.firing == FIRE_BOW) {
+            HeroArts.startDraw(player, state);
         } else if (state.firing == FIRE_CHARGE) {
             SwordArts.startCharge(player, state);
         } else if (state.firing == FIRE_FLAME) {
@@ -456,8 +464,8 @@ public final class SuitWeapons {
         ModNetwork.sendToTrackingAndSelf(player, new BeamStateS2CPacket(player.getId(), FIRE_NONE));
         if (isBeam(was)) {
             player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.4F, 1.8F);
-        } else if (was == FIRE_SPIN) {
-            HeroArts.releaseSpin(player, state);
+        } else if (was == FIRE_BOW) {
+            HeroArts.releaseDraw(player, state);
         } else if (was == FIRE_CHARGE) {
             SwordArts.releaseCharge(player, state);
         } else if (was == FIRE_FLAME) {
@@ -482,7 +490,7 @@ public final class SuitWeapons {
                 switch (state.firing) {
                     case FIRE_CARDS -> PhantomCards.tickStream(player, state);
                     case FIRE_PUNCH -> HulkbusterArts.tickFlurry(player, state);
-                    case FIRE_SPIN -> HeroArts.tickSpinCharge(player, state);
+                    case FIRE_BOW -> HeroArts.tickDraw(player, state);
                     case FIRE_CHARGE -> SwordArts.tickCharge(player, state);
                     case FIRE_HOLY -> BishopArts.tickHoly(player, state);
                     case FIRE_CANNON -> CannonArts.tickCannon(player, state);

@@ -61,7 +61,29 @@ public enum DbzCharacter {
     SUPER_BUU("super_buu", "majin_buu", Role.BOSS, 1700.0D, 18.0D, 0.40D, 1.15F, 1_200_000_000),
     /** Super Buu after absorbing Gohan and Piccolo: 1.3x health and damage. */
     SUPER_BUU_ABSORBED("super_buu_absorbed", "majin_buu", Role.BOSS, 2210.0D, 23.4D, 0.40D, 1.2F, 1_600_000_000),
-    KID_BUU("kid_buu", Role.BOSS, 1800.0D, 20.0D, 0.42D, 0.9F, 1_500_000_000);
+    KID_BUU("kid_buu", Role.BOSS, 1800.0D, 20.0D, 0.42D, 0.9F, 1_500_000_000),
+    // The Doom saga (DESIGN.md 4-17, 2026-10-12): Battleworld's people share the fighters' body and cutscenes. Saved by
+    // name, so they go at the end; the scouter reads nothing from them (another universe). doom.DoomMoves fights them.
+    /** Victor von Doom: green cloak and hood over the iron mask. */
+    DOCTOR_DOOM("doctor_doom", "doom", Role.BOSS, 1800.0D, 16.0D, 0.34D, 1.05F, 0),
+    /** God Emperor Doom (half health in Castle Doom): the Beyonders' power, white and gold. */
+    DOOM_GOD_EMPEROR("doom_god_emperor", "doom", Role.BOSS, 1800.0D, 22.0D, 0.38D, 1.1F, 0),
+    DOOMBOT("doombot", Role.MINION, 60.0D, 7.0D, 0.30D, 1.0F, 0),
+    /** The three masked witches behind Doom's throne (the Doomsday poster). */
+    LATVERIAN_WITCH("latverian_witch", Role.MINION, 90.0D, 5.0D, 0.30D, 1.0F, 0),
+    /** Doom raises them out of the ground (the D23 trailer): three times a man's size. */
+    SENTINEL("sentinel", Role.MINION, 320.0D, 14.0D, 0.26D, 2.6F, 0),
+    MAGNETO("magneto", Role.BOSS, 1000.0D, 12.0D, 0.32D, 1.0F, 0),
+    NAMOR("namor", Role.BOSS, 1050.0D, 15.0D, 0.40D, 1.0F, 0),
+    TALOKAN_WARRIOR("talokan_warrior", Role.MINION, 50.0D, 7.0D, 0.33D, 1.0F, 0),
+    MARVEL_ZOMBIE("marvel_zombie", Role.MINION, 45.0D, 6.0D, 0.29D, 1.0F, 0),
+    /** The Deadlands' Baron: what's left of a Captain America, shield and all. */
+    ZOMBIE_CAPTAIN("zombie_captain", Role.BOSS, 1100.0D, 14.0D, 0.35D, 1.05F, 0),
+    /** The Fantastic Four of Earth-828, who came through the incursion. */
+    MISTER_FANTASTIC("mister_fantastic", "reed", Role.ALLY, 320.0D, 10.0D, 0.34D, 1.0F, 0),
+    INVISIBLE_WOMAN("invisible_woman", "sue", Role.ALLY, 300.0D, 9.0D, 0.34D, 0.95F, 0),
+    HUMAN_TORCH("human_torch", "johnny", Role.ALLY, 280.0D, 11.0D, 0.38D, 1.0F, 0),
+    THE_THING("the_thing", "ben", Role.ALLY, 520.0D, 17.0D, 0.30D, 1.2F, 0);
 
     public enum Role { NPC, ALLY, BOSS, MINION }
 

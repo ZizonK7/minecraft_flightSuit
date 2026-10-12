@@ -23,6 +23,7 @@ public final class Cutscenes {
             loaded = true;
             com.pfkfks.flightsuit.planet.dbz.DbzCutscenes.registerAll();
             com.pfkfks.flightsuit.suit.SuitCutscenes.registerAll();
+            com.pfkfks.flightsuit.doom.DoomCutscenes.registerAll();
         }
     }
 

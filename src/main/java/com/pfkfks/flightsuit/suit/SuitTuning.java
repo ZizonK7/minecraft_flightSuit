@@ -81,7 +81,7 @@ public final class SuitTuning {
     /** Losing also costs every worn suit piece this share of its durability. */
     public static final float DUEL_LOSS_WEAR = 0.3F;
 
-    // Mark 4 hero: Master Sword (hold right click), spin attack (X), clawshot (C), Hylian shield (passive).
+    // Mark 4 hero: Master Sword (left click), bow (right click held), spin attack (X), clawshot (C), Hylian shield (Z held).
     /** Hero Mode (the hard suit, M18 3rd feedback): every blow that lands on the hero counts double, as in Zelda's Hero Mode. */
     public static final float HERO_DAMAGE_TAKEN = 2.0F;
     /** Ticks between slashes while the button is held. */
@@ -116,9 +116,18 @@ public final class SuitTuning {
     public static final double CLAW_DRAG_MAX_VOLUME = 2.0D;
     public static final int CLAW_MAX_REEL_TICKS = 50;
     public static final int HYLIAN_BLOCK_COST = 40;
-    /** M18 feedback: Z is the shield, right click held charges the spin - this long for a spin, this long for the great one (X spins at once). */
-    public static final int SPIN_CHARGE_TICKS = 10;
-    public static final int GREAT_SPIN_CHARGE_TICKS = 30;
+    /**
+     * The Hero's Bow (right click held, then let go - 2026-10-12 feedback, the charged spin's place; X still spins at
+     * once): drawn at least BOW_MIN_DRAW_TICKS to loose at all, full at BOW_FULL_DRAW_TICKS. A real arrow; damage and
+     * speed grow with the draw, and the chain and the Triforce count. Empowered (full health, Triforce, full chain)
+     * a full draw is a light arrow that goes through.
+     */
+    public static final int BOW_COST = 300;
+    public static final int BOW_MIN_DRAW_TICKS = 5;
+    public static final int BOW_FULL_DRAW_TICKS = 20;
+    public static final float BOW_DAMAGE = 7.0F;
+    public static final float BOW_SPEED = 3.2F;
+    public static final int LIGHT_ARROW_PIERCE = 4;
     /** Half-angle of the front the Hylian shield covers. */
     public static final double HYLIAN_BLOCK_ANGLE_DEG = 70.0D;
 

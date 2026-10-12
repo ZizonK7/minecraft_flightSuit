@@ -38,6 +38,8 @@ public class PlanetData extends SavedData {
         public final Map<Planet, Integer> cleared = new EnumMap<>(Planet.class);
         /** Infinity Stones this player has won (thanos.InfinityStone bits) - Thanos comes for them. */
         public int stones;
+        /** 2026-10-12 feedback: Captain has told them who sends the Chitauri and where (ThanosSaga.brief) - once. */
+        public boolean thanosBriefed;
         /** M17: cutscenes this player has watched (each plays once; "/planet replay" shows one again). */
         public final java.util.Set<String> seenCutscenes = new java.util.LinkedHashSet<>();
         /** 2026-10-12: the spaceship's hangar bays (Hangar), each a suit's pieces by slot name. */
@@ -60,6 +62,7 @@ public class PlanetData extends SavedData {
             tag.put("Cleared", clears);
             tag.putLong("NextBeat", nextBeatDay);
             tag.putInt("Stones", stones);
+            tag.putBoolean("ThanosBriefed", thanosBriefed);
             net.minecraft.nbt.ListTag seen = new net.minecraft.nbt.ListTag();
             seenCutscenes.forEach(id -> seen.add(net.minecraft.nbt.StringTag.valueOf(id)));
             tag.put("Seen", seen);
@@ -91,6 +94,7 @@ public class PlanetData extends SavedData {
             }
             traveller.nextBeatDay = tag.getLong("NextBeat");
             traveller.stones = tag.getInt("Stones");
+            traveller.thanosBriefed = tag.getBoolean("ThanosBriefed");
             net.minecraft.nbt.ListTag seen = tag.getList("Seen", net.minecraft.nbt.Tag.TAG_STRING);
             for (int i = 0; i < seen.size(); i++) {
                 traveller.seenCutscenes.add(seen.getString(i));

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "flightsuit:block/multiverse_gate_ns"
+    },
+    "axis=z": {
+      "model": "flightsuit:block/multiverse_gate_ew"
+    }
+  }
+}

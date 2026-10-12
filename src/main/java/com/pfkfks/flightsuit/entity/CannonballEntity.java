@@ -155,7 +155,8 @@ public class CannonballEntity extends ThrowableProjectile {
         if (getOwner() instanceof SuitCompanionEntity companion && !companion.isFoe(living)) {
             return false;
         }
-        return (living instanceof Enemy || living.getLastHurtByMob() == getOwner()) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(living);
+        return (living instanceof Enemy || SuitWeapons.isStoryFoe(living) || living.getLastHurtByMob() == getOwner())
+                && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(living);
     }
 
     /** Anyone but the shooter's side: a ball to the face is a ball to the face. */

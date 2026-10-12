@@ -25,7 +25,8 @@ import java.util.List;
  * villain attacks (the herald). On Titan the Black Order each guard a stone in an arena, and Red Skull keeps the
  * Soul Stone atop the Vormir spire (a soul for a soul: 30 levels). The Time Stone is Hero City's - Captain
  * entrusts it to an ally, or it's in the vault for whoever takes the city. Every stone a player wins goes on
- * their record (PlanetData.Traveller.stones); with three, Thanos comes for them (ThanosRaid).
+ * their record (PlanetData.Traveller.stones) and is one fewer in Thanos' gauntlet when he comes - which a wish on
+ * the Dragon Balls brings about (ThanosRaid.onWish).
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class ThanosSaga {
@@ -51,7 +52,6 @@ public final class ThanosSaga {
             data.setDirty();
             int count = Integer.bitCount(traveller.stones);
             player.sendSystemMessage(Component.translatable("thanos.flightsuit.stone_won", stone.displayName(), count).withStyle(ChatFormatting.LIGHT_PURPLE));
-            ThanosRaid.onStoneWon(player, count);
         }
     }
 
@@ -65,6 +65,40 @@ public final class ThanosSaga {
             player.drop(stack, false);
         }
         record(player, stone);
+    }
+
+    /**
+     * Why Titan (2026-10-12 feedback, "타노스 행성에 갈 명분"): once the herald is on, Captain tells the player - after
+     * they've beaten back a Chitauri storm with the city, or when they next talk to him - who sends the Chitauri and
+     * where he is: Thanos, gathering the Infinity Stones, his Black Order holding them on Titan. Every stone taken
+     * first is one he won't have when he comes. No clock on it (the user: a deadline only makes the game hurried):
+     * for now he's after the Dragon Balls; a wish made on them is what brings him (ThanosRaid.onWish). Once per player.
+     */
+    public static void brief(ServerPlayer player) {
+        PlanetData data = PlanetData.get(player.server);
+        PlanetData.Traveller traveller = data.traveller(player.getUUID());
+        if (traveller.thanosBriefed || !heraldActive(player.server)) {
+            return;
+        }
+        traveller.thanosBriefed = true;
+        data.setDirty();
+        player.sendSystemMessage(com.pfkfks.flightsuit.hero.HeroType.CAPTAIN.line("thanos_brief", player.getName()));
+        player.sendSystemMessage(com.pfkfks.flightsuit.hero.HeroType.CAPTAIN.line("thanos_brief_titan"));
+        player.sendSystemMessage(com.pfkfks.flightsuit.hero.HeroType.CAPTAIN.line("thanos_brief_no_rush"));
+        player.sendSystemMessage(Component.translatable("thanos.flightsuit.briefed").withStyle(ChatFormatting.LIGHT_PURPLE));
+        com.pfkfks.flightsuit.suit.EdithAlert.send(player, Component.translatable("thanos.flightsuit.edith_titan_title").withStyle(ChatFormatting.LIGHT_PURPLE),
+                Component.translatable("thanos.flightsuit.edith_titan"), null, null, com.pfkfks.flightsuit.suit.EdithAlert.AMBER, false);
+    }
+
+    /** The wish told it plainer than Captain could: no briefing needed after that. */
+    static void markBriefed(ServerPlayer player) {
+        PlanetData data = PlanetData.get(player.server);
+        data.traveller(player.getUUID()).thanosBriefed = true;
+        data.setDirty();
+    }
+
+    public static boolean briefed(ServerPlayer player) {
+        return PlanetData.get(player.server).traveller(player.getUUID()).thanosBriefed;
     }
 
     /** Chitauri in Hero City's villain waves (DESIGN 4-16 전조). */

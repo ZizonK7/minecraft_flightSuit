@@ -43,7 +43,8 @@ public final class ShieldRenderer {
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         boolean drew = false;
         for (AbstractClientPlayer player : minecraft.level.players()) {
-            if (!SuitAnimator.isShielding(player)) {
+            if (!SuitAnimator.isShielding(player) || HeroRenderer.hylianShieldUp(player)) {
+                // Link's guard is the Hylian shield on his arm (HeroRenderer), not the nano wall.
                 continue;
             }
             Vec3 eye = player.getEyePosition(partialTick);

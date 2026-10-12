@@ -343,7 +343,7 @@ public final class SpaceTravel {
      * Walks out from (x, z) until the terrain stands above the sea - asking the generator (cheap, nothing gets
      * generated), so only the chunk finally chosen is loaded.
      */
-    static BlockPos firmGround(ServerLevel level, int x0, int z0) {
+    public static BlockPos firmGround(ServerLevel level, int x0, int z0) {
         int bestX = x0;
         int bestZ = z0;
         search:

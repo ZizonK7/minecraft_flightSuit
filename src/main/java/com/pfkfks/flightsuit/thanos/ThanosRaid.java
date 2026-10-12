@@ -45,10 +45,14 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The final battle (DESIGN.md 4-16 최종전, M16): once a player holds three Infinity Stones, Thanos comes for
- * them two days later at dusk - to their village (or to Hero City if they have none). Waves: Chitauri, then two
- * of the Black Order, then Thanos himself, wielding every stone the player does NOT have. Hero City's heroes
- * come to help an ally (trust 70+). The village is kept loaded throughout (DESIGN 4-15).
+ * The final battle (DESIGN.md 4-16 최종전, M16). What brings him (2026-10-12, the user): the Dragon Balls. A wish
+ * made on them tells Thanos the balls have slipped through his fingers, so he settles for the stones - and comes for
+ * the last one he lacks, the Time Stone, WISH_DELAY_DAYS later at dusk: to the player's village if they hold it, else
+ * to Hero City where it's kept (either way to the other if the first doesn't exist). Waves: Chitauri, then two of
+ * the Black Order, then Thanos himself, wielding every stone the player does NOT have - except the Time Stone he's
+ * come for. So the stones won on Titan beforehand are what makes the battle easier. Hero City's heroes come to help
+ * an ally (trust 70+). The village is kept loaded throughout (DESIGN 4-15). (Until 2026-10-12 three stones in hand
+ * brought him; now they don't.)
  *
  * Win (Thanos beaten, or turned to dust by the Infinity Gauntlet): a chest battery upgrade and arc reactors (M18 - the
  * Nanotech Mark 50 was dropped). Lose (still standing
@@ -60,8 +64,8 @@ import java.util.UUID;
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
 public final class ThanosRaid {
-    public static final int STONES_TO_RAID = 3;
-    private static final int DELAY_DAYS = 2;
+    /** From the wish to his coming: time to fetch stones from Titan first (Claude's call, to be checked in play). */
+    private static final int WISH_DELAY_DAYS = 7;
     private static final int RETRY_DAYS = 5;
     /** "Away until the snap is undone" (heroes' away-until day, a village's return day). */
     private static final long UNTIL_UNDONE = Long.MAX_VALUE / 4;
@@ -75,18 +79,22 @@ public final class ThanosRaid {
 
     // ---------------------------------------------------------------- when
 
-    static void onStoneWon(ServerPlayer player, int count) {
-        if (count < STONES_TO_RAID) {
-            return;
-        }
+    /**
+     * A wish granted on the Dragon Balls (DragonBalls.wish): Thanos learns of it and comes for the Time Stone. Once
+     * per player - not again while he's due, nor after he's been beaten.
+     */
+    public static void onWish(ServerPlayer player) {
         ThanosData data = ThanosData.get(player.server);
         if (data.defeated.contains(player.getUUID()) || data.raidDay.containsKey(player.getUUID())
                 || data.raid != null && data.raid.player.equals(player.getUUID())) {
             return;
         }
-        long day = player.server.overworld().getDayTime() / 24000L + DELAY_DAYS;
+        long day = player.server.overworld().getDayTime() / 24000L + WISH_DELAY_DAYS;
         data.raidDay.put(player.getUUID(), day);
         data.setDirty();
+        // The Titan's reason to go is now plain, whether or not Captain told it yet.
+        ThanosSaga.markBriefed(player);
+        player.sendSystemMessage(ThanosForce.THANOS.line("dragon_balls"));
         player.sendSystemMessage(Component.translatable("thanos.flightsuit.he_senses").withStyle(ChatFormatting.DARK_PURPLE));
         EdithAlert.send(player, Component.translatable("thanos.flightsuit.edith_coming_title").withStyle(ChatFormatting.DARK_PURPLE),
                 Component.translatable("thanos.flightsuit.edith_coming", day), null, null, EdithAlert.RED, true);
@@ -133,10 +141,14 @@ public final class ThanosRaid {
             return false;
         }
         WarData.VillageRecord village = WarData.get(server).homeVillage(who);
+        boolean hasVillage = village != null && server.getLevel(village.dimension) != null;
+        boolean hasCity = HeroData.get(server).built;
+        // Where the Time Stone is: with the player (Captain gave it), or still in Hero City's keeping.
+        boolean timeWithPlayer = (ThanosSaga.stones(server, who) & InfinityStone.TIME.bit()) != 0;
         ThanosData.Raid raid;
-        if (village != null && server.getLevel(village.dimension) != null) {
+        if (hasVillage && (timeWithPlayer || !hasCity)) {
             raid = new ThanosData.Raid(who, village.dimension, village.hall, false, village.key());
-        } else if (HeroData.get(server).built) {
+        } else if (hasCity) {
             raid = new ThanosData.Raid(who, Level.OVERWORLD, HeroData.get(server).center(), true, "");
         } else {
             data.raidDay.put(who, day + 1);
@@ -236,7 +248,7 @@ public final class ThanosRaid {
             }
             case 2 -> {
                 if (blackOrder == 0 || now - raid.waveAt > 20L * 90) {
-                    int his = InfinityStone.ALL & ~ThanosSaga.stones(server, raid.player);
+                    int his = stonesOf(server, raid);
                     raid.thanos = spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D, his);
                     announce(level, raid, ThanosForce.THANOS.line("go"));
                     announce(level, raid, Component.translatable("thanos.flightsuit.his_stones", InfinityStone.list(his)).withStyle(ChatFormatting.DARK_PURPLE));
@@ -247,12 +259,16 @@ public final class ThanosRaid {
                 Entity him = raid.thanos == null ? null : level.getEntity(raid.thanos);
                 if ((him == null || him.isRemoved()) && !raid.won) {
                     // His chunk unloaded (or he was lost): he comes back.
-                    raid.thanos = spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D,
-                            InfinityStone.ALL & ~ThanosSaga.stones(server, raid.player));
+                    raid.thanos = spawn(level, raid, ThanosForce.THANOS, random.nextDouble() * Math.PI * 2.0D, stonesOf(server, raid));
                     data.setDirty();
                 }
             }
         }
+    }
+
+    /** The stones in his gauntlet: all the player hasn't won - but not the Time Stone, the one he has come to take. */
+    private static int stonesOf(MinecraftServer server, ThanosData.Raid raid) {
+        return InfinityStone.ALL & ~ThanosSaga.stones(server, raid.player) & ~InfinityStone.TIME.bit();
     }
 
     private static void next(ThanosData data, ThanosData.Raid raid, long now) {

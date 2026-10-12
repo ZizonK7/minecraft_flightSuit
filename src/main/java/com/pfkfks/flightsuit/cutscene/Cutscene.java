@@ -69,6 +69,9 @@ public final class Cutscene {
     public static final int BEAM_WHITE = 4;
     public static final int BEAM_DEATH = 5;
     public static final int BEAM_MOUTH = 6;
+    /** The Doom saga (2026-10-12): Doom's green, the Torch's fire. */
+    public static final int BEAM_DOOM = 7;
+    public static final int BEAM_FIRE = 8;
 
     /** Burst kinds. */
     public static final int BURST_EXPLOSION = 0;
@@ -81,6 +84,10 @@ public final class Cutscene {
     public static final int BURST_LIGHTNING = 7;
     public static final int BURST_SPIRIT_BOMB = 8;
     public static final int BURST_LAVA = 9;
+    /** The Doom saga: a pillar of green light; another Earth hanging in the sky (an incursion); a rift tearing open. */
+    public static final int BURST_GREEN_PILLAR = 10;
+    public static final int BURST_EARTH = 11;
+    public static final int BURST_RIFT = 12;
 
     /** Sound kinds. */
     public static final int SOUND_BOOM = 0;

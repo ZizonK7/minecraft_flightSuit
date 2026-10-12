@@ -1,0 +1,53 @@
+{
+  "version": 3,
+  "name": "bow_draw",
+  "author": "flightsuit",
+  "description": "Link's bow (2026-10-12): the bow arm held out along the look direction, the other hand drawn back to the string (vanilla's bow pose; pitch of both arms is adjusted by head xRot in SuitAnimator).",
+  "emote": {
+    "beginTick": 1,
+    "endTick": 20,
+    "stopTick": 21,
+    "isLoop": true,
+    "returnTick": 1,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {
+        "tick": 3,
+        "easing": "OUTQUAD",
+        "rightArm": {
+          "pitch": -90,
+          "yaw": -6,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 3,
+        "easing": "OUTQUAD",
+        "leftArm": {
+          "pitch": -90,
+          "yaw": 29,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "LINEAR",
+        "rightArm": {
+          "pitch": -90,
+          "yaw": -6,
+          "roll": 0
+        }
+      },
+      {
+        "tick": 20,
+        "easing": "LINEAR",
+        "leftArm": {
+          "pitch": -90,
+          "yaw": 29,
+          "roll": 0
+        }
+      }
+    ]
+  }
+}

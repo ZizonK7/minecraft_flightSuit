@@ -32,6 +32,10 @@ public final class ClientSetup {
         event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.MASTER_SWORD.get(),
                 new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "ocarina"),
                 (stack, level, entity, seed) -> HeroRenderer.ocarina(entity)));
+        // 2026-10-12 feedback: and as the Hero's Bow while he draws (right click held) - how far back, 0..1.
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.MASTER_SWORD.get(),
+                new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "bow"),
+                (stack, level, entity, seed) -> HeroRenderer.bowDraw(entity)));
     }
 
     @SubscribeEvent
@@ -48,6 +52,7 @@ public final class ClientSetup {
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.NamekianParts.LAYER, com.pfkfks.flightsuit.client.parts.NamekianParts::createLayer);
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.FriezaParts.LAYER, com.pfkfks.flightsuit.client.parts.FriezaParts::createLayer);
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.CellBuuParts.LAYER, com.pfkfks.flightsuit.client.parts.CellBuuParts::createLayer);
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.MarvelParts.LAYER, com.pfkfks.flightsuit.client.parts.MarvelParts::createLayer);
     }
 
     @SubscribeEvent
@@ -57,6 +62,7 @@ public final class ClientSetup {
             LivingEntityRenderer<?, ?> renderer = event.getSkin(skin);
             if (renderer instanceof PlayerRenderer player) {
                 player.addLayer(new HeroRenderer.SwordLayer(player, event.getContext().getItemInHandRenderer()));
+                player.addLayer(new HeroRenderer.HylianShieldLayer(player, event.getContext().getItemInHandRenderer()));
             }
         }
     }

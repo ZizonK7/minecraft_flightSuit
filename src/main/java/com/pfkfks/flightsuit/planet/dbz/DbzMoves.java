@@ -40,7 +40,7 @@ final class DbzMoves {
         return switch (who) {
             case VEGETA, RECOOME -> 240;
             case CELL, FRIEZA, FRIEZA_FINAL, PICCOLO -> 200;
-            default -> 160;
+            default -> com.pfkfks.flightsuit.doom.DoomMoves.isCast(who) ? com.pfkfks.flightsuit.doom.DoomMoves.beamCooldown(who) : 160;
         };
     }
 
@@ -52,7 +52,7 @@ final class DbzMoves {
             case FRIEZA, FRIEZA_FINAL -> 24.0F;
             case PICCOLO -> 26.0F;
             case GOKU_SSJ, GOHAN_TEEN_SSJ2 -> 28.0F;
-            default -> 14.0F;
+            default -> com.pfkfks.flightsuit.doom.DoomMoves.isCast(who) ? com.pfkfks.flightsuit.doom.DoomMoves.beamDamage(who) : 14.0F;
         };
     }
 
@@ -303,6 +303,9 @@ final class DbzMoves {
                 }
             }
             default -> {
+                if (com.pfkfks.flightsuit.doom.DoomMoves.isCast(who)) {
+                    com.pfkfks.flightsuit.doom.DoomMoves.use(me, server, target, distance, sees);
+                }
             }
         }
         if (me.tickCount % 40 == 0 && who.isFoe() && who.role() == DbzCharacter.Role.BOSS) {

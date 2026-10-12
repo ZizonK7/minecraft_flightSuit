@@ -670,6 +670,8 @@ public final class DragonBalls {
         }
         PENDING.remove(player.getUUID());
         player.sendSystemMessage(Component.translatable("dragonball.flightsuit.granted").withStyle(ChatFormatting.GREEN));
+        // 2026-10-12 (user): the wish is what brings Thanos - the balls lost to him, he comes for the last stone.
+        com.pfkfks.flightsuit.thanos.ThanosRaid.onWish(player);
         player.serverLevel().playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 0.8F);
         for (Show show : SHOWS) {
             if (show.level == player.level() && show.at.distanceToSqr(player.position()) < 64.0D * 64.0D) {

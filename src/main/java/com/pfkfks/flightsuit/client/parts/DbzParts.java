@@ -14,7 +14,7 @@ import java.util.Set;
  */
 public final class DbzParts {
     public enum Set_ {
-        SAIYAN, NAMEKIAN, FRIEZA, CELL_BUU
+        SAIYAN, NAMEKIAN, FRIEZA, CELL_BUU, MARVEL
     }
 
     /** A character's parts: which model, which of its groups. */
@@ -45,6 +45,13 @@ public final class DbzParts {
         WEAR.put(DbzCharacter.SUPER_BUU, new Wear(Set_.CELL_BUU, Set.of("antenna_super")));
         WEAR.put(DbzCharacter.SUPER_BUU_ABSORBED, new Wear(Set_.CELL_BUU, Set.of("antenna_super")));
         WEAR.put(DbzCharacter.KID_BUU, new Wear(Set_.CELL_BUU, Set.of("antenna_kid")));
+        // The Doom saga (MarvelParts): capes, and Talokan's headdress.
+        WEAR.put(DbzCharacter.DOCTOR_DOOM, new Wear(Set_.MARVEL, Set.of("cape_doom")));
+        WEAR.put(DbzCharacter.DOOMBOT, new Wear(Set_.MARVEL, Set.of("cape_doom")));
+        WEAR.put(DbzCharacter.DOOM_GOD_EMPEROR, new Wear(Set_.MARVEL, Set.of("cape_god")));
+        WEAR.put(DbzCharacter.MAGNETO, new Wear(Set_.MARVEL, Set.of("cape_magneto")));
+        WEAR.put(DbzCharacter.LATVERIAN_WITCH, new Wear(Set_.MARVEL, Set.of("cape_witch")));
+        WEAR.put(DbzCharacter.TALOKAN_WARRIOR, new Wear(Set_.MARVEL, Set.of("feathers")));
     }
 
     private DbzParts() {

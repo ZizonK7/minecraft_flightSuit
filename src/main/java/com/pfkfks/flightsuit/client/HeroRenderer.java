@@ -105,6 +105,32 @@ public final class HeroRenderer {
         return until != null && until > holder.level().getGameTime() ? 1.0F : 0.0F;
     }
 
+    /**
+     * The Master Sword's "flightsuit:bow" model override (ClientSetup, 2026-10-12): while the hero draws (right click
+     * held) the sword in hand is the bow - 0 when not drawing, else how far back the string is (0.01 .. 1).
+     */
+    public static float bowDraw(@org.jetbrains.annotations.Nullable LivingEntity holder) {
+        if (!(holder instanceof Player) || ClientWeapons.firing(holder.getId()) != SuitWeapons.FIRE_BOW) {
+            return 0.0F;
+        }
+        float pull = ClientWeapons.firingTicks(holder.getId(), 0.0F) / com.pfkfks.flightsuit.suit.SuitTuning.BOW_FULL_DRAW_TICKS;
+        return Mth.clamp(pull, 0.01F, 1.0F);
+    }
+
+    /** Link holding up the Hylian shield (Z): drawn on his left arm instead of the nano shield's wall. */
+    public static boolean hylianShieldUp(Player player) {
+        return SuitAnimator.isShielding(player) && SuitWeapons.armedClass(player) == com.pfkfks.flightsuit.suit.SuitClass.HERO;
+    }
+
+    private static ItemStack hylianShield;
+
+    private static ItemStack hylianShield() {
+        if (hylianShield == null) {
+            hylianShield = new ItemStack(ModItems.HYLIAN_SHIELD.get());
+        }
+        return hylianShield;
+    }
+
     public static void showSword(int entityId, int ticks) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
@@ -173,6 +199,61 @@ public final class HeroRenderer {
                     : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, left, poseStack, buffers, light);
             poseStack.popPose();
         }
+    }
+
+    // ---------------------------------------------------------------- the Hylian shield (Z, 2026-10-12 feedback)
+
+    /** Third person: the shield on the off-hand arm (which the guard pose holds out in front) while Z is held. */
+    public static final class HylianShieldLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
+        private final ItemInHandRenderer itemInHandRenderer;
+
+        public HylianShieldLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent,
+                                 ItemInHandRenderer itemInHandRenderer) {
+            super(parent);
+            this.itemInHandRenderer = itemInHandRenderer;
+        }
+
+        @Override
+        public void render(PoseStack poseStack, MultiBufferSource buffers, int light, AbstractClientPlayer player, float limbSwing,
+                           float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+            if (!hylianShieldUp(player)) {
+                return;
+            }
+            HumanoidArm arm = player.getMainArm().getOpposite();
+            boolean left = arm == HumanoidArm.LEFT;
+            poseStack.pushPose();
+            getParentModel().translateToHand(arm, poseStack);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            poseStack.translate((left ? -1.0F : 1.0F) / 16.0F, 0.125F, -0.625F);
+            itemInHandRenderer.renderItem(player, hylianShield(), left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+                    : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, left, poseStack, buffers, light);
+            poseStack.popPose();
+        }
+    }
+
+    /** First person: the shield raised in front, low on the off-hand side (in place of whatever that hand holds). */
+    @SubscribeEvent
+    public static void onRenderOffHand(RenderHandEvent event) {
+        if (event.getHand() != InteractionHand.OFF_HAND) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (player == null || !hylianShieldUp(player)) {
+            return;
+        }
+        event.setCanceled(true);
+        boolean left = player.getMainArm() == HumanoidArm.RIGHT;
+        int side = left ? -1 : 1;
+        PoseStack poseStack = event.getPoseStack();
+        poseStack.pushPose();
+        // Vanilla's off-hand item spot, brought in toward the middle and up a little: braced behind it.
+        poseStack.translate(side * 0.42F, -0.42F, -0.72F);
+        minecraft.getEntityRenderDispatcher().getItemInHandRenderer().renderItem(player, hylianShield(),
+                left ? ItemDisplayContext.FIRST_PERSON_LEFT_HAND : ItemDisplayContext.FIRST_PERSON_RIGHT_HAND, left,
+                poseStack, event.getMultiBufferSource(), event.getPackedLight());
+        poseStack.popPose();
     }
 
     /** First person: the sword instead of the bare arm, swinging with vanilla's attack motion. */

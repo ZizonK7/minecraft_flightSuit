@@ -351,6 +351,7 @@ public class CityHeroEntity extends PathfinderMob {
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
+        tickRecovery();
         LivingEntity target = getTarget();
         if (skillCooldown > 0) {
             skillCooldown--;
@@ -466,7 +467,24 @@ public class CityHeroEntity extends PathfinderMob {
         if (source.getEntity() instanceof CityHeroEntity) {
             return false;
         }
+        if (!(source.getEntity() instanceof Player) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            // 2026-10-12 feedback ("히어로가 너무 빨리 죽어"): heroes shrug off most of what villains and invaders deal
+            // - a player who turns on them still meets them at full strength.
+            amount *= HERO_DAMAGE_TAKEN;
+        }
         return super.hurt(source, amount);
+    }
+
+    private static final float HERO_DAMAGE_TAKEN = 0.4F;
+    /** And they catch their breath: this share of their health a second once nothing has hit them for a while. */
+    private static final float HERO_REGEN = 0.02F;
+    private static final int HERO_REGEN_AFTER = 100;
+
+    private void tickRecovery() {
+        if (isAlive() && getHeroType().isHero() && getHealth() < getMaxHealth() && tickCount % 20 == 0
+                && tickCount - getLastHurtByMobTimestamp() > HERO_REGEN_AFTER) {
+            heal(getMaxHealth() * HERO_REGEN);
+        }
     }
 
     /** Heroes don't die: beaten, they withdraw (HeroCity counts it toward the city falling). */

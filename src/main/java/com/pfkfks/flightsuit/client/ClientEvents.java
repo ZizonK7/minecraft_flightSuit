@@ -134,9 +134,8 @@ public final class ClientEvents {
             }
         }
         if (!ModKeys.COUNTER.isDown() && counterHeld >= 0) {
-            if (shieldSent) {
-                ModNetwork.sendToServer(new CounterC2SPacket(CounterHandler.RELEASE));
-            }
+            // Always (2026-10-12): Link's shield goes up on the press itself, so a quick tap must let it down too.
+            ModNetwork.sendToServer(new CounterC2SPacket(CounterHandler.RELEASE));
             counterHeld = -1;
         }
     }
