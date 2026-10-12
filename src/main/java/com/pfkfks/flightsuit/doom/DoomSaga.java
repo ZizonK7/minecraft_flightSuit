@@ -44,7 +44,9 @@ import java.util.function.Supplier;
 /**
  * The Doom saga, "Doomsday" (DESIGN.md 4-17, 2026-10-12): the multiverse is dying - Earths collide (incursions) - and
  * Victor von Doom has stitched what was left of the dead worlds into Battleworld, with himself on its throne.
- * - Prologue, the incursion: after Thanos falls (or by day 60), one night another Earth fills the sky over you, a rift
+ * - Prologue, the incursion: only after Thanos falls - the stones' time-meddling in that war tangled the timelines,
+ *   and through the knot the worlds start colliding (the user: "타노스 사가의 시간여행 때문에 시간선들이 엉켜서 둠스데이가
+ *   오는 것"). The first night after, another Earth fills the sky over you, a rift
  *   tears open and Doombots step out. Beat them and the Fantastic Four of Earth-828 come through after them; Reed
  *   hands you the bridge key (an amethyst frame, lit - a gate, like the Nether's).
  * - Chapter 1, Battleworld: every gate opens onto the Four's refuge. Reed tells you how it holds together: three
@@ -105,8 +107,6 @@ public final class DoomSaga {
         }
     }
 
-    /** First night it can come (overworld day), for those who haven't beaten Thanos. */
-    public static final long INCURSION_DAY = 60L;
     private static final int ALL_CORES = 7;
     private static final String ESCORT = "flightsuit_escort";
 
@@ -197,13 +197,16 @@ public final class DoomSaga {
 
     private static final Map<UUID, Incursion> INCURSIONS = new HashMap<>();
 
-    /** Who's due an incursion: past Thanos (or day 60), not started, not already in one. */
-    private static boolean due(ServerPlayer player, long day) {
-        if (stage(player) != null && stage(player) != Stage.INCURSION) {
+    /**
+     * Who's due an incursion: not started (or started and not finished), and Thanos beaten in this world - by anyone:
+     * the tangled timelines are the world's, not one player's (so a friend who joins later gets the story too).
+     */
+    private static boolean due(ServerPlayer player) {
+        Stage stage = stage(player);
+        if (stage != null && stage != Stage.INCURSION) {
             return false;
         }
-        boolean thanos = com.pfkfks.flightsuit.thanos.ThanosData.get(player.server).defeated.contains(player.getUUID());
-        return stage(player) == Stage.INCURSION || thanos || day >= INCURSION_DAY;
+        return stage == Stage.INCURSION || !com.pfkfks.flightsuit.thanos.ThanosData.get(player.server).defeated.isEmpty();
     }
 
     /** Starts this player's incursion now (the test command, and the night it's due). */
@@ -231,12 +234,11 @@ public final class DoomSaga {
 
     private static void tickIncursions(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        long day = overworld.getDayTime() / 24000L;
         long time = overworld.getDayTime() % 24000L;
         boolean night = time > 13500L && time < 22000L;
         if (night) {
             for (ServerPlayer player : overworld.players()) {
-                if (!INCURSIONS.containsKey(player.getUUID()) && !player.isSpectator() && due(player, day)
+                if (!INCURSIONS.containsKey(player.getUUID()) && !player.isSpectator() && due(player)
                         && !CutsceneRunner.isWatching(player) && overworld.random.nextInt(30) == 0) {
                     startIncursion(player);
                 }

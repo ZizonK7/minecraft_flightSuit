@@ -1740,7 +1740,7 @@
   "doom.flightsuit.marker.domain": "the Baron of %s",
   "doom.flightsuit.marker.castle": "Castle Doom",
   "doom.flightsuit.no_key": "Reed hasn't given you a key yet, or you already have one",
-  "doom.flightsuit.goal.none": "The Doom saga hasn't begun (after Thanos falls, or from the 60th night)",
+  "doom.flightsuit.goal.none": "The Doom saga hasn't begun (it starts on a night after Thanos falls)",
   "doom.flightsuit.goal.incursion": "[Doom] The incursion: stop the Doombots from the rift %1$s",
   "doom.flightsuit.goal.gate": "[Doom] Build an amethyst frame, open the gate with the bridge key, cross to Battleworld %1$s",
   "doom.flightsuit.goal.arrived": "[Doom] Talk to Reed Richards at the refuge %1$s",
@@ -1815,7 +1815,7 @@
   "dbz.flightsuit.zombie_captain.blast": "RAAAGH!",
   "dbz.flightsuit.zombie_captain.beaten": "...Finally... I can rest...",
   "dbz.flightsuit.reed.arrive": "...This world is still standing. Good.",
-  "dbz.flightsuit.reed.doom": "Doctor Doom. He's stitching the pieces of falling worlds together. He calls it Battleworld. Ours is in there too.",
+  "dbz.flightsuit.reed.doom": "In the war with Thanos, someone used the stones to meddle with time. The timelines tangled, and through the knot the worlds began to collide - incursions. And someone has crawled into that gap. Doctor Doom. He's stitching the falling worlds into Battleworld. Ours is in there too.",
   "dbz.flightsuit.reed.key": "%s, take this. A bridge key. Build a frame of amethyst, touch it with this, and a gate opens.",
   "dbz.flightsuit.reed.key_2": "We'll wait for you at the refuge on the other side. Hurry - before the next incursion.",
   "dbz.flightsuit.reed.welcome": "You made it. This is our refuge. Come here - there's a lot to explain.",
@@ -1903,6 +1903,6 @@
   "dbz.flightsuit.sue.beaten": "I'm fine... falling back for a moment.",
   "dbz.flightsuit.johnny.beaten": "Flame's... out...",
   "dbz.flightsuit.ben.beaten": "Aw, nuts... not my day.",
-  "guide.flightsuit.page.23": "§1§lThe Doom Saga§r\n§8After Thanos (or from night 60)§r\nAnother Earth in the sky\n-> beat the rift's Doombots\nand the Fantastic Four\ngive you a key\n\n§1§lMultiverse gate§r\nAmethyst block frame +\nbridge key %9$s\nStand in it 3s: Battleworld\n/doom = what's next",
+  "guide.flightsuit.page.23": "§1§lThe Doom Saga§r\n§8A night after Thanos falls§r\nAnother Earth in the sky\n-> beat the rift's Doombots\nand the Fantastic Four\ngive you a key\n\n§1§lMultiverse gate§r\nAmethyst block frame +\nbridge key %9$s\nStand in it 3s: Battleworld\n/doom = what's next",
   "doom.flightsuit.incursion.overworld": "The incursion only begins in the overworld"
 }
