@@ -297,6 +297,11 @@ public final class SpaceTravel {
         }
     }
 
+    /** Where this pilot's ship comes down on {@code planet} - Mark 2's emergency escape flies there (EscapeFlight). */
+    public static BlockPos landingPoint(ServerLevel level, Planet planet, ServerPlayer pilot) {
+        return landingSite(level, planet, pilot);
+    }
+
     /** The planet's landing site (found once: firm ground near the middle of the world), a few steps apart per pilot. */
     private static BlockPos landingSite(ServerLevel level, Planet planet, ServerPlayer pilot) {
         PlanetData data = PlanetData.get(level.getServer());

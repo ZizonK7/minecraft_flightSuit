@@ -289,13 +289,38 @@ public final class SuitTuning {
     public static final int XRAY_COOLDOWN_TICKS = 600;
     public static final int XRAY_TICKS = 300;
     public static final int XRAY_RADIUS = 32;
-    /** The flashbang (B): thrown where you look; everything with eyes on it is blinded and loses you for a while. */
-    public static final int FLASHBANG_COST = 500;
-    public static final int FLASHBANG_COOLDOWN_TICKS = 200;
-    public static final double FLASHBANG_RANGE = 20.0D;
+    /**
+     * The flash (2026-10-12: no longer thrown - it goes off where the emergency escape takes off): everything with
+     * eyes on it is blinded and loses you for a while.
+     */
     public static final double FLASHBANG_RADIUS = 7.0D;
     public static final int FLASHBANG_BLIND_TICKS = 100;
     public static final int FLASHBANG_STUN_TICKS = 20;
+    /**
+     * Mark 2 emergency escape (B, 2026-10-12, EscapeFlight): a flash, then the suit flies the wearer home - to the
+     * suit's station, or on a planet to the landed ship. Speeds are blocks per tick (the client flies it).
+     */
+    public static final int ESCAPE_COST = 3_000;
+    public static final int ESCAPE_COOLDOWN_TICKS = 1_800;
+    /** Pressed again, or cut short (blocked, out of the suit): only this long before it can be tried again. */
+    public static final int ESCAPE_FAILED_COOLDOWN_TICKS = 100;
+    public static final double ESCAPE_CLIMB_SPEED = 1.0D;
+    /** Straight up through rock (the laser cutting the way ahead). */
+    public static final double ESCAPE_DRILL_SPEED = 0.6D;
+    public static final double ESCAPE_CRUISE_SPEED = 2.0D;
+    /** Cruising height: this far above the higher of the take-off and landing ground, at least the floor. */
+    public static final int ESCAPE_CRUISE_ABOVE = 40;
+    public static final int ESCAPE_CRUISE_FLOOR = 120;
+    /** Blocks the laser clears above the head while climbing (ahead of the client, which is a few ticks ahead). */
+    public static final int ESCAPE_DRILL_AHEAD = 7;
+    /** Farther than this at cruising height: the suit jumps ahead to ESCAPE_JUMP_TO short of home (sonic boom). */
+    public static final double ESCAPE_JUMP_OVER = 1_600.0D;
+    public static final double ESCAPE_JUMP_TO = 600.0D;
+    /** Within this (horizontally) of home: the descent. */
+    public static final double ESCAPE_DESCENT_RADIUS = 8.0D;
+    /** No closer for this long: the last stretch (a roof over the station, a cliff in the way) is done in one go. */
+    public static final int ESCAPE_STUCK_TICKS = 40;
+    public static final int ESCAPE_MAX_TICKS = 1_200;
 
     // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B). After the
     // first test ("어렵고 쎄야 하는데 그냥 쎈데"): the chain - every move that differs from the last within CHAIN_WINDOW

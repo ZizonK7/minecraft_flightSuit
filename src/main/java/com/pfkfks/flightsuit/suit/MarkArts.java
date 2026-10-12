@@ -41,8 +41,9 @@ import java.util.Set;
  *       whole missile salvo - and the shoulder guns (B) that pick off whatever's ahead for a few seconds (the EDITH
  *       scan went after the first test: Mark 1 needn't mine, and it doubled Mark 2's x-ray);</li>
  *   <li>Mark 2, the explorer: the mining laser (X) that cuts a 3x3 tunnel ahead and pockets the drops, x-ray (V)
- *       that shows ores and monsters through the rock for a while, and the flashbang (B) that blinds whatever has
- *       eyes on it (the light orb went: the user couldn't tell what it was for).</li>
+ *       that shows ores and monsters through the rock for a while, and the emergency escape (B, EscapeFlight: a
+ *       flash that blinds whatever has eyes on it, then the flight home - it replaced the thrown flashbang, which
+ *       had replaced the light orb).</li>
  * </ul>
  * Ores are drawn on the client (client/OreSightClient) from the positions the server scans once.
  */
@@ -337,39 +338,19 @@ public final class MarkArts {
         player.displayClientMessage(Component.translatable("message.flightsuit.xray", mobs, ores), true);
     }
 
-    // ---------------------------------------------------------------- Mark 2: flashbang (B)
+    // ---------------------------------------------------------------- Mark 2: the escape's flash (B)
 
     /**
-     * Thrown where you look: a burst of white that blinds everything with eyes on it, stops it in its tracks for a
-     * moment and makes it forget you - the way in, or the way out.
+     * A burst of white at {@code at} that blinds everything with eyes on it, stops it in its tracks for a moment and
+     * makes it forget you - what the emergency escape (EscapeFlight) leaves behind as it takes off. Until 2026-10-12
+     * B threw it as a flashbang of its own.
      */
-    static void flashbang(ServerPlayer player, SuitWeapons.State state) {
-        long now = player.level().getGameTime();
-        if (now < state.skill3Ready) {
-            SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
-            return;
-        }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLASHBANG_COST)) {
-            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            return;
-        }
-        ServerLevel level = player.serverLevel();
-        Vec3 eye = player.getEyePosition();
-        Vec3 far = eye.add(player.getLookAngle().scale(SuitTuning.FLASHBANG_RANGE));
-        BlockHitResult hit = level.clip(new ClipContext(eye, far, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 at = hit.getType() == HitResult.Type.MISS ? far : hit.getLocation().add(hit.getLocation().subtract(eye).normalize().scale(-0.3D));
-        state.skill3Ready = now + SuitTuning.FLASHBANG_COOLDOWN_TICKS;
-        SuitWeapons.sendStatus(player, state);
-        Vec3 hand = eye.add(player.getLookAngle().scale(0.5D)).add(0.0D, -0.2D, 0.0D);
-        KiFx.shot(level, (byte) KiShots.Style.KI.ordinal(), KiFx.WHITE, 0.35F, hand, at.subtract(hand).normalize(), 1.6D, at.distanceTo(hand));
-        int flight = (int) Math.ceil(at.distanceTo(hand) / 1.6D);
+    static void flash(ServerPlayer player, SuitWeapons.State state, Vec3 at) {
         state.flashAt = at;
-        state.flashTick = now + flight;
-        player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
-        level.playSound(null, player.blockPosition(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 0.8F, 1.3F);
+        state.flashTick = player.level().getGameTime();
     }
 
-    /** The thrown flashbang going off where it lands. */
+    /** The flash going off. */
     private static void tickFlashbang(ServerPlayer player, SuitWeapons.State state) {
         if (state.flashTick == 0L || player.level().getGameTime() < state.flashTick) {
             return;
@@ -401,6 +382,8 @@ public final class MarkArts {
             HulkbusterArts.stun(level, mob, SuitTuning.FLASHBANG_STUN_TICKS);
             blinded++;
         }
-        player.displayClientMessage(Component.translatable("message.flightsuit.flashbang", blinded), true);
+        if (blinded > 0) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.flashbang", blinded), true);
+        }
     }
 }

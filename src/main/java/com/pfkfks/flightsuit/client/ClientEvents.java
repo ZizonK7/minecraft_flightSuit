@@ -58,6 +58,7 @@ public final class ClientEvents {
             ModNetwork.sendToServer(new CommandAttackC2SPacket());
         }
         SuitFlightClient.tick(player);
+        EscapeClient.tick(player);
         WeaponInput.tick(minecraft, player);
         RemoteLinkClient.tick(player);
         CinematicCamera.tick();
@@ -220,6 +221,7 @@ public final class ClientEvents {
         CinematicCamera.reset();
         CutsceneClient.reset();
         SuitFlightClient.reset();
+        EscapeClient.reset();
         RemoteLinkClient.reset();
         WeaponInput.reset();
         ClientWeapons.reset();

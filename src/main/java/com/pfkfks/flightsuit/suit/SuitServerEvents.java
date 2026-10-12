@@ -124,7 +124,8 @@ public final class SuitServerEvents {
 
         // Creative players already have mayfly (so nothing was granted) but still fly "in the suit";
         // tryDrain is free for them, so this only ever revokes flight we granted.
-        if (worn.canFly() && abilities.flying) {
+        // The emergency escape is paid for up front (EscapeFlight).
+        if (worn.canFly() && abilities.flying && !EscapeFlight.active(player)) {
             int cost = player.isSprinting() ? SuitTuning.BOOST_COST : SuitTuning.HOVER_COST;
             if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, cost) && granted) {
                 revokeFlight(player, data);

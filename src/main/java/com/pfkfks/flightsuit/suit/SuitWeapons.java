@@ -220,6 +220,15 @@ public final class SuitWeapons {
         long xrayUntil;
         Vec3 flashAt = Vec3.ZERO;
         long flashTick;
+        /** 2026-10-12 Mark 2 emergency escape (EscapeFlight): where home is (null: not escaping), and how it goes. */
+        Vec3 escapeTo;
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> escapeDim;
+        int escapeCruise;
+        int escapeTicks;
+        boolean escapeJumped;
+        boolean escapeDescending;
+        double escapeBest;
+        int escapeStuck;
         // M18 Mark 6 (CannonArts): the monkey rush sweeping forward.
         int rushTicks;
         Vec3 rushPos = Vec3.ZERO;
@@ -361,7 +370,7 @@ public final class SuitWeapons {
                 switch (suitClass) {
                     case SCRAP -> ScrapArts.flare(player, state);
                     case STANDARD -> MarkArts.shoulderGuns(player, state);
-                    case STEALTH -> MarkArts.flashbang(player, state);
+                    case STEALTH -> EscapeFlight.press(player, state);
                     case PHANTOM -> PhantomArts.useStolen(player, state);
                     case HERO -> HeroArts.boomerang(player, state);
                     case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
@@ -479,6 +488,7 @@ public final class SuitWeapons {
         PhantomArts.tick(player, state, suitClass);
         ScrapArts.tick(player, state, suitClass);
         MarkArts.tick(player, state, suitClass);
+        EscapeFlight.tick(player, state, suitClass);
         CannonArts.tick(player, state, suitClass);
         BishopArts.tick(player, state, suitClass);
         CardDuel.tick(player);
