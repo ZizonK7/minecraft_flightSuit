@@ -113,6 +113,14 @@ public class DbzFighterEntity extends PathfinderMob {
     private boolean clashLeader;
     private float damageDealt = 1.0F;
     private float damageTaken = 1.0F;
+    /**
+     * 2026-10-12 feedback ("히어로가 너무 빨리 죽어", Dragon Ball and Battleworld alike): our side takes this share of
+     * every blow, and catches its breath - ALLY_REGEN of its health a second once it hasn't been hit for
+     * ALLY_REGEN_AFTER ticks - so the friends who fight beside you last the fight instead of leaving in the first wave.
+     */
+    private static final float ALLY_DAMAGE_TAKEN = 0.35F;
+    private static final float ALLY_REGEN = 0.02F;
+    private static final int ALLY_REGEN_AFTER = 100;
     private int buffUntil;
     /** Whether the NoAi flag was set before acting began (to put it back). */
     private boolean hadNoAi;
@@ -413,6 +421,10 @@ public class DbzFighterEntity extends PathfinderMob {
             }
             if (escortOf != null) {
                 tickEscort();
+            }
+            if (getCharacter().role() == DbzCharacter.Role.ALLY && isAlive() && getHealth() < getMaxHealth() && tickCount % 20 == 0
+                    && tickCount - getLastHurtByMobTimestamp() > ALLY_REGEN_AFTER) {
+                heal(getMaxHealth() * ALLY_REGEN);
             }
         }
     }
@@ -1006,6 +1018,9 @@ public class DbzFighterEntity extends PathfinderMob {
             amount *= 0.5F;
         }
         amount *= damageTaken;
+        if (!me.isFoe()) {
+            amount *= ALLY_DAMAGE_TAKEN;
+        }
         boolean byPlayer = source.getEntity() instanceof Player;
         if (byPlayer && guardUntil > tickCount) {
             amount *= 0.5F;

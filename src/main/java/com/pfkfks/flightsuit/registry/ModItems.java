@@ -93,6 +93,8 @@ public final class ModItems {
     public static final RegistryObject<Item> MONKEY_PISTOL = display("monkey_pistol");
     public static final RegistryObject<Item> MONKEY_MACHINE_GUN = display("monkey_machine_gun");
     public static final RegistryObject<Item> C4 = display("c4");
+    /** 2026-10-12 feedback: Link's Hylian shield, drawn on his left arm while Z holds it up (HeroRenderer). */
+    public static final RegistryObject<Item> HYLIAN_SHIELD = display("hylian_shield");
     /**
      * The towns' money (after the M16 test: "money instead of emeralds - different eras, different money"): the
      * Three Kingdoms' wuzhu coins, Hero City's dollars. Earned from their shops, requests and rewards.

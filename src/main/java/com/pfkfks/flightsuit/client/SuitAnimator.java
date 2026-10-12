@@ -43,6 +43,8 @@ public final class SuitAnimator {
     private static final String SHIELD_HOLD = "shield_hold";
     /** Looping right-palm aim while the primary weapon fires (beam or card stream). */
     private static final String AIM_HOLD = "aim_hold";
+    /** Looping bow draw (2026-10-12, Link's bow): the bow arm out along the look, the other hand at the string. */
+    private static final String BOW_DRAW = "bow_draw";
 
     private SuitAnimator() {
     }
@@ -63,6 +65,8 @@ public final class SuitAnimator {
         SuitAnim currentAction;
         boolean shielding;
         boolean aiming;
+        /** The aim is Link's bow: both arms follow the look's pitch. */
+        boolean bow;
 
         Layers(AbstractClientPlayer player) {
             // Boost: lie along the look direction like an elytra glide (body pitch = -90 - xRot).
@@ -74,7 +78,7 @@ public final class SuitAnimator {
             }));
             // Firing: aim the raised right arm where the player looks (vanilla bow-aim formula).
             action.addModifierLast(new AdjustmentModifier(part -> {
-                if (!aiming || !"rightArm".equals(part)) {
+                if (!aiming || !"rightArm".equals(part) && !(bow && "leftArm".equals(part))) {
                     return Optional.empty();
                 }
                 return Optional.of(new AdjustmentModifier.PartModifier(new Vec3f(player.getXRot() * DEG, 0.0F, 0.0F), Vec3f.ZERO));
@@ -150,15 +154,20 @@ public final class SuitAnimator {
         }
     }
 
-    /** Primary weapon firing / stopped: holds the right palm out along the look direction meanwhile. */
-    public static void setAiming(AbstractClientPlayer player, boolean active) {
+    /**
+     * Primary weapon firing / stopped: holds the right palm out along the look direction meanwhile - or, for Link's
+     * bow ({@code bow}), the drawing pose.
+     */
+    public static void setAiming(AbstractClientPlayer player, boolean active, boolean bow) {
         Layers layers = layersOf(player);
-        if (layers == null || layers.aiming == active) {
+        active |= bow;
+        if (layers == null || layers.aiming == active && layers.bow == bow) {
             return;
         }
         layers.aiming = active;
+        layers.bow = bow;
         if (active) {
-            KeyframeAnimation animation = animation(AIM_HOLD);
+            KeyframeAnimation animation = animation(bow ? BOW_DRAW : AIM_HOLD);
             if (animation != null) {
                 layers.currentAction = null;
                 layers.action.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.OUTQUAD),

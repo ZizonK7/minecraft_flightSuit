@@ -491,6 +491,7 @@ public final class HeroCity {
         player.sendSystemMessage(type.line(tier, player.getName()));
         player.sendSystemMessage(Component.translatable("fort.flightsuit.standing",
                 Component.translatable("tier.flightsuit." + tier), trust, standing.done).withStyle(ChatFormatting.GRAY));
+        com.pfkfks.flightsuit.thanos.ThanosSaga.brief(player);
         if (com.pfkfks.flightsuit.thanos.ThanosSaga.offersTimeStone(player, trust)) {
             player.sendSystemMessage(button(Component.translatable("hero.flightsuit.button_time_stone"), "/village hero timestone",
                     "hero.flightsuit.button_time_stone_hint", ChatFormatting.GREEN));
@@ -903,6 +904,11 @@ public final class HeroCity {
             data.setDirty();
             if (request != null) {
                 succeed(level, data, request, 15);
+                // The Chitauri thrown back: Captain says who sent them (once, after the herald - ThanosSaga.brief).
+                ServerPlayer defender = level.getServer().getPlayerList().getPlayer(request.player);
+                if (defender != null) {
+                    com.pfkfks.flightsuit.thanos.ThanosSaga.brief(defender);
+                }
             }
         }
     }

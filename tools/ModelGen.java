@@ -2936,7 +2936,8 @@ public class ModelGen {
         static void buildAll() throws IOException {
             List<W> all = List.of(trunksSword(), masterSword(), mjolnir(), captainShield(), widowBaton(), hawkeyeBow(),
                     shieldPistol(), greenDragonBlade(), serpentSpear(), xiahouBroadsword(), belledSabre(), twinSwords(),
-                    yitianSword(), guDingDao(), bishopStaff(), cannon(), monkeyPistol(), monkeyMachineGun(), c4(), ocarina());
+                    yitianSword(), guDingDao(), bishopStaff(), cannon(), monkeyPistol(), monkeyMachineGun(), c4(), ocarina(),
+                    hylianShield());
             List<BufferedImage> previews = new ArrayList<>();
             for (W w : all) {
                 BufferedImage tex = packAndPaint(w);
@@ -3040,6 +3041,10 @@ public class ModelGen {
             W w = new W("master_sword");
             // While Link plays his song the sword in hand is drawn as the ocarina (client: HeroSongClient).
             w.overrides.add(new String[]{"flightsuit:ocarina", "1", "flightsuit:item/ocarina"});
+            // While he draws (right click held, 2026-10-12 feedback) it is the Hero's Bow, pulled back as far as he's drawn.
+            w.overrides.add(new String[]{"flightsuit:bow", "0.01", "minecraft:item/bow_pulling_0"});
+            w.overrides.add(new String[]{"flightsuit:bow", "0.65", "minecraft:item/bow_pulling_1"});
+            w.overrides.add(new String[]{"flightsuit:bow", "0.9", "minecraft:item/bow_pulling_2"});
             w.grip = new double[]{8, -2.5, 8};
             w.rod("pommel", 2, 2, -6.5, -5.5, metal(0xFF5A4FB0));
             w.rod("grip", 1.2, 1.2, -5.5, 0, wrap(0xFF4B3C9E, 0xFF2E2470));
@@ -3216,6 +3221,77 @@ public class ModelGen {
             w.add("hump", 6, 9, 7, 10, 9.8, 9, flat(blueLight));
             w.add("belly", 6, 5.4, 7, 10, 6, 9, flat(blueDark));
             w.add("mouthpiece", 11, 7, 7.4, 13, 8.2, 8.6, flat(blueLight));
+            return w;
+        }
+
+        /** Half-width of the Hylian shield at height y: square-shouldered on top, tapering to a point at the bottom. */
+        static double hylianHalf(double y) {
+            if (y >= 15.2) {
+                return 6.6 - (y - 15.2) * 2.0; // the top corners rounded off
+            }
+            if (y >= 9.0) {
+                return 6.6;
+            }
+            return 6.6 * Math.pow(Math.max(0, y) / 9.0, 0.75);
+        }
+
+        /**
+         * 2026-10-12 feedback: Link's Hylian shield (Z), not an item of its own - drawn on his arm while he holds it up.
+         * A heater shield: deep blue face, silver rim, the gold Triforce at the top and the red Hylian crest (the
+         * bird, wings spread) below it. Laid flat like the captain's shield (z 7.5 - 8.5), one element per row.
+         */
+        static W hylianShield() {
+            W w = new W("hylian_shield");
+            w.density = 3;
+            int blue = 0xFF223F92, blueDark = 0xFF172C6A, silver = 0xFFC9D0D8, silverDark = 0xFF8C95A0, red = 0xFFB5222A;
+            Paint face = p -> {
+                double dx = Math.abs(p.x - 8);
+                if (p.face == Face.RIGHT || p.face == Face.LEFT || p.face == Face.TOP || p.face == Face.BOTTOM) {
+                    return shade(silver, 0.85);
+                }
+                if (hylianHalf(p.y) - dx < 0.9 || p.y > 15.0) {
+                    return grain(p, (int) Math.floor(p.y * 2) % 5 == 0 ? silverDark : silver, 0.03);
+                }
+                // The Triforce: three gold triangles, point up.
+                double ty = p.y - 11.3;
+                if (ty >= 0 && ty <= 3.2) {
+                    double half = (3.2 - ty) * 0.72;
+                    boolean big = dx <= half;
+                    // The gap in the middle: upside down, its point on the base line.
+                    boolean hole = ty < 1.6 && dx < ty * 0.72 - 0.15;
+                    if (big && !hole) {
+                        return GOLD;
+                    }
+                }
+                // The crest: the bird's body and head down the middle, wings swept up and out, tail fanned below.
+                if (dx < 0.6 && p.y > 4.2 && p.y < 10.4 || dx < 1.0 && p.y > 9.4 && p.y < 10.4) {
+                    return red;
+                }
+                double wing = 7.0 + dx * 0.45;
+                if (dx >= 0.6 && dx < 4.6 && p.y > wing - 0.7 && p.y < wing + 0.5) {
+                    return red;
+                }
+                if (p.y > 3.0 && p.y < 4.4 && dx < (4.4 - p.y) * 1.2 + 0.4) {
+                    return red;
+                }
+                return grain(p, p.y < 3.5 ? blueDark : blue, 0.04);
+            };
+            for (int row = 0; row < 16; row++) {
+                double half = Math.min(hylianHalf(row), hylianHalf(row + 1));
+                half = Math.max(half, hylianHalf(row + 0.5) * 0.9);
+                if (half < 0.6) {
+                    continue;
+                }
+                double bulge = Math.max(0, 0.3 - Math.abs(row + 0.5 - 9) / 30);
+                w.add("row" + row, 8 - half, row, 7.5 - bulge, 8 + half, row + 1, 8.5 + bulge, face);
+            }
+            w.rawDisplay = new LinkedHashMap<>();
+            w.rawDisplay.put("thirdperson_righthand", new double[][]{{0, 90, 0}, {0, 2, 1}, {0.85, 0.85, 0.85}});
+            w.rawDisplay.put("thirdperson_lefthand", new double[][]{{0, 90, 0}, {0, 2, 1}, {0.85, 0.85, 0.85}});
+            w.rawDisplay.put("firstperson_righthand", new double[][]{{0, 180, 5}, {-2, 2, -4}, {0.8, 0.8, 0.8}});
+            w.rawDisplay.put("firstperson_lefthand", new double[][]{{0, 180, 5}, {2, 2, -4}, {0.8, 0.8, 0.8}});
+            w.rawDisplay.put("ground", new double[][]{{0, 0, 0}, {0, 2, 0}, {0.5, 0.5, 0.5}});
+            w.rawDisplay.put("fixed", new double[][]{{0, 180, 0}, {0, 0, 0}, {1, 1, 1}});
             return w;
         }
 

@@ -6,6 +6,9 @@
     "gui": {"parent": "minecraft:item/generated", "textures": {"layer0": "flightsuit:item/master_sword"}}
   },
   "overrides": [
-    {"predicate": {"flightsuit:ocarina": 1}, "model": "flightsuit:item/ocarina"}
+    {"predicate": {"flightsuit:ocarina": 1}, "model": "flightsuit:item/ocarina"},
+    {"predicate": {"flightsuit:bow": 0.01}, "model": "minecraft:item/bow_pulling_0"},
+    {"predicate": {"flightsuit:bow": 0.65}, "model": "minecraft:item/bow_pulling_1"},
+    {"predicate": {"flightsuit:bow": 0.9}, "model": "minecraft:item/bow_pulling_2"}
   ]
 }

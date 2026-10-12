@@ -36,8 +36,10 @@ import com.pfkfks.flightsuit.fx.KiFx;
  * Mark 4, the Hero of Twilight (after Twilight Princess's hero). A swordsman rather than a gunner:
  * - Master Sword (left click): a cut across the front; at full health (or a full chain) every cut also looses a
  *   sword beam that flies straight on (the old Zelda rule);
- * - spin attack (X at once, or right click held, then let go - M18 feedback): one sweep all the way round; held to
- *   a full charge (or at full health) the great spin, wider and harder;
+ * - spin attack (X): one sweep all the way round; at full health (or in the Triforce, on a full chain) the great
+ *   spin, wider and harder;
+ * - the Hero's Bow (right click held, then let go - 2026-10-12 feedback, once the charged spin): a real arrow,
+ *   stronger the further it was drawn; a full draw while empowered is a light arrow that goes through;
  * - clawshot (C): the claw flies at the crosshair - into a block, it reels you there; into a monster, it drags the
  *   monster to you (a big one pulls you to it instead, and you land a slash on arrival). C again lets go;
  * - Hylian shield (Z held - M18 feedback, "the famous shield"): projectiles from the front glance off; a melee blow met within a few ticks of
@@ -63,6 +65,7 @@ public final class HeroArts {
     static final byte MOVE_CLAW = 3;
     static final byte MOVE_SONG = 4;
     static final byte MOVE_GUARD = 5;
+    static final byte MOVE_BOW = 6;
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
 
@@ -169,8 +172,8 @@ public final class HeroArts {
             state.triforceUntil = 0L;
             state.chain = 0;
             state.chainLast = 0;
-            state.shieldHeld = false;
-            state.spinCharge = 0;
+            setShield(player, state, false);
+            state.bowDraw = 0;
             return;
         }
         tickShieldHeld(player, state);
@@ -247,16 +250,21 @@ public final class HeroArts {
             return;
         }
         state.shieldHeld = on;
+        // The clients raise the Hylian shield on the left arm (HeroRenderer) in the guard pose.
+        ModNetwork.sendToTrackingAndSelf(player, new com.pfkfks.flightsuit.network.ShieldStateS2CPacket(player.getId(), on));
         if (on) {
             state.shieldRaisedAt = player.level().getGameTime();
             player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.7F, 1.2F);
-            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
         } else {
             player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 0.4F, 0.9F);
         }
     }
 
-    /** Held up: a slow walk behind it; it costs a little to keep up and falls when the power's gone. */
+    /**
+     * Held up: a slow walk behind it (the client slows the input, as for the nano shield); it costs a little to keep
+     * up and falls when the power's gone. (2026-10-12: no more parry one-shots replayed while it's up - they took
+     * the guard pose away, and the ocarina's too after a quick tap left the shield up.)
+     */
     private static void tickShieldHeld(ServerPlayer player, SuitWeapons.State state) {
         if (!state.shieldHeld) {
             return;
@@ -266,10 +274,6 @@ public final class HeroArts {
             setShield(player, state, false);
             return;
         }
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 2, false, false, false));
-        if ((player.level().getGameTime() - state.shieldRaisedAt) % 20 == 10) {
-            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
-        }
     }
 
     /** True while the hero holds the shield up (Z). */
@@ -278,41 +282,65 @@ public final class HeroArts {
         return state != null && state.shieldHeld;
     }
 
-    // ---------------------------------------------------------------- spin attack (right click held, M18 feedback)
+    // ---------------------------------------------------------------- the Hero's Bow (right click held, 2026-10-12 feedback)
 
-    /** The sword drawn back, light gathering on it (the old Zelda charge). */
-    static void startSpinCharge(ServerPlayer player, SuitWeapons.State state) {
-        state.spinCharge = 0;
-        KiFx.charge(player.serverLevel(), player, 0x9AD8FF, 0.7F, SuitTuning.GREAT_SPIN_CHARGE_TICKS, KiFx.AT_HANDS);
-        player.level().playSound(null, player.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.4F, 2.0F);
+    /** The bow comes up and the string goes back (the client swaps the sword for the bow and poses the draw). */
+    static void startDraw(ServerPlayer player, SuitWeapons.State state) {
+        state.bowDraw = 0;
+        player.level().playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_START, SoundSource.PLAYERS, 0.6F, 1.3F);
     }
 
-    static void tickSpinCharge(ServerPlayer player, SuitWeapons.State state) {
-        state.spinCharge++;
+    static void tickDraw(ServerPlayer player, SuitWeapons.State state) {
+        state.bowDraw++;
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 1, false, false, false));
-        if (state.spinCharge == SuitTuning.GREAT_SPIN_CHARGE_TICKS) {
-            // Full: the great spin is ready.
-            KiFx.burst(player.serverLevel(), hand(player), 0x9AD8FF, 0.9F, 8, KiFx.SPARK);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.6F);
+        if (state.bowDraw == SuitTuning.BOW_FULL_DRAW_TICKS) {
+            // Full draw: a glint at the arrowhead (gold when it'll be a light arrow).
+            boolean light = empowered(player, state);
+            KiFx.burst(player.serverLevel(), hand(player), light ? KiFx.GOLD : 0xBFE9FF, 0.6F, 6, KiFx.SPARK);
+            player.level().playSound(null, player.blockPosition(), light ? SoundEvents.AMETHYST_BLOCK_CHIME : SoundEvents.CROSSBOW_LOADING_END,
+                    SoundSource.PLAYERS, 0.9F, 1.6F);
         }
     }
 
-    /** Let go: a spin if it was held long enough (the great spin at a full charge), nothing for a tap. */
-    static void releaseSpin(ServerPlayer player, SuitWeapons.State state) {
-        KiFx.stopCharge(player.serverLevel(), player);
-        int charge = state.spinCharge;
-        state.spinCharge = 0;
-        if (charge < SuitTuning.SPIN_CHARGE_TICKS) {
+    /** Let go: an arrow if it was drawn at all - harder and faster the further back; a tap looses nothing. */
+    static void releaseDraw(ServerPlayer player, SuitWeapons.State state) {
+        int draw = state.bowDraw;
+        state.bowDraw = 0;
+        if (draw < SuitTuning.BOW_MIN_DRAW_TICKS) {
             return;
         }
-        spin(player, state, charge >= SuitTuning.GREAT_SPIN_CHARGE_TICKS);
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BOW_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
+            return;
+        }
+        link(player, state, MOVE_BOW);
+        float pull = Math.min(1.0F, (float) draw / SuitTuning.BOW_FULL_DRAW_TICKS);
+        boolean full = pull >= 1.0F;
+        boolean light = full && empowered(player, state);
+        ServerLevel level = player.serverLevel();
+        net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(level, player);
+        arrow.setBaseDamage(SuitTuning.BOW_DAMAGE * pull * power(player, state) / SuitTuning.BOW_SPEED);
+        arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.CREATIVE_ONLY;
+        arrow.setCritArrow(full);
+        if (light) {
+            arrow.setPierceLevel((byte) SuitTuning.LIGHT_ARROW_PIERCE);
+            arrow.setGlowingTag(true);
+            KiFx.aura(level, arrow, KiFx.GOLD, 40);
+        }
+        arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, SuitTuning.BOW_SPEED * (0.4F + 0.6F * pull), 0.5F);
+        level.addFreshEntity(arrow);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F,
+                1.0F / (player.getRandom().nextFloat() * 0.4F + 1.2F) + pull * 0.5F);
+        if (light) {
+            level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.8F, 1.8F);
+        }
     }
 
     // ---------------------------------------------------------------- spin attack at once (X)
 
     /**
-     * X: the spin straight away, no charge (M18 3rd feedback: the bow that had taken X went back to the spin). The
-     * great spin at full health, in the Triforce or on a full chain; held right click still charges one.
+     * X: the spin straight away (M18 3rd feedback: the bow that had taken X went back to the spin; 2026-10-12 the bow
+     * took the held right click instead). The great spin at full health, in the Triforce or on a full chain.
      */
     static void spinAttack(ServerPlayer player, SuitWeapons.State state) {
         spin(player, state, false);
@@ -377,6 +405,8 @@ public final class HeroArts {
         SuitWeapons.sendStatus(player, state);
         state.songTarget = target;
         state.songTicks = 0;
+        // Both hands on the ocarina: the shield comes down.
+        setShield(player, state, false);
         // Facing the one it's for, so the scene's last shot looks down the line at it.
         Vec3 to = target.position().subtract(player.position());
         float yaw = (float) (Math.atan2(-to.x, to.z) * (180.0D / Math.PI));

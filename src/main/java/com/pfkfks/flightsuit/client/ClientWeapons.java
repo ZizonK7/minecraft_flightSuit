@@ -44,6 +44,8 @@ public final class ClientWeapons {
     private static final Map<Integer, Byte> FIRING = new HashMap<>();
     /** What each player fired last (to tell when Trunks stops cutting). */
     private static final Map<Integer, Byte> FIRING_BEFORE = new HashMap<>();
+    /** When each player started firing what they fire now (game time) - how far Link has drawn his bow. */
+    private static final Map<Integer, Long> FIRING_SINCE = new HashMap<>();
 
     public static long skill1Ready;
     public static long skill2Ready;
@@ -67,14 +69,18 @@ public final class ClientWeapons {
     }
 
     public static void handleBeam(BeamStateS2CPacket packet) {
+        Minecraft minecraft = Minecraft.getInstance();
         if (packet.kind == SuitWeapons.FIRE_NONE) {
             FIRING.remove(packet.entityId);
+            FIRING_SINCE.remove(packet.entityId);
         } else {
-            FIRING.put(packet.entityId, packet.kind);
+            Byte was = FIRING.put(packet.entityId, packet.kind);
+            if ((was == null || was != packet.kind) && minecraft.level != null) {
+                FIRING_SINCE.put(packet.entityId, minecraft.level.getGameTime());
+            }
         }
-        Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level != null && minecraft.level.getEntity(packet.entityId) instanceof net.minecraft.client.player.AbstractClientPlayer player) {
-            SuitAnimator.setAiming(player, SuitWeapons.aimsArm(packet.kind));
+            SuitAnimator.setAiming(player, SuitWeapons.aimsArm(packet.kind), packet.kind == SuitWeapons.FIRE_BOW);
         }
         FIRING_BEFORE.put(packet.entityId, packet.kind);
     }
@@ -101,6 +107,13 @@ public final class ClientWeapons {
         return FIRING.getOrDefault(entityId, SuitWeapons.FIRE_NONE);
     }
 
+    /** Ticks since the player started firing what they fire now (0 if nothing). */
+    public static float firingTicks(int entityId, float partialTick) {
+        Long since = FIRING_SINCE.get(entityId);
+        ClientLevel level = Minecraft.getInstance().level;
+        return since == null || level == null ? 0.0F : Math.max(0.0F, level.getGameTime() - since + partialTick);
+    }
+
     /** Seconds until a skill is ready again (0 = ready). */
     public static float secondsLeft(long readyTick) {
         ClientLevel level = Minecraft.getInstance().level;
@@ -109,6 +122,7 @@ public final class ClientWeapons {
 
     public static void reset() {
         FIRING.clear();
+        FIRING_SINCE.clear();
         skill1Ready = 0L;
         skill2Ready = 0L;
         gauge = 0;

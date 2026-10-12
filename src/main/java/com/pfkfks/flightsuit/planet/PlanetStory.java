@@ -211,7 +211,7 @@ public final class PlanetStory {
             return;
         }
         int stones = com.pfkfks.flightsuit.thanos.ThanosSaga.stones(player.server, player.getUUID());
-        if (player.level().dimension() == Planet.TITAN.dimension() || stones != 0) {
+        if (player.level().dimension() == Planet.TITAN.dimension() || stones != 0 || com.pfkfks.flightsuit.thanos.ThanosSaga.briefed(player)) {
             com.pfkfks.flightsuit.thanos.ThanosSaga.objective(player);
             if (player.level().dimension() == Planet.TITAN.dimension()) {
                 return;
