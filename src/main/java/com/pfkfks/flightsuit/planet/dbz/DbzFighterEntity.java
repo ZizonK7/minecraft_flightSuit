@@ -717,7 +717,8 @@ public class DbzFighterEntity extends PathfinderMob {
     /** Nappa: a blast wave from where he stands (no blocks broken). */
     public void blastWave(ServerLevel server, double radius, float damage) {
         setAction(DbzAction.TRANSFORM);
-        int colour = getCharacter().name().contains("BUU") ? KiFx.CANDY : 0xFFE0A0;
+        int colour = getCharacter().name().contains("BUU") ? KiFx.CANDY
+                : com.pfkfks.flightsuit.doom.DoomMoves.isCast(getCharacter()) ? com.pfkfks.flightsuit.doom.DoomMoves.waveColour(getCharacter()) : 0xFFE0A0;
         KiFx.burst(server, getBoundingBox().getCenter(), colour, (float) radius * 0.6F, 14, KiFx.BLAST);
         KiFx.burst(server, position(), colour, (float) radius * 1.3F, 16, KiFx.RING);
         for (LivingEntity hit : server.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(radius), this::isEnemy)) {

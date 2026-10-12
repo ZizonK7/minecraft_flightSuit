@@ -102,6 +102,17 @@ public final class DoomMoves {
         };
     }
 
+    /** The colour of a blast wave (DbzFighterEntity.blastWave): Doom's green, Sue's force field, the Thing's dust... */
+    public static int waveColour(DbzCharacter who) {
+        return switch (who) {
+            case INVISIBLE_WOMAN -> 0x9AE6FF;
+            case THE_THING -> 0xFFB060;
+            case SENTINEL -> 0xFF5030;
+            case ZOMBIE_CAPTAIN -> 0x9AB07A;
+            default -> GREEN;
+        };
+    }
+
     public static Vector3f beamRgb(DbzCharacter who) {
         int c = beamColour(who);
         return new Vector3f((c >> 16 & 0xFF) / 255.0F, (c >> 8 & 0xFF) / 255.0F, (c & 0xFF) / 255.0F);
@@ -218,7 +229,7 @@ public final class DoomMoves {
             switch (move) {
                 case 0 -> {
                     me.startCharge(god ? 24 : 32);
-                    me.say(server, DbzCharacter.DOCTOR_DOOM.line("plasma"));
+                    sayOnce(me, server, "plasma", 500);
                 }
                 case 1 -> photonShot(me, server, target);
                 case 2 -> molecularShield(me, server, target);
@@ -267,7 +278,7 @@ public final class DoomMoves {
     private static void molecularShield(DbzFighterEntity me, ServerLevel server, LivingEntity target) {
         me.raiseBarrier(80);
         me.setAction(DbzAction.GUARD);
-        me.say(server, DbzCharacter.DOCTOR_DOOM.line("shield"));
+        sayOnce(me, server, "shield", 500);
         for (int i = 0; i < 4; i++) {
             int n = i;
             later(me, 30 + n * 8, () -> {
@@ -317,7 +328,7 @@ public final class DoomMoves {
     /** The big one: three sweeping fans of bolts. */
     private static void photonArray(DbzFighterEntity me, ServerLevel server, LivingEntity target) {
         me.setAction(DbzAction.CHARGE);
-        me.say(server, DbzCharacter.DOCTOR_DOOM.line("array"));
+        sayOnce(me, server, "array", 500);
         KiFx.charge(server, me, GREEN, 1.4F, 24, KiFx.AT_HANDS);
         for (int volley = 0; volley < 3; volley++) {
             int v = volley;
@@ -342,7 +353,7 @@ public final class DoomMoves {
     /** A slow green sun thrown at you: get out of its way. */
     private static void sphereFlame(DbzFighterEntity me, ServerLevel server, LivingEntity target) {
         me.setAction(DbzAction.HANDS_UP);
-        me.say(server, DbzCharacter.DOCTOR_DOOM.line("sphere"));
+        sayOnce(me, server, "sphere", 500);
         KiFx.charge(server, me, GREEN, 3.0F, 30, KiFx.AT_OVERHEAD);
         later(me, 30, () -> {
             me.setAction(DbzAction.FIRE);
@@ -354,7 +365,7 @@ public final class DoomMoves {
 
     /** "Hell answers to me": lightning out of a clear sky and a wave of green that throws everyone back. */
     private static void hellAnswers(DbzFighterEntity me, ServerLevel server, LivingEntity target) {
-        me.say(server, DbzCharacter.DOCTOR_DOOM.line("hell"));
+        sayOnce(me, server, "hell", 500);
         me.setAction(DbzAction.TRANSFORM);
         for (int i = 0; i < 3; i++) {
             int n = i;
@@ -383,7 +394,7 @@ public final class DoomMoves {
      */
     private static void doomsTime(DbzFighterEntity me, ServerLevel server, LivingEntity target) {
         Vec3 spot = target.position();
-        me.say(server, DbzCharacter.DOCTOR_DOOM.line("time"));
+        sayOnce(me, server, "time", 500);
         me.setAction(DbzAction.HANDS_UP);
         KiFx.burst(server, spot.add(0.0D, 0.1D, 0.0D), GREEN, 2.5F, 24, KiFx.RING);
         KiFx.pillar(server, null, spot, GREEN, 4.0F, 24);
@@ -469,18 +480,18 @@ public final class DoomMoves {
                 KiFx.beam(server, me.getEyePosition(), target.getBoundingBox().getCenter(), 0xD040FF, 0.5F, 14, KiFx.BEAM_SPIRAL, me,
                         KiFx.AT_HANDS, target);
                 server.playSound(null, target.blockPosition(), SoundEvents.CHAIN_BREAK, SoundSource.HOSTILE, 1.5F, 0.5F);
-                me.say(server, me.getCharacter().line(target instanceof Player ? "pull" : "pull_suit"));
+                sayOnce(me, server, target instanceof Player ? "pull" : "pull_suit", 400);
                 me.specialCooldown(90);
             } else if (move % 3 == 1 && me.getHealth() < me.getMaxHealth() * 0.75F) {
                 me.raiseBarrier(100);
                 me.setAction(DbzAction.GUARD);
                 KiFx.burst(server, me.getBoundingBox().getCenter(), 0xD040FF, 2.5F, 20, KiFx.ORB);
-                me.say(server, me.getCharacter().line("shield"));
+                sayOnce(me, server, "shield", 400);
                 me.specialCooldown(120);
             } else {
                 // The storm of steel: rings mark where it comes down.
                 me.setAction(DbzAction.HANDS_UP);
-                me.say(server, me.getCharacter().line("storm"));
+                sayOnce(me, server, "storm", 400);
                 for (int i = 0; i < 6; i++) {
                     Vec3 spot = target.position().add((me.getRandom().nextDouble() - 0.5D) * 8.0D, 0.0D, (me.getRandom().nextDouble() - 0.5D) * 8.0D);
                     KiFx.burst(server, spot.add(0.0D, 0.1D, 0.0D), 0xC8D2E0, 1.6F, 20, KiFx.RING);
@@ -505,7 +516,7 @@ public final class DoomMoves {
             me.getPersistentData().putInt(MOVE, move + 1);
             if (move % 3 == 1 && sees && distance < 20.0D) {
                 Vec3 spot = target.position();
-                me.say(server, me.getCharacter().line("rex"));
+                sayOnce(me, server, "rex", 400);
                 KiFx.burst(server, spot.add(0.0D, 0.1D, 0.0D), 0x40B8FF, 2.2F, 16, KiFx.RING);
                 later(me, 16, () -> {
                     KiFx.pillar(server, null, spot, 0x40B8FF, 8.0F, 20);
@@ -520,7 +531,7 @@ public final class DoomMoves {
                 });
                 me.specialCooldown(110);
             } else if (move % 3 == 2 && me.getHealth() < me.getMaxHealth() * 0.6F && summon(me, server, DbzCharacter.TALOKAN_WARRIOR, 3, 5)) {
-                me.say(server, me.getCharacter().line("talokan"));
+                sayOnce(me, server, "talokan", 400);
                 me.specialCooldown(200);
             } else if (distance > 5.0D) {
                 me.dash(server, target);
@@ -552,10 +563,10 @@ public final class DoomMoves {
             Vec3 from = me.getEyePosition().subtract(0.0D, 0.4D, 0.0D);
             KiShots.fire(server, me, KiShots.Style.DISC, from, target.getBoundingBox().getCenter().subtract(from), 1.3D, 26.0D, 11.0F, 1.2D,
                     me::isEnemy);
-            me.say(server, me.getCharacter().line("shield"));
+            sayOnce(me, server, "shield", 400);
             me.specialCooldown(90);
         } else if (move % 3 == 1 && me.getHealth() < me.getMaxHealth() * 0.65F && summon(me, server, DbzCharacter.MARVEL_ZOMBIE, 3, 6)) {
-            me.say(server, me.getCharacter().line("horde"));
+            sayOnce(me, server, "horde", 400);
             me.specialCooldown(220);
         } else if (distance < 12.0D) {
             footDive(me, server, target, distance);
@@ -642,7 +653,7 @@ public final class DoomMoves {
             }
         }
         if (who == DbzCharacter.DOOMBOT) {
-            me.say(server, DbzCharacter.DOCTOR_DOOM.line("doombots"));
+            sayOnce(me, server, "doombots", 500);
         }
         return true;
     }
