@@ -6,12 +6,12 @@ public final class SuitTuning {
     }
 
     // Storage: the chestplate's arc reactor is the main battery, the other pieces only hold a small buffer.
-    public static final int CHEST_CAPACITY = 20_000;
-    public static final int PIECE_CAPACITY = 2_000;
+    // 2026-10-12 x3 (user: "에너지가 너무 적다, 제대로 싸울 수가 없네" - a Mark 1 beam emptied 20,000 in 40 seconds).
+    public static final int CHEST_CAPACITY = 60_000;
+    public static final int PIECE_CAPACITY = 6_000;
     public static final int ENERGY_CELL_CHARGE = 10_000;
 
     // Per-tick drains.
-    public static final int NIGHT_VISION_COST = 1;
     public static final int HOVER_COST = 8;
     public static final int BOOST_COST = 20;
     public static final int THRUST_COST = 12;
@@ -225,7 +225,7 @@ public final class SuitTuning {
 
     // Scrap Mark 0 (ScrapArts): a coal boiler for a battery, the flamethrower (right click held - M18 feedback: no beam
     // on a scrap suit), the scrap shot (X), a rocket jump (C), overdrive (V), a flare (B).
-    public static final int SCRAP_CHEST_CAPACITY = 8_000;
+    public static final int SCRAP_CHEST_CAPACITY = 24_000;
     /** FE a lump of coal (or charcoal) is worth in the boiler; a coal block is nine. */
     public static final int SCRAP_COAL_ENERGY = 2_000;
     public static final float SCRAP_FLIGHT_FACTOR = 0.55F;

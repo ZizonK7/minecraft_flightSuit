@@ -166,6 +166,9 @@ public class Construction {
         }
         boolean ground = entry.layer() <= 1 && isNaturalGround(now) && now.getFluidState().isEmpty();
         if (entry.state().isAir()) {
+            if (isPlanted(now)) {
+                return false;
+            }
             return !now.isAir() && now.getFluidState().isEmpty() && (now.canBeReplaced() || ground);
         }
         return now.canBeReplaced() || ground;
@@ -227,7 +230,19 @@ public class Construction {
         if (now.isAir() || now.canBeReplaced() || now.is(entry.state().getBlock()) || !canClear(level, entry.pos(), now)) {
             return false;
         }
+        if (entry.state().isAir() && isPlanted(now)) {
+            return false;
+        }
         return !(entry.layer() <= 1 && isNaturalGround(now));
+    }
+
+    /**
+     * A crop the farmers planted where the blueprint only wants the space clear (a farm's open layer): it's
+     * the farm working, not something in the way - else the builders pull up every seed the farmers sow on
+     * the rows already laid while the rest of the farm is still going in (user report 2026-10-12).
+     */
+    static boolean isPlanted(BlockState state) {
+        return state.is(BlockTags.CROPS);
     }
 
     /** Never the hall block itself, nor what nobody can break (bedrock and the like). */

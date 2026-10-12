@@ -88,6 +88,15 @@ public class DamageLedger {
         return state.getBlock().asItem();
     }
 
+    /**
+     * What the board and the merchants ask for: the stand-in when there is one - nobody can get farmland or
+     * a path as an item, but dirt anyone can (user report 2026-10-12: "경작지가 필요하다").
+     */
+    public static Item wanted(BlockState state) {
+        List<Item> subs = substitutes(state);
+        return subs.isEmpty() ? material(state) : subs.get(0);
+    }
+
     /** Stand-ins accepted when the exact item isn't in the village storage. */
     public static List<Item> substitutes(BlockState state) {
         if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.FARMLAND) || state.is(Blocks.DIRT_PATH)

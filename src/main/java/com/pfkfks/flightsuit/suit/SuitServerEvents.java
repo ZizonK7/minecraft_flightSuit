@@ -82,7 +82,8 @@ public final class SuitServerEvents {
     }
 
     private static void tickNightVision(ServerPlayer player, WornSuit worn, CompoundTag data) {
-        boolean active = worn.helmet() && SuitEnergy.tryDrain(player, EquipmentSlot.HEAD, SuitTuning.NIGHT_VISION_COST);
+        // Always on and free (2026-10-12, user): just wearing the suit shouldn't run the battery down.
+        boolean active = worn.helmet();
         if (active) {
             MobEffectInstance current = player.getEffect(MobEffects.NIGHT_VISION);
             // Vanilla starts flickering night vision under 200 ticks, so keep it topped up well above that.
