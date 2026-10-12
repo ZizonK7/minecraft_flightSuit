@@ -480,32 +480,32 @@ public class DbzFighterEntity extends PathfinderMob {
 
     // Small handles for DbzMoves (the move table per character).
 
-    boolean blastReady() {
+    public boolean blastReady() {
         return blastCooldown <= 0;
     }
 
-    boolean specialReady() {
+    public boolean specialReady() {
         return specialCooldown <= 0;
     }
 
-    void blastCooldown(int ticks) {
+    public void blastCooldown(int ticks) {
         blastCooldown = ticks;
     }
 
-    void specialCooldown(int ticks) {
+    public void specialCooldown(int ticks) {
         specialCooldown = ticks;
     }
 
-    boolean isTransformedNow() {
+    public boolean isTransformedNow() {
         return transformed;
     }
 
-    void raiseBarrier(int ticks) {
+    public void raiseBarrier(int ticks) {
         barrier = ticks;
     }
 
     /** Begins a charged beam: {@code ticks} of gathering, crouched, hands at one side (chargeTick fires it). */
-    void startCharge(int ticks) {
+    public void startCharge(int ticks) {
         charging = ticks;
         setAction(DbzAction.CHARGE);
         if (level() instanceof ServerLevel server) {
@@ -515,6 +515,10 @@ public class DbzFighterEntity extends PathfinderMob {
                     shared == StolenSkill.SPECIAL_BEAM_CANNON ? 0.6F : 1.0F);
             if (shared != null) {
                 shared.chargeBall(server, this, ticks);
+            } else if (com.pfkfks.flightsuit.doom.DoomMoves.isCast(me)) {
+                // The Doom saga: Doom's plasma beam, a Sentinel's eye beam... (doom.DoomMoves).
+                KiFx.charge(server, this, com.pfkfks.flightsuit.doom.DoomMoves.beamColour(me), 1.2F, ticks,
+                        me == DbzCharacter.SENTINEL ? KiFx.AT_EYES : KiFx.AT_HANDS);
             } else if (me == DbzCharacter.FRIEZA || me == DbzCharacter.FRIEZA_FINAL) {
                 // The Supernova: a ball of fire over his raised finger.
                 KiFx.charge(server, this, 0xFF7038, 3.0F, ticks, KiFx.AT_OVERHEAD);
@@ -549,7 +553,7 @@ public class DbzFighterEntity extends PathfinderMob {
             KiFx.stopCharge(server, this);
             return;
         }
-        Vec3 from = me == DbzCharacter.PICCOLO ? getEyePosition() : hands;
+        Vec3 from = me == DbzCharacter.PICCOLO || me == DbzCharacter.SENTINEL ? getEyePosition() : hands;
         Vec3 dir = target.getBoundingBox().getCenter().subtract(from).normalize();
         float damage = DbzMoves.beamDamage(me) * damageDealt;
         if (shared != null) {
@@ -558,7 +562,8 @@ public class DbzFighterEntity extends PathfinderMob {
             return;
         }
         // Recoome's Eraser Gun, Frieza's Supernova, Trunks' Burning Attack: a beam of their own.
-        Vector3f colour = me == DbzCharacter.TRUNKS ? new Vector3f(1.0F, 0.82F, 0.25F)
+        Vector3f colour = com.pfkfks.flightsuit.doom.DoomMoves.isCast(me) ? com.pfkfks.flightsuit.doom.DoomMoves.beamRgb(me)
+                : me == DbzCharacter.TRUNKS ? new Vector3f(1.0F, 0.82F, 0.25F)
                 : me == DbzCharacter.FRIEZA || me == DbzCharacter.FRIEZA_FINAL ? new Vector3f(1.0F, 0.44F, 0.22F) : new Vector3f(0.75F, 0.3F, 0.9F);
         com.pfkfks.flightsuit.suit.SuitSkills.beam(server, this, from, dir, 30.0D, 1.8D, damage, 1.0D,
                 new DustParticleOptions(colour, 2.8F), new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.3F),
@@ -619,6 +624,9 @@ public class DbzFighterEntity extends PathfinderMob {
             case CELL, CELL_SEMI, CELL_IMPERFECT -> 0x8CFF70;
             case MAJIN_BUU, SUPER_BUU, SUPER_BUU_ABSORBED, KID_BUU -> KiFx.CANDY;
             case OOZARU_VEGETA -> KiFx.RED;
+            case DOCTOR_DOOM, DOOM_GOD_EMPEROR, DOOMBOT -> com.pfkfks.flightsuit.doom.DoomMoves.GREEN;
+            case MAGNETO -> 0xD040FF;
+            case NAMOR -> 0x40C8FF;
             default -> KiFx.WHITE;
         };
     }
@@ -656,11 +664,12 @@ public class DbzFighterEntity extends PathfinderMob {
     }
 
     /** Ki blasts (M17: they fly, with a tail, and can be dodged or cut): the first at the target, the rest at others near. */
-    void kiBlast(ServerLevel server, LivingEntity target, float damage, int count) {
+    public void kiBlast(ServerLevel server, LivingEntity target, float damage, int count) {
         swing(InteractionHand.MAIN_HAND);
         setAction(DbzAction.FIRE);
         DbzCharacter me = getCharacter();
-        KiShots.Style style = me.isFoe() && me != DbzCharacter.CELL_JR && me != DbzCharacter.ANDROID_17 && me != DbzCharacter.ANDROID_18
+        KiShots.Style style = com.pfkfks.flightsuit.doom.DoomMoves.isCast(me) ? com.pfkfks.flightsuit.doom.DoomMoves.shotStyle(me)
+                : me.isFoe() && me != DbzCharacter.CELL_JR && me != DbzCharacter.ANDROID_17 && me != DbzCharacter.ANDROID_18
                 ? KiShots.Style.KI_DARK : KiShots.Style.KI;
         for (int n = 0; n < count; n++) {
             LivingEntity victim = n == 0 ? target : nearestOtherEnemy(server, target);
@@ -690,7 +699,7 @@ public class DbzFighterEntity extends PathfinderMob {
     }
 
     /** Saiyans close in at speed: a blur, and they're beside you. */
-    void dash(ServerLevel server, LivingEntity target) {
+    public void dash(ServerLevel server, LivingEntity target) {
         Vec3 to = target.position().subtract(position()).normalize().scale(Math.min(distanceTo(target) - 2.0D, 10.0D)).add(position());
         afterimage(server);
         if (randomTeleport(to.x, target.getY(), to.z, false)) {
@@ -706,7 +715,7 @@ public class DbzFighterEntity extends PathfinderMob {
     }
 
     /** Nappa: a blast wave from where he stands (no blocks broken). */
-    void blastWave(ServerLevel server, double radius, float damage) {
+    public void blastWave(ServerLevel server, double radius, float damage) {
         setAction(DbzAction.TRANSFORM);
         int colour = getCharacter().name().contains("BUU") ? KiFx.CANDY : 0xFFE0A0;
         KiFx.burst(server, getBoundingBox().getCenter(), colour, (float) radius * 0.6F, 14, KiFx.BLAST);
@@ -732,7 +741,7 @@ public class DbzFighterEntity extends PathfinderMob {
         discard();
     }
 
-    void say(ServerLevel server, Component line) {
+    public void say(ServerLevel server, Component line) {
         for (Player player : server.getEntitiesOfClass(Player.class, getBoundingBox().inflate(40.0D))) {
             player.sendSystemMessage(line);
         }
@@ -1013,6 +1022,9 @@ public class DbzFighterEntity extends PathfinderMob {
             amount *= 1.5F;
         }
         boolean hurt = super.hurt(source, amount);
+        if (hurt && com.pfkfks.flightsuit.doom.DoomMoves.isCast(me) && level() instanceof ServerLevel doomLevel) {
+            com.pfkfks.flightsuit.doom.DoomMoves.onHurt(doomLevel, this, source);
+        }
         if (hurt && isAlive() && !milestones.isEmpty()) {
             runMilestones(getHealth() / getMaxHealth());
         }
@@ -1028,6 +1040,9 @@ public class DbzFighterEntity extends PathfinderMob {
         DbzCharacter me = getCharacter();
         if (level().isClientSide || me.role() == DbzCharacter.Role.MINION || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
                 || !(level() instanceof ServerLevel server)) {
+            if (me.role() == DbzCharacter.Role.MINION && com.pfkfks.flightsuit.doom.DoomMoves.isCast(me) && level() instanceof ServerLevel doomLevel) {
+                com.pfkfks.flightsuit.doom.DoomMoves.minionDown(doomLevel, this, source);
+            }
             super.die(source);
             return;
         }
@@ -1043,7 +1058,9 @@ public class DbzFighterEntity extends PathfinderMob {
         setHealth(1.0F);
         server.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1.0D, getZ(), 20, 0.4D, 0.8D, 0.4D, 0.03D);
         say(server, me.line("beaten"));
-        if (me.role() == DbzCharacter.Role.BOSS) {
+        if (me.role() == DbzCharacter.Role.BOSS && com.pfkfks.flightsuit.doom.DoomMoves.isCast(me)) {
+            com.pfkfks.flightsuit.doom.DoomSaga.onBossBeaten(server, this, source.getEntity());
+        } else if (me.role() == DbzCharacter.Role.BOSS) {
             PlanetStory.onBossBeaten(server, this, source.getEntity());
         }
         discard();
@@ -1054,7 +1071,9 @@ public class DbzFighterEntity extends PathfinderMob {
         if (hand != InteractionHand.MAIN_HAND || isFighting() || isActing()) {
             return InteractionResult.PASS;
         }
-        if (player instanceof ServerPlayer serverPlayer) {
+        if (player instanceof ServerPlayer serverPlayer && com.pfkfks.flightsuit.doom.DoomMoves.isCast(getCharacter())) {
+            com.pfkfks.flightsuit.doom.DoomSaga.talk(serverPlayer, getCharacter());
+        } else if (player instanceof ServerPlayer serverPlayer) {
             PlanetStory.talk(serverPlayer, getCharacter());
         }
         return InteractionResult.sidedSuccess(level().isClientSide);

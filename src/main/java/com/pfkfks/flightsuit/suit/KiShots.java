@@ -44,7 +44,18 @@ public final class KiShots {
         /** A plain ki blast: a small burst on what it hits. */
         KI,
         /** A purple ki blast (Frieza's side). */
-        KI_DARK
+        KI_DARK,
+        // The Doom saga (DESIGN.md 4-17): bolts like a ki blast, each its own colour - and Doom's Sphere Flame.
+        /** Doom's (and the Doombots') green energy bolt. */
+        DOOM,
+        /** Doom's Sphere Flame: a big slow green ball that bursts like the Burning Attack. */
+        DOOM_SPHERE,
+        /** The Latverian witches' hex. */
+        HEX,
+        /** Magneto's flying shards of steel. */
+        METAL,
+        /** Namor's (and Talokan's) water lances. */
+        WATER
     }
 
 
@@ -98,7 +109,7 @@ public final class KiShots {
         shot.fx = KiFx.shot(level, (byte) style.ordinal(), colour(style), size(style, radius), from, dir, speed, range);
         SHOTS.add(shot);
         switch (style) {
-            case BURNING -> level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.6F);
+            case BURNING, DOOM_SPHERE -> level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.6F);
             case DISC -> level.playSound(null, from.x, from.y, from.z, SoundEvents.TRIDENT_RIPTIDE_1, SoundSource.PLAYERS, 1.0F, 1.6F);
             case FIRE -> level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 0.8F, 1.2F);
             default -> level.playSound(null, from.x, from.y, from.z, SoundEvents.FIRECHARGE_USE, SoundSource.HOSTILE, 0.8F, 1.6F);
@@ -110,6 +121,10 @@ public final class KiShots {
             case BURNING, DISC -> KiFx.BURNING;
             case FIRE -> KiFx.FIRE;
             case KI_DARK -> KiFx.KI_DARK;
+            case DOOM, DOOM_SPHERE -> 0x50FF70;
+            case HEX -> 0xE040A0;
+            case METAL -> 0xC8D2E0;
+            case WATER -> 0x40B8FF;
             default -> KiFx.KI;
         };
     }
@@ -118,6 +133,7 @@ public final class KiShots {
     private static float size(Style style, double radius) {
         return switch (style) {
             case BURNING -> 1.5F;
+            case DOOM_SPHERE -> 2.4F;
             case DISC -> (float) (radius * 1.3D);
             case FIRE -> 0.5F;
             default -> 0.6F;
@@ -193,7 +209,7 @@ public final class KiShots {
             return true;
         }
         if (shot.travelled >= shot.range) {
-            if (shot.style == Style.BURNING) {
+            if (shot.style == Style.BURNING || shot.style == Style.DOOM_SPHERE) {
                 impact(shot, end, null);
             }
             return true;
@@ -211,7 +227,7 @@ public final class KiShots {
     private static void impact(Shot shot, Vec3 at, LivingEntity direct) {
         ServerLevel level = shot.level;
         switch (shot.style) {
-            case BURNING -> {
+            case BURNING, DOOM_SPHERE -> {
                 for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(shot.radius),
                         entity -> entity != shot.owner && entity.isAlive() && shot.hits.test(entity)
                                 && entity.getBoundingBox().getCenter().distanceTo(at) <= shot.radius + entity.getBbWidth() / 2.0D)) {
@@ -221,7 +237,7 @@ public final class KiShots {
                         victim.knockback(1.2D, -push.x, -push.z);
                     }
                 }
-                KiFx.burst(level, at, KiFx.BURNING, (float) Math.max(2.0D, shot.radius), 20, KiFx.BLAST);
+                KiFx.burst(level, at, colour(shot.style), (float) Math.max(2.0D, shot.radius), 20, KiFx.BLAST);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.5F, 0.9F);
             }
             case DISC -> {
@@ -242,7 +258,7 @@ public final class KiShots {
                 if (direct != null && !KiGuard.blocks(direct, shot.owner, at.subtract(shot.dir.scale(2.0D)))) {
                     hurt(shot, direct, shot.damage);
                 }
-                KiFx.burst(level, at, shot.style == Style.KI_DARK ? KiFx.KI_DARK : KiFx.KI, 1.1F, 12, KiFx.BLAST);
+                KiFx.burst(level, at, colour(shot.style), 1.1F, 12, KiFx.BLAST);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 0.5F, 1.6F);
             }
         }

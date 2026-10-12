@@ -205,6 +205,11 @@ public final class PlanetStory {
 
     /** What to do next, and which way. */
     public static void objective(ServerPlayer player) {
+        // The Doom saga (DESIGN.md 4-17): its line first; in Battleworld that's all there is.
+        boolean doom = com.pfkfks.flightsuit.doom.DoomSaga.objective(player);
+        if (doom && com.pfkfks.flightsuit.doom.Multiverse.inBattleworld(player.level())) {
+            return;
+        }
         int stones = com.pfkfks.flightsuit.thanos.ThanosSaga.stones(player.server, player.getUUID());
         if (player.level().dimension() == Planet.TITAN.dimension() || stones != 0) {
             com.pfkfks.flightsuit.thanos.ThanosSaga.objective(player);
@@ -214,7 +219,9 @@ public final class PlanetStory {
         }
         DbzStage stage = dbzStage(player);
         if (stage == null) {
-            player.sendSystemMessage(Component.translatable("story.flightsuit.none").withStyle(ChatFormatting.GRAY));
+            if (!doom) {
+                player.sendSystemMessage(Component.translatable("story.flightsuit.none").withStyle(ChatFormatting.GRAY));
+            }
             return;
         }
         Goal goal = goal(player);
@@ -309,6 +316,14 @@ public final class PlanetStory {
                 pos = PlanetData.get(player.server).site(here);
                 label = Component.translatable("story.flightsuit.marker.ship", goal.planet().displayName());
                 key = "ship:" + goal.planet().id();
+            }
+        } else if (com.pfkfks.flightsuit.doom.Multiverse.inBattleworld(level)) {
+            // The Doom saga's next sight in Battleworld.
+            com.pfkfks.flightsuit.doom.DoomSaga.Goal goal = com.pfkfks.flightsuit.doom.DoomSaga.goal(player);
+            if (goal != null) {
+                pos = goal.pos();
+                label = goal.label();
+                key = label.getString();
             }
         }
         if (pos != null && pos.getY() == 0 && level.hasChunkAt(pos)) {

@@ -55,6 +55,14 @@ public final class ModBlocks {
     public static final RegistryObject<com.pfkfks.flightsuit.planet.dbz.DragonBallBlock> DRAGON_BALL = BLOCKS.register("dragon_ball",
             () -> new com.pfkfks.flightsuit.planet.dbz.DragonBallBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE)
                     .strength(-1.0F, 3_600_000.0F).noLootTable().noOcclusion().lightLevel(state -> 9).sound(SoundType.GLASS)));
+    /**
+     * The Doom saga (DESIGN.md 4-17): the multiverse gate that fills an amethyst frame lit with the bridge key - no
+     * item, unbreakable itself (break the frame), lit like a portal.
+     */
+    public static final RegistryObject<com.pfkfks.flightsuit.doom.MultiverseGateBlock> MULTIVERSE_GATE = BLOCKS.register("multiverse_gate",
+            () -> new com.pfkfks.flightsuit.doom.MultiverseGateBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GREEN)
+                    .noCollission().strength(-1.0F).sound(SoundType.GLASS).lightLevel(state -> 11).noLootTable()
+                    .pushReaction(PushReaction.BLOCK)));
     public static final RegistryObject<CleanerDockBlock> CLEANER_DOCK = register("cleaner_dock",
             () -> new CleanerDockBlock(metal().noOcclusion()));
     /** Blast-proof, so a creeper can't take the whole village down with it. */

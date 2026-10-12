@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Code-built models: the box layout, the texture and a preview render of every model that isn't a plain skin.
  *
- * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|monkey|weapons|parts_saiyan|parts_namekian|parts_frieza|parts_cell_buu|all]
+ * Usage: java tools/ModelGen.java <repo root> [hulk|hulkbuster|trunks|shenron|oozaru|monkey|weapons|parts_saiyan|parts_namekian|parts_frieza|parts_cell_buu|parts_marvel|all]
  *
  * The parts_* models (M18, DESIGN.md 5차 피드백 "인물별 입체 부품") are the Dragon Ball cast's 3D parts drawn over the
  * skinned body by client/DbzPartsLayer: two roots, "head" and "body", at the player model's pivots, each with named
@@ -77,6 +77,9 @@ public class ModelGen {
         }
         if (all || what.equals("parts_cell_buu")) {
             emit(CellBuuParts.build(), "client/parts/CellBuuParts.java", "textures/entity/dbz/parts/cell_buu.png");
+        }
+        if (all || what.equals("parts_marvel")) {
+            emit(MarvelParts.build(), "client/parts/MarvelParts.java", "textures/entity/dbz/parts/marvel.png");
         }
     }
 
@@ -2510,6 +2513,77 @@ public class ModelGen {
      * wings ("wings", body) and the imperfect form's tail ("tail", body); Buu's antenna ("antenna_fat",
      * "antenna_super", "antenna_kid", head). TODO (M18 agent).
      */
+    /**
+     * The Doom saga's parts (DESIGN.md 4-17): the capes that make the silhouettes - Doom's green cloak, God Emperor
+     * Doom's (green, gold-edged, white-lined), Magneto's purple, the Latverian witches' black - each a group under the
+     * body, hung from the shoulders behind the back in two panels ("<group>" and "<group>_low", pivoted at the
+     * shoulders and at the hem of the upper panel so MarvelParts.animate can sway and stream them); and the feathered
+     * headdress of Talokan's warriors ("feathers", under the head: a fan of five quills over the crown).
+     * Body space: shoulders at y 0, the back at z 2; the cape hangs to the ankles (23 px).
+     */
+    static final class MarvelParts {
+        /** Rest pose (x rotation) of the upper and lower panels - the same as client/parts/MarvelParts.REST. */
+        static final float[] REST = {0.08F, 0.06F};
+
+        static Model build() {
+            Model m = Parts.partsModel("parts_marvel", 128, 64);
+            Part body = Parts.body(m);
+            cape(body, "cape_doom", 0xFF2A5E2E, 0xFF1E4422, 0xFF2A5E2E, 0);
+            cape(body, "cape_god", 0xFF2E6B34, 0xFFEDE8DA, 0xFFE6BE48, 1);
+            cape(body, "cape_magneto", 0xFF6A2A8A, 0xFF4A1A62, 0xFF6A2A8A, 0);
+            cape(body, "cape_witch", 0xFF1C2A20, 0xFF121A14, 0xFF3A7A44, 1);
+            feathers(Parts.head(m));
+            return m;
+        }
+
+        /**
+         * A cape: {@code outer} on the outside with long folds, {@code inner} lining against the back, {@code trim}
+         * along the edges when {@code trimmed} is 1. Ten wide (a pixel past each shoulder), one thick.
+         */
+        static void cape(Part body, String name, int outer, int inner, int trim, int trimmed) {
+            Paint cloth = p -> clothAt(p, outer, inner, trim, trimmed == 1, false);
+            Paint hem = p -> clothAt(p, outer, inner, trim, trimmed == 1, true);
+            Part top = body.child(name, 0, 0.2F, 2.4F, REST[0], 0, 0);
+            top.box(name + "_upper", -5, 0, 0, 10, 12, 1, cloth);
+            Part low = top.child(name + "_low", 0, 12, 0, REST[1], 0, 0);
+            low.box(name + "_lower", -5, 0, 0, 10, 11, 1, hem);
+        }
+
+        /** Folds: darker vertical bands every few texels, a lighter crest beside each; the inside plain and shadowed. */
+        static int clothAt(Px p, int outer, int inner, int trim, boolean trimmed, boolean hem) {
+            if (p.face == Face.FRONT) {
+                return grain(p, shade(inner, 0.9 - p.fy * 0.1), 0.05);
+            }
+            int fold = Math.floorMod((int) Math.floor(p.x + 5), 3);
+            int c = fold == 0 ? shade(outer, 0.78) : fold == 1 ? shade(outer, 1.1) : outer;
+            if (trimmed && (p.face == Face.BACK) && (p.i == 0 || p.i == p.fw - 1 || hem && p.j == p.fh - 1)) {
+                c = trim;
+            }
+            if (p.face == Face.BOTTOM || p.face == Face.TOP) {
+                c = shade(outer, 0.8);
+            }
+            if (p.face == Face.BACK) {
+                c = shade(c, 1.0 - p.fy * 0.12);
+            }
+            return grain(p, c, 0.05);
+        }
+
+        /** Five quills fanned over the crown, red, gold and jade by turns, a band at the base. */
+        static void feathers(Part head) {
+            Part fan = head.child("feathers", 0, -8.2F, 1.0F);
+            int[] colours = {0xFFE04A3A, 0xFFE0B440, 0xFF2EC08A, 0xFFE0B440, 0xFFE04A3A};
+            for (int i = 0; i < 5; i++) {
+                float angle = (i - 2) * 0.32F;
+                int colour = colours[i];
+                Part quill = fan.child("quill_" + i, (i - 2) * 1.2F, 0, 0, -0.35F, 0, angle);
+                quill.box("quill_" + i + "_vane", -0.5F, -6, -0.5F, 1, 6, 1, 0.1F, p -> {
+                    int c = p.fy < 0.2 ? shade(colour, 1.2) : p.fy > 0.85 ? 0xFFE8E0C8 : colour;
+                    return grain(p, c, 0.06);
+                });
+            }
+        }
+    }
+
     static final class CellBuuParts {
         // Skin colours: cell_imperfect / cell_semi / cell / cell_jr / majin_buu / super_buu / kid_buu.
         static final int IMP = 0xFF4A8A3E, IMP_DARK = 0xFF2A5A2A, SEMI = 0xFF5AAA4A, SEMI_DARK = 0xFF3B6E2E;

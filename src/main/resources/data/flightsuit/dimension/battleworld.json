@@ -1,0 +1,26 @@
+{
+  "type": "flightsuit:battleworld",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:overworld",
+    "biome_source": {
+      "type": "minecraft:checkerboard",
+      "scale": 3,
+      "biomes": [
+        "minecraft:snowy_plains",
+        "minecraft:badlands",
+        "minecraft:dark_forest",
+        "minecraft:desert",
+        "minecraft:cherry_grove",
+        "minecraft:ice_spikes",
+        "minecraft:savanna",
+        "minecraft:mushroom_fields",
+        "minecraft:jungle",
+        "minecraft:swamp",
+        "minecraft:flower_forest",
+        "minecraft:eroded_badlands",
+        "minecraft:taiga"
+      ]
+    }
+  }
+}

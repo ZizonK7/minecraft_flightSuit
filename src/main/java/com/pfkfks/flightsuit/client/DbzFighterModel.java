@@ -156,9 +156,11 @@ public class DbzFighterModel extends PlayerModel<DbzFighterEntity> {
      */
     private void shape(DbzCharacter who, DbzAction action) {
         boolean saibaman = who == DbzCharacter.SAIBAMAN;
-        float wide = saibaman ? 1.45F : 1.0F;
+        // The Doom saga (2026-10-12): the Thing's rocky bulk, a Sentinel's great head.
+        boolean thing = who == DbzCharacter.THE_THING;
+        float wide = saibaman ? 1.45F : thing ? 1.12F : who == DbzCharacter.SENTINEL ? 1.15F : 1.0F;
         float tall = saibaman ? 1.3F : 1.0F;
-        float thin = saibaman ? 0.72F : 1.0F;
+        float thin = saibaman ? 0.72F : thing ? 1.3F : 1.0F;
         for (ModelPart part : new ModelPart[]{head, hat}) {
             part.xScale = wide;
             part.zScale = wide;

@@ -48,6 +48,7 @@ public final class ClientSetup {
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.NamekianParts.LAYER, com.pfkfks.flightsuit.client.parts.NamekianParts::createLayer);
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.FriezaParts.LAYER, com.pfkfks.flightsuit.client.parts.FriezaParts::createLayer);
         event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.CellBuuParts.LAYER, com.pfkfks.flightsuit.client.parts.CellBuuParts::createLayer);
+        event.registerLayerDefinition(com.pfkfks.flightsuit.client.parts.MarvelParts.LAYER, com.pfkfks.flightsuit.client.parts.MarvelParts::createLayer);
     }
 
     @SubscribeEvent

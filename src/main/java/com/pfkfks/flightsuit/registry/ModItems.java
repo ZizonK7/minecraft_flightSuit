@@ -140,6 +140,22 @@ public final class ModItems {
     public static final RegistryObject<com.pfkfks.flightsuit.thanos.InfinityGauntletItem> INFINITY_GAUNTLET = ITEMS.register("infinity_gauntlet",
             () -> new com.pfkfks.flightsuit.thanos.InfinityGauntletItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
 
+    /**
+     * The Doom saga (DESIGN.md 4-17): Reed's bridge key (lights a multiverse gate), the Barons' world cores (one per
+     * domain freed - keepsakes), and Doom's mask (worn on the head, a trophy).
+     */
+    public static final RegistryObject<com.pfkfks.flightsuit.doom.BridgeKeyItem> BRIDGE_KEY = ITEMS.register("bridge_key",
+            () -> new com.pfkfks.flightsuit.doom.BridgeKeyItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> WORLD_CORE = ITEMS.register("world_core",
+            () -> new Item(new Item.Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant()) {
+                @Override
+                public boolean isFoil(net.minecraft.world.item.ItemStack stack) {
+                    return true;
+                }
+            });
+    public static final RegistryObject<com.pfkfks.flightsuit.doom.DoomMaskItem> DOOM_MASK = ITEMS.register("doom_mask",
+            () -> new com.pfkfks.flightsuit.doom.DoomMaskItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
+
     public static Item stone(com.pfkfks.flightsuit.thanos.InfinityStone stone) {
         return STONES.get(stone).get();
     }

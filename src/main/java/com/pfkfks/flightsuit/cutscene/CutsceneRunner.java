@@ -60,8 +60,8 @@ public final class CutsceneRunner {
     public static final double VIEW_RANGE = 96.0D;
 
     /** The scripts' beam colours (Cutscene.BEAM_*), drawn by the clients (KiFx), and how wide each is. */
-    private static final int[] BEAM_COLOUR = {KiFx.KAME, KiFx.GALICK, KiFx.SBC, KiFx.CANDY, KiFx.WHITE, KiFx.DEATH, KiFx.MOUTH};
-    private static final float[] BEAM_WIDTH = {1.5F, 1.5F, 0.6F, 0.6F, 2.4F, 0.3F, 2.2F};
+    private static final int[] BEAM_COLOUR = {KiFx.KAME, KiFx.GALICK, KiFx.SBC, KiFx.CANDY, KiFx.WHITE, KiFx.DEATH, KiFx.MOUTH, 0x50FF70, KiFx.FIRE};
+    private static final float[] BEAM_WIDTH = {1.5F, 1.5F, 0.6F, 0.6F, 2.4F, 0.3F, 2.2F, 1.6F, 1.2F};
 
     /** A scene being played. */
     public static final class Running {
@@ -484,6 +484,18 @@ public final class CutsceneRunner {
                 }
             }
             case Cutscene.BURST_SPIRIT_BOMB -> KiFx.burst(level, at, KiFx.SPIRIT, 3.2F, 26, KiFx.ORB);
+            case Cutscene.BURST_GREEN_PILLAR -> KiFx.pillar(level, null, at, 0x50FF70, 26.0F, 40);
+            case Cutscene.BURST_EARTH -> {
+                // Another Earth over this one: a great blue world with green land, slowly there (KiFx orbs).
+                KiFx.burst(level, at, 0x3C7DFF, 30.0F, 200, KiFx.ORB);
+                KiFx.burst(level, at, 0x9FE07A, 17.0F, 200, KiFx.ORB);
+            }
+            case Cutscene.BURST_RIFT -> {
+                KiFx.pillar(level, null, at, 0x50FF70, 14.0F, 60);
+                KiFx.burst(level, at.add(0.0D, 0.1D, 0.0D), 0x50FF70, 5.0F, 30, KiFx.RING);
+                KiFx.burst(level, at.add(0.0D, 1.5D, 0.0D), 0xB8FFC8, 2.5F, 16, KiFx.FLASH);
+                level.playSound(null, at.x, at.y, at.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 0.8F, 1.2F);
+            }
             case Cutscene.BURST_LAVA -> {
                 level.sendParticles(ParticleTypes.LAVA, at.x, at.y, at.z, 20, 2.0D, 0.3D, 2.0D, 0.0D);
                 level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, 20, 2.0D, 0.5D, 2.0D, 0.02D);

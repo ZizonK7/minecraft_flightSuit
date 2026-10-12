@@ -33,6 +33,8 @@ public class DbzPartsLayer extends RenderLayer<DbzFighterEntity, DbzFighterModel
         models.put(DbzParts.Set_.NAMEKIAN, new NamekianParts(context.bakeLayer(NamekianParts.LAYER)));
         models.put(DbzParts.Set_.FRIEZA, new FriezaParts(context.bakeLayer(FriezaParts.LAYER)));
         models.put(DbzParts.Set_.CELL_BUU, new CellBuuParts(context.bakeLayer(CellBuuParts.LAYER)));
+        models.put(DbzParts.Set_.MARVEL, new com.pfkfks.flightsuit.client.parts.MarvelParts(
+                context.bakeLayer(com.pfkfks.flightsuit.client.parts.MarvelParts.LAYER)));
     }
 
     @Override

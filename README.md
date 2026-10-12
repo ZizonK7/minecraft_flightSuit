@@ -28,7 +28,7 @@
 
 실제 마인크래프트에서 쓰려면 이 모드 jar와 함께 [PlayerAnimator](https://maven.kosmx.dev/dev/kosmx/player-anim/player-animation-lib-forge/) Forge 1.20 버전을 `mods` 폴더에 넣어야 합니다. 조합법을 R/U로 보려면 [JEI](https://www.curseforge.com/minecraft/mc-mods/jei) 1.20.1 Forge 버전도 넣으세요 (없어도 모드는 동작).
 
-## 현재 기능 (M1 ~ M18)
+## 현재 기능 (M1 ~ M19)
 
 크리에이티브 탭 "플라이트 슈트"에서 모든 아이템과 블록을 꺼낼 수 있습니다. **슈트가 든 캡슐**로 바로 써 보거나, 스테이션에 슈트를 넣고 이디스 안경으로 불러 보세요.
 
@@ -391,6 +391,26 @@ Mark 0는 **철과 구리만** (흉갑에 화로 하나, 캡슐은 철·구리·
   - **10분을 버티지 못하면**: 타노스가 손가락을 튕겨 주민 절반이 재가 되어 사라집니다. **저절로 돌아오지 않습니다** (엔드게임처럼): 타노스를 다시 맞아 이기거나 인피니티 건틀렛으로 스냅하면 모두 돌아옵니다 (마을이 다음에 로드될 때 회관 곁에서 주황빛 먼지가 모여 사람이 됨). 5일 뒤 다시 옵니다.
 - **인피니티 건틀렛** (금 블록 5, 네더라이트 주괴, 다이아몬드 블록): 우클릭으로 가진 스톤을 끼움. 여섯 개가 다 차면 우클릭 = **스냅**: 96칸 안의 타노스 군단은 재가 되고 (타노스도 → 승리), 48칸 안의 몬스터가 쓰러집니다. 대가: 체력 반 칸만 남고 배고픔 0, 나약함 2분, 스톤은 타 버림 (한 번뿐).
 
+### 닥터 둠 사가 「둠스데이」 (M19, 인게임 테스트 전)
+
+자세한 기획: [docs/DOOM_SAGA.md](docs/DOOM_SAGA.md)
+
+- **프롤로그 - 인커전**: 타노스를 이긴 뒤 (또는 60일째 밤부터) 어느 밤, 하늘에 **또 하나의 지구**가 떠오르고 이디스가 "인커전 감지"를 알립니다. 곧 눈앞에 초록 균열이 열리고 **둠봇** 넷이 걸어 나옵니다. 모두 쓰러뜨리면 균열에서 **판타스틱 4**(지구-828)가 나와 리드 리처즈가 **브리지 열쇠**를 줍니다.
+- **멀티버스 게이트** (네더 포털처럼): **자수정 블록**으로 닫힌 문틀(안쪽 2×3 이상, 21×21 이하, 모양 자유, 모서리 필요 없음)을 세우고 문틀이나 그 안을 열쇠로 우클릭 → 초록·보라 소용돌이. 안에 **3초** 서 있으면 건너갑니다 (크리에이티브는 바로).
+  - 어느 게이트로 들어가든 **배틀월드의 피난처**에 도착하고, 배틀월드의 어느 게이트로 나가든 **들어왔던 게이트 옆**으로 돌아옵니다. 문틀을 부수면 꺼집니다. 열쇠를 잃으면 `/doom key`
+- **배틀월드**: 128칸마다 다른 세계(눈밭·악지·어두운 숲·사막·벚나무 숲·역고드름·정글…)가 바둑판처럼 이어 붙은 땅. 밤에는 둠봇 순찰대가 다닙니다 (고철: 철 조각·레드스톤).
+- **피난처의 리드**와 이야기하면 목표가 생깁니다: 세 **남작**이 지키는 **세계의 핵** 셋 (순서 자유, 판타스틱 4 한 명이 같이 싸움). 화면 위 화살표와 금빛 빛기둥이 다음 장소를 가리킵니다.
+  - **제노샤** (동쪽, 수 동행): 둠봇 → 땅에서 일어나는 **센티넬** 둘 → **매그니토** (슈트나 철 장비를 입었으면 끌어당김, 강철 비, 자기장 방패)
+  - **탈로칸** (서북서, 쟈니 동행): 탈로칸 전사 → **나모르** ("임페리우스 렉스!" 물기둥, 돌진, 전사 소환)
+  - **데드랜드** (남쪽, 실드 너머, 벤 동행): 마블 좀비 떼 둘 → **좀비 캡틴** (방패 던지기, 떼 소환)
+- **둠의 성** (북쪽, 세 핵을 다 모으면 둠이 직접 부름, 판타스틱 4 전원 동행): 둠봇 → 라트베리아의 마녀 셋 → **닥터 둠**
+  - 둠의 기술 (마블 vs 캡콤): 플라스마 빔, 포톤 샷, 분자 방패(받는 피해 절반 + 돌 던지기), 히든 미사일(빨간 고리 = 미사일 떨어질 곳), 풋 다이브, 둠봇 소환, 체력 절반 아래로는 포톤 어레이·스피어 플레임·번개·**둠스 타임**(초록 고리에서 1초 안에 벗어나지 못하면 붙잡혀 감전). 가까이서 때리면 갑옷의 전기에 감전될 수 있음
+  - 결전 중 컷신: 75% "그건 둠봇이었다", 50% **갓 엠퍼러 둠**, 20% 리드의 질문, 0% 가면
+  - **보상**: 둠의 가면 (머리에 쓰는 장식), 흉갑 배터리 +1단계 (최대면 아크 원자로 2), 네더라이트 주괴 2, 아크 원자로 3, 다이아 16. 남작마다 세계의 핵과 자원
+  - 그 뒤에도 둠은 **하루 한 번** 왕좌로 돌아옵니다 (재대결)
+- 본 컷신(16개 중)은 `/planet replay doom.<이름>`으로 다시 볼 수 있습니다 (치트: `/flightsuit dbz cutscene doom.<이름>`은 안 본 것도)
+- `/doom`: 다음 목표와 방향 (`/planet`에도 나옴)
+
 ### 테스트 명령어 (치트 필요)
 
 - `/flightsuit durability <0-100>`: 입은 슈트와 16칸 안의 내 동료 슈트의 내구도를 %로 설정합니다. `0`이면 다음 피격에 강제 이탈합니다.
@@ -404,6 +424,7 @@ Mark 0는 **철과 구리만** (흉갑에 화로 하나, 캡슐은 철·구리·
 - `/flightsuit dbz stage <단계>`: 드래곤볼 이야기 단계를 바로 바꿈 ("다음 날" 기다림도 풀림). 단계: `arrived, met_bulma, met_goku, raditz_beaten, nappa_beaten, saiyans_beaten, namek_open, met_dende, zarbon_beaten, ginyu_beaten, frieza_beaten, met_trunks, androids_beaten, cell_beaten, buu_beaten, kid_buu_beaten`. `/flightsuit dbz cutscene <id>`: 컷신을 내 앞에서 바로 봄 (본 적 없어도). `/flightsuit dbz stop`: 지금 행성의 이야기 전투를 끝냄 (보상 없음). `/flightsuit dbz fx <이펙트>`: 기 기술 그림 하나를 내 앞에 보여 줌 (피해 없음, 탭 자동완성)
 - `/flightsuit dragonballs give`: 드래곤볼 7개를 바로 받기. `/flightsuit dragonballs reset`: 드래곤볼을 다시 흩기 (돌 상태도 풀림)
 - `/flightsuit thanos now`: 타노스가 지금 내 마을로 옴. `/flightsuit thanos stones`: 인피니티 스톤 6개 받기
+- `/flightsuit doom start`: 지금 인커전 시작 (둠 사가를 처음부터). `/flightsuit doom stage <incursion|gate|arrived|domains|castle|done>`: 단계를 바로 바꿈 (gate 이후면 열쇠도 줌). `/flightsuit doom cores <0-7>`: 되찾은 핵 (1 제노샤, 2 탈로칸, 4 데드랜드의 합). `/flightsuit doom tp <refuge|genosha|talokan|deadlands|castle>`: 배틀월드의 그곳으로 (처음이면 다가갈 때 지어짐). `/flightsuit doom stop`: 배틀월드의 싸움을 끝냄
 - `/flightsuit raid general <guan_yu|zhang_fei|xiahou_dun|gan_ning|liu_bei|cao_cao|sun_quan>`: 눈앞에 적 장수를 부릅니다. 크리에이티브 탭의 삼국지 병사·장수 생성 알도 있습니다.
 
 ### 이디스 안경
@@ -484,6 +505,7 @@ src/main/java/com/pfkfks/flightsuit/
   fx/        기 기술 그림(KiFx: 광선·기 모으기·기탄·폭발·빛기둥·오라·태양권을 근처 클라이언트에 보냄. 그리는 쪽은 client/KiFxClient·KiDraw)
   cutscene/  컷신 엔진(M17): 대본과 빌더(Cutscene), 등록(Cutscenes), 서버 재생·건너뛰기(CutsceneRunner), 카메라(CameraEntity). 클라이언트 쪽은 client/CutsceneClient·CutsceneOverlay
   planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock, 착륙장), 우주선(SpaceshipEntity), 격납고(Hangar), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
+  doom/      닥터 둠 사가(M19): 이야기·싸움·대화·목표(DoomSaga), 기술(DoomMoves), 배틀월드 볼거리(DoomSites), 멀티버스 게이트(Multiverse, MultiverseGateBlock, BridgeKeyItem), 둠의 가면(DoomMaskItem), 저장(DoomData), 명령어(DoomCommands), 컷신 대본(DoomCutscenes). 인물은 planet/dbz/DbzCharacter 끝에 (드래곤볼 인물 몸을 같이 씀)
   thanos/    타노스 사가: 인피니티 스톤(InfinityStone, InfinityStoneItem), 타노스 군단(ThanosForce, ThanosForceEntity: 치타우리·블랙 오더·타노스·레드 스컬), 타이탄 볼거리(TitanSites), 스톤 사냥·전조(ThanosSaga), 최종전(ThanosRaid)
   thief/     배트맨 일당: 도둑 종류(ThiefType), 도둑 엔티티(ThiefEntity: 몰래 털기·발견·EMP·도주), 일정·계산 처리·상자 털기(ThiefManager), 저장(ThiefData), 배트랭·갈고리 총·연막탄, 명령어
   village/   마을: 회관(VillageHallBlockEntity), 주민(ResidentEntity)과 직업·재능, 건축(VillageWorks: 복구·주문·개축·건의, Blueprint 설계도, Construction), 설계도 아이템, 피해 기록, 주민 AI(village/ai)
@@ -504,6 +526,7 @@ tools/ModelGen.java       자바 코드 모델(헐크, 헐크버스터, 트랭�
 tools/DbzSkinGen.java     드래곤볼 인물 스킨(64x64) 생성 (`new` = M17 인물만, `preview` = 미리보기 docs/reference/dbz_preview.png만)
 tools/TownsfolkGen.java   마을 사람 스킨 생성 (디렉터리 뒤에 이름을 주면 그것만: dbz_citizen dbz_shopkeeper dbz_child namekian)
 tools/ParticleGen.java    파티클 그림 (잠든 적의 "Z")
+tools/DoomGen.java        닥터 둠 사가 그림: 인물 스킨 14명, 멀티버스 게이트(움직이는 텍스처), 브리지 열쇠·세계의 핵·둠의 가면 (`skins|gate|items|preview`, 미리보기 docs/reference/doom_preview.png). 망토·깃털은 `java tools/ModelGen.java . parts_marvel`
 docs/reference/           레퍼런스 이미지와 슈트 스킨 원본
 ```
 
