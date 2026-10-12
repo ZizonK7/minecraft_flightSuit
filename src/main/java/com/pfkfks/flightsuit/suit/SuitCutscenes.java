@@ -9,12 +9,14 @@ import com.pfkfks.flightsuit.cutscene.Cutscenes;
  */
 public final class SuitCutscenes {
     public static final String DRAGON_FIST = "suit.dragon_fist";
+    public static final String HULK_FINISHER = "suit.hulk_finisher";
 
     private SuitCutscenes() {
     }
 
     public static void registerAll() {
         Cutscenes.register(dragonFist());
+        Cutscenes.register(hulkFinisher());
     }
 
     /**
@@ -31,6 +33,21 @@ public final class SuitCutscenes {
                 .at(18).shake(6)
                 .shot(28).linear().cam(11, 4.5, 6).camTo(13, 5.5, 20).look(0, 1.5, 0).lookTo(0, 1.5, 28)
                 .shot(22).cam(-5, 2.6, 34).camTo(-3, 2.0, 31.5).look(0, 1.5, 28).lookTo(0, 1.2, 28)
+                .build();
+    }
+
+    /**
+     * The Hulkbuster's finisher (HulkbusterArts.finisher, 2026-10-12): low beside him as he grabs the foe (16), round
+     * the front of the two through the flurry (40), behind his shoulder for the last punch and the foe flying off (20).
+     * 76 ticks, the same clock as the move; distances allow for the suit's 1.5x size.
+     */
+    static Cutscene hulkFinisher() {
+        return Cutscene.of(HULK_FINISHER).free()
+                .shot(16).cam(-4.5, 1.2, 1.0).camTo(-4.0, 1.8, 2.5).look(0, 2.0, 1.5).lookTo(0, 2.2, 2.0)
+                .shot(40).linear().cam(4.5, 2.2, 5.5).camTo(-4.5, 2.6, 5.0).look(0, 2.0, 1.8).lookTo(0, 2.0, 1.8)
+                .at(0).shake(40)
+                .shot(20).cam(-2.4, 3.2, -3.4).camTo(-3.0, 3.6, -5.0).look(0, 2.0, 3.0).lookTo(0, 2.6, 9.0)
+                .at(10).shake(10)
                 .build();
     }
 }

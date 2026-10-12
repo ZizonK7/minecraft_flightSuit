@@ -65,12 +65,18 @@ public final class HulkbusterArts {
             state.pistonTarget = null;
             state.pistonHits = 0;
             state.slamPhase = SLAM_NONE;
+            if (state.finisherTarget != null) {
+                Stasis.release(state.finisherTarget);
+                state.finisherTarget = null;
+            }
             return;
         }
         tickPiston(player, state);
         tickSlam(player, state);
         tickArmour(player, state);
         tickHammer(player, state);
+        tickFinisher(player, state);
+        tickGauge(player, state);
         if (player.tickCount % 2 == 0 && wearsFullSet(player)) {
             shoveSmallMobs(player);
         }
@@ -140,9 +146,16 @@ public final class HulkbusterArts {
 
     // ---------------------------------------------------------------- jackhammer (V, M18)
 
-    /** Grabs the aimed foe and pounds it ten times where it stands - the boss-killer. */
+    /** Grabs the aimed foe and pounds it ten times where it stands - the boss-killer. With the boss gauge full: the finisher. */
     static void jackhammer(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
+        if (state.finisherTarget != null) {
+            return;
+        }
+        if (state.bossGauge >= SuitTuning.BOSS_GAUGE_MAX && state.hammerTarget == null && state.pistonTarget == null) {
+            finisher(player, state);
+            return;
+        }
         if (now < state.ultReady || state.hammerTarget != null || state.pistonTarget != null) {
             SuitWeapons.cooldownMessage(player, state.ultReady - now);
             return;
@@ -221,10 +234,143 @@ public final class HulkbusterArts {
         }
     }
 
-    /** True while the jackhammer pounds (rooted, half damage like the piston punch). */
+    /** True while the jackhammer (or the finisher) pounds (rooted, half damage like the piston punch). */
     public static boolean isHammering(ServerPlayer player) {
         SuitWeapons.State state = SuitWeapons.existing(player);
-        return state != null && state.hammerTarget != null;
+        return state != null && (state.hammerTarget != null || state.finisherTarget != null);
+    }
+
+    // ---------------------------------------------------------------- the boss gauge and the finisher (V, 2026-10-12)
+
+    /** Fighting a boss fills the gauge - hitting it and being hit by it; full, V is the finisher. */
+    private static void gainGauge(ServerPlayer player, float amount) {
+        SuitWeapons.State state = SuitWeapons.state(player);
+        if (state.finisherTarget != null || amount <= 0.0F) {
+            return;
+        }
+        boolean wasFull = state.bossGauge >= SuitTuning.BOSS_GAUGE_MAX;
+        int before = (int) state.bossGauge;
+        state.bossGauge = Math.min(SuitTuning.BOSS_GAUGE_MAX, state.bossGauge + amount);
+        state.bossGaugeLast = player.level().getGameTime();
+        if ((int) state.bossGauge != before) {
+            SuitWeapons.sendStatus(player, state);
+        }
+        if (!wasFull && state.bossGauge >= SuitTuning.BOSS_GAUGE_MAX) {
+            player.serverLevel().playSound(null, player.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 0.6F);
+            KiFx.aura(player.serverLevel(), player, KiFx.RED, 30);
+            player.displayClientMessage(Component.translatable("message.flightsuit.finisher_ready"), true);
+        }
+    }
+
+    /** A quiet spell (no boss fought for a while): the gauge drains a point a second. */
+    private static void tickGauge(ServerPlayer player, SuitWeapons.State state) {
+        if (state.bossGauge <= 0.0F || player.tickCount % 20 != 0
+                || player.level().getGameTime() - state.bossGaugeLast < SuitTuning.BOSS_GAUGE_QUIET_TICKS) {
+            return;
+        }
+        state.bossGauge = Math.max(0.0F, state.bossGauge - 1.0F);
+        SuitWeapons.sendStatus(player, state);
+    }
+
+    /**
+     * The finisher: the aimed foe grabbed and held in front of the fists, a camera scene (SuitCutscenes.HULK_FINISHER,
+     * the camera only), a flurry of punches, then one last punch that sends it flying.
+     */
+    private static void finisher(ServerPlayer player, SuitWeapons.State state) {
+        LivingEntity target = SuitWeapons.aim(player, SuitTuning.JACKHAMMER_RANGE).target();
+        if (target == null) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.no_target"), true);
+            return;
+        }
+        long now = player.level().getGameTime();
+        state.bossGauge = 0.0F;
+        state.finisherTarget = target;
+        state.finisherTicks = 0;
+        state.ultReady = Math.max(state.ultReady, now + SuitTuning.JACKHAMMER_COOLDOWN_TICKS / 3);
+        SuitWeapons.sendStatus(player, state);
+        ServerLevel level = player.serverLevel();
+        // Facing the foe squarely, so the scene (laid out along the facing) frames the two.
+        Vec3 to = target.position().subtract(player.position());
+        float yaw = (float) (Math.atan2(-to.x, to.z) * (180.0D / Math.PI));
+        player.setYRot(yaw);
+        player.setYBodyRot(yaw);
+        player.setYHeadRot(yaw);
+        com.pfkfks.flightsuit.cutscene.CutsceneRunner.play(level, SuitCutscenes.HULK_FINISHER, player.position(), yaw,
+                java.util.Map.of(), actors -> {
+                }, true, java.util.List.of(player));
+        KiFx.charge(level, player, KiFx.RED, 1.2F, SuitTuning.FINISHER_GRAB_TICKS, KiFx.AT_HANDS);
+        level.playSound(null, player.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 1.2F, 0.4F);
+        level.playSound(null, player.blockPosition(), SoundEvents.WARDEN_ROAR, SoundSource.PLAYERS, 0.6F, 1.6F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.finisher", target.getDisplayName()), true);
+    }
+
+    private static void tickFinisher(ServerPlayer player, SuitWeapons.State state) {
+        LivingEntity target = state.finisherTarget;
+        if (target == null) {
+            return;
+        }
+        int t = state.finisherTicks++;
+        if (t >= SuitTuning.FINISHER_TICKS || target.level() != player.level() || target.distanceTo(player) > SuitTuning.JACKHAMMER_RANGE + 8.0D) {
+            state.finisherTarget = null;
+            Stasis.release(target);
+            return;
+        }
+        ServerLevel level = player.serverLevel();
+        player.setDeltaMovement(0.0D, Math.min(0.0D, player.getDeltaMovement().y), 0.0D);
+        player.hurtMarked = true;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 6, false, false));
+        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
+        if (t < SuitTuning.FINISHER_FINAL_TICK && target.isAlive()) {
+            // Held in front of the fists (big things stay where they are).
+            if (target.getBbWidth() < 2.5D) {
+                double reach = player.getBbWidth() / 2.0D + target.getBbWidth() / 2.0D + 0.6D;
+                Vec3 pull = player.position().add(face.scale(reach)).subtract(target.position());
+                target.setDeltaMovement(pull.scale(0.5D).add(0.0D, 0.02D, 0.0D));
+                target.hurtMarked = true;
+            }
+            if (!Stasis.hold(level, target, 8, false)) {
+                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 8, 6, false, false));
+            }
+        }
+        Vec3 at = target.getBoundingBox().getCenter();
+        int flurryEnd = SuitTuning.FINISHER_GRAB_TICKS + SuitTuning.FINISHER_FLURRY_TICKS;
+        if (t >= SuitTuning.FINISHER_GRAB_TICKS && t < flurryEnd && (t - SuitTuning.FINISHER_GRAB_TICKS) % SuitTuning.FINISHER_INTERVAL == 0) {
+            int n = (t - SuitTuning.FINISHER_GRAB_TICKS) / SuitTuning.FINISHER_INTERVAL;
+            boolean left = n % 2 == 0;
+            player.swing(left ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND, true);
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, left ? SuitAnim.HULK_PUNCH_LEFT : SuitAnim.HULK_PUNCH_RIGHT, 0));
+            if (target.isAlive()) {
+                target.invulnerableTime = 0;
+                target.hurt(player.damageSources().playerAttack(player), SuitTuning.FINISHER_PUNCH_DAMAGE);
+            }
+            Vec3 side = new Vec3(-face.z, 0.0D, face.x).scale(left ? -0.4D : 0.4D);
+            KiFx.burst(level, at.add(side).add(0.0D, (n % 3 - 1) * 0.3D, 0.0D), KiFx.RED, 0.9F, 5, KiFx.SPARK);
+            level.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 6, 0.4D, 0.4D, 0.4D, 0.5D);
+            level.playSound(null, target.blockPosition(), n % 2 == 0 ? SoundEvents.PLAYER_ATTACK_STRONG : SoundEvents.ANVIL_LAND,
+                    SoundSource.PLAYERS, 0.8F, 1.2F + (n % 4) * 0.1F);
+        } else if (t == flurryEnd + 2) {
+            // The wind-up for the last one.
+            KiFx.charge(level, player, KiFx.GOLD, 1.4F, SuitTuning.FINISHER_FINAL_TICK - t, KiFx.AT_HANDS);
+            level.playSound(null, player.blockPosition(), SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.2F, 0.5F);
+        } else if (t == SuitTuning.FINISHER_FINAL_TICK) {
+            player.swing(InteractionHand.MAIN_HAND, true);
+            ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.HULK_PUNCH_RIGHT, 0));
+            Stasis.release(target);
+            if (target.isAlive()) {
+                target.invulnerableTime = 0;
+                target.hurt(player.damageSources().playerAttack(player),
+                        SuitTuning.FINISHER_FINAL_DAMAGE + target.getMaxHealth() * SuitTuning.FINISHER_FINAL_SHARE);
+                target.knockback(3.0D, -face.x, -face.z);
+                target.setDeltaMovement(target.getDeltaMovement().add(0.0D, 0.8D, 0.0D));
+                target.hurtMarked = true;
+                state.wallWatch.put(target, level.getGameTime() + SuitTuning.WALL_SLAM_TICKS);
+            }
+            KiFx.burst(level, at, KiFx.GOLD, 3.5F, 14, KiFx.BLAST);
+            KiFx.burst(level, at, KiFx.WHITE, 2.0F, 8, KiFx.FLASH);
+            com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(level, at, 24.0D, 12);
+            level.playSound(null, target.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.6F, 0.7F);
+            level.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.2F, 0.5F);
+        }
     }
 
     // ---------------------------------------------------------------- block throwing (B twice, M18)
@@ -720,8 +866,17 @@ public final class HulkbusterArts {
 
     /** Small projectiles glance off the plating (half damage); the pounding wearer takes half of everything. */
     static void onHurt(LivingHurtEvent event) {
+        // The boss gauge: blows the Mark 44 lands on a boss, and the boss's blows on it.
+        if (event.getSource().getEntity() instanceof ServerPlayer hitter && hitter != event.getEntity()
+                && SuitWeapons.armedClass(hitter) == SuitClass.HULKBUSTER && Stasis.isBoss(event.getEntity())) {
+            gainGauge(hitter, event.getAmount() * SuitTuning.BOSS_GAUGE_PER_DEALT);
+        }
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
+        }
+        if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker != player
+                && SuitWeapons.armedClass(player) == SuitClass.HULKBUSTER && Stasis.isBoss(attacker)) {
+            gainGauge(player, event.getAmount() * SuitTuning.BOSS_GAUGE_PER_TAKEN);
         }
         if (isPounding(player) || isHammering(player)) {
             event.setAmount(event.getAmount() * SuitTuning.PISTON_DAMAGE_TAKEN);

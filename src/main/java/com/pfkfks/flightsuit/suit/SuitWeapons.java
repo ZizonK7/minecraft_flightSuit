@@ -176,6 +176,11 @@ public final class SuitWeapons {
         LivingEntity hammerTarget;
         int hammerHits;
         int hammerTicks;
+        /** 2026-10-12 Mark 44: the boss gauge (0..100), when it last rose; the finisher's victim and clock. */
+        float bossGauge;
+        long bossGaugeLast;
+        LivingEntity finisherTarget;
+        int finisherTicks;
         /** M18 feedback: the chunk of ground ripped up and held over the shoulder (B once), until B again throws it. */
         final List<net.minecraft.world.entity.item.FallingBlockEntity> held = new ArrayList<>();
         long heldSince;
@@ -654,7 +659,8 @@ public final class SuitWeapons {
     static void sendStatus(ServerPlayer player, State state) {
         StolenSkill stolen = PhantomArts.stolen(player);
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready, state.gauge, state.spadeUntil, state.ultReady,
+                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready,
+                        armedClass(player) == SuitClass.HULKBUSTER ? (int) state.bossGauge : state.gauge, state.spadeUntil, state.ultReady,
                         state.superSaiyan, state.ssjLockedUntil, stolen == null ? "" : stolen.name(), state.stolenReady,
                         state.skill3Ready, buffUntil(state), state.armourMode, (byte) state.chain, !state.held.isEmpty()));
     }

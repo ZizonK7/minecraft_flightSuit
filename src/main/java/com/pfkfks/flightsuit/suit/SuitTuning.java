@@ -375,6 +375,24 @@ public final class SuitTuning {
     public static final int JACKHAMMER_INTERVAL = 3;
     public static final float JACKHAMMER_DAMAGE = 9.0F;
     public static final float JACKHAMMER_BOSS_MULTIPLIER = 1.5F;
+    /**
+     * The boss gauge (2026-10-12, user: "게이지 채우면 궁극기로 피니쉬 공격 연사하는 컷씬"): filled by fighting a boss
+     * (dealing and taking damage), 100 = V is the finisher instead of the jackhammer. Draining after a quiet spell.
+     */
+    public static final float BOSS_GAUGE_PER_DEALT = 1.2F;
+    public static final float BOSS_GAUGE_PER_TAKEN = 2.0F;
+    public static final int BOSS_GAUGE_MAX = 100;
+    public static final int BOSS_GAUGE_QUIET_TICKS = 600;
+    /** The finisher: hold and wind-up, the flurry (one punch every FINISHER_INTERVAL), the last punch, the end. */
+    public static final int FINISHER_GRAB_TICKS = 16;
+    public static final int FINISHER_FLURRY_TICKS = 40;
+    public static final int FINISHER_INTERVAL = 2;
+    public static final int FINISHER_FINAL_TICK = 66;
+    public static final int FINISHER_TICKS = 76;
+    public static final float FINISHER_PUNCH_DAMAGE = 4.0F;
+    public static final float FINISHER_FINAL_DAMAGE = 40.0F;
+    /** Of the target's most health, added to the last punch. */
+    public static final float FINISHER_FINAL_SHARE = 0.15F;
     public static final int THROW_COST = 1_200;
     public static final int THROW_COOLDOWN_TICKS = 240;
     public static final double THROW_RANGE = 6.0D;
