@@ -33,6 +33,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +44,8 @@ import java.util.List;
  * <ul>
  *   <li>right click held: the staff's beam - heals the ally under the crosshair, shoots holy arrows at a foe;</li>
  *   <li>Z: Holy Magic Shell - a two-second window in which incoming shots, beams and missiles break on a shell of
- *       light, and one caught in the first moments goes straight back where it came from;</li>
+ *       light, and one caught in the first moments goes straight back where it came from; since 2026-10-12 Z picks
+ *       whom: left click the marked ally (three seconds for them), right click yourself;</li>
  *   <li>X: Angel Ray - a line of light that hurts foes and heals allies along it;</li>
  *   <li>C: chains of light - the aimed foe held fast (bosses only for a moment);</li>
  *   <li>V: Genesis - pillars of light fall on every foe around, every ally made whole;</li>
@@ -58,6 +61,10 @@ public final class BishopArts {
     private static final String DOOR_OWNER = "FlightSuitDoorOwner";
     private static final String DOOR_HEALTH = "FlightSuitDoorHealth";
     private static final String DOOR_SAMPLED = "FlightSuitDoorSampled";
+    /** Holy Magic Shell on an entity (2026-10-12: any ally, not only the bishop): until, raised at, whose. */
+    private static final String SHELL_UNTIL = "FlightSuitShellUntil";
+    private static final String SHELL_RAISED = "FlightSuitShellRaised";
+    private static final String SHELL_OWNER = "FlightSuitShellOwner";
     private static final int HOLY = 0xFFF3B0;
     private static final int HEAL = 0xA8FFC0;
 
@@ -117,11 +124,12 @@ public final class BishopArts {
     static void tick(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
         tickDoors(player);
         if (suitClass != SuitClass.BISHOP) {
-            state.shellUntil = 0L;
+            state.shellAimUntil = 0L;
             state.genesisLeft = 0;
             return;
         }
         tickGenesis(player, state);
+        tickShellAim(player, state);
         long now = player.level().getGameTime();
         if (state.doorUntil > 0L && state.doorUntil <= now) {
             state.doorUntil = 0L;
@@ -172,79 +180,159 @@ public final class BishopArts {
 
     // ---------------------------------------------------------------- Holy Magic Shell (Z)
 
+    /**
+     * Z: picking who gets the shell (2026-10-12, user: "누르고 좌클릭하면 그 친구한테, 우클릭은 본인에게") - for a
+     * few seconds the ally under the crosshair is marked (a ring at their feet and an outline); left click shells
+     * them, right click the bishop. Z again puts it away.
+     */
     static void shell(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
+        if (state.shellAimUntil > now) {
+            state.shellAimUntil = 0L;
+            player.displayClientMessage(Component.translatable("message.flightsuit.shell_aim_off"), true);
+            return;
+        }
         if (now < state.stepReady) {
+            SuitWeapons.cooldownMessage(player, state.stepReady - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SHELL_COST)) {
-            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
-            return;
-        }
-        state.stepReady = now + SuitTuning.SHELL_COOLDOWN_TICKS;
-        state.shellRaised = now;
-        state.shellUntil = now + SuitTuning.SHELL_TICKS;
-        ServerLevel level = player.serverLevel();
-        KiFx.aura(level, player, HOLY, SuitTuning.SHELL_TICKS);
-        KiFx.burst(level, player.position().add(0.0D, 1.0D, 0.0D), HOLY, 1.8F, SuitTuning.SHELL_TICKS, KiFx.ORB);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.5F);
-        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+        state.shellAimUntil = now + SuitTuning.SHELL_AIM_TICKS;
+        player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8F, 1.8F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.shell_aim"), true);
     }
 
-    /** True while the shell is up (KiGuard asks before ki lands). */
-    public static boolean shelled(LivingEntity victim) {
-        if (!(victim instanceof ServerPlayer player) || SuitWeapons.armedClass(player) != SuitClass.BISHOP) {
+    /** True while the bishop is picking whom to shell (the clicks are the picking, not the staff). */
+    static boolean aimingShell(ServerPlayer player, SuitWeapons.State state) {
+        return state.shellAimUntil > player.level().getGameTime();
+    }
+
+    /** The ally the shell would go to: the one under the crosshair (not the bishop), or null. */
+    private static @Nullable LivingEntity shellTarget(ServerPlayer player) {
+        LivingEntity target = SuitWeapons.aim(player, SuitTuning.SHELL_AIM_RANGE, true).target();
+        return target != null && target != player && isAlly(player, target) ? target : null;
+    }
+
+    /** While picking: the ally under the crosshair is marked. */
+    private static void tickShellAim(ServerPlayer player, SuitWeapons.State state) {
+        if (!aimingShell(player, state) || player.tickCount % 3 != 0) {
+            return;
+        }
+        LivingEntity target = shellTarget(player);
+        if (target == null) {
+            return;
+        }
+        target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 6, 0, false, false, false));
+        KiFx.burst(player.serverLevel(), target.position().add(0.0D, 0.1D, 0.0D), HOLY, target.getBbWidth() + 0.8F, 4, KiFx.RING);
+    }
+
+    /** Left click while picking: the marked ally gets the shell. */
+    static void shellAlly(ServerPlayer player, SuitWeapons.State state) {
+        LivingEntity target = shellTarget(player);
+        if (target == null) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.shell_no_ally"), true);
+            return;
+        }
+        if (raise(player, state, target, SuitTuning.SHELL_ALLY_TICKS)) {
+            Vec3 from = staff(player);
+            KiFx.beam(player.serverLevel(), from, target.getBoundingBox().getCenter(), HOLY, 0.25F, 8, KiFx.BEAM_THIN, null, KiFx.AT_POS, null);
+            if (target instanceof ServerPlayer other) {
+                other.displayClientMessage(Component.translatable("message.flightsuit.shell_given", player.getDisplayName()), true);
+            }
+            player.displayClientMessage(Component.translatable("message.flightsuit.shell_on", target.getDisplayName()), true);
+        }
+    }
+
+    /** Right click while picking: the bishop's own shell. */
+    static void shellSelf(ServerPlayer player, SuitWeapons.State state) {
+        raise(player, state, player, SuitTuning.SHELL_TICKS);
+    }
+
+    private static boolean raise(ServerPlayer player, SuitWeapons.State state, LivingEntity who, int ticks) {
+        long now = player.level().getGameTime();
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SHELL_COST)) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return false;
         }
-        SuitWeapons.State state = SuitWeapons.existing(player);
-        return state != null && state.shellUntil > player.level().getGameTime();
+        state.shellAimUntil = 0L;
+        state.stepReady = now + SuitTuning.SHELL_COOLDOWN_TICKS;
+        CompoundTag data = who.getPersistentData();
+        data.putLong(SHELL_UNTIL, now + ticks);
+        data.putLong(SHELL_RAISED, now);
+        data.putUUID(SHELL_OWNER, player.getUUID());
+        ServerLevel level = player.serverLevel();
+        KiFx.aura(level, who, HOLY, ticks);
+        KiFx.burst(level, who.position().add(0.0D, who.getBbHeight() / 2.0D, 0.0D), HOLY, Math.max(1.8F, who.getBbHeight()), ticks, KiFx.ORB);
+        level.playSound(null, who.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.5F);
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.PARRY, 0));
+        return true;
+    }
+
+    /** True while a shell is up on {@code victim} (KiGuard asks before ki lands). */
+    public static boolean shelled(LivingEntity victim) {
+        CompoundTag data = victim.getPersistentData();
+        return data.contains(SHELL_UNTIL) && data.getLong(SHELL_UNTIL) > victim.level().getGameTime();
+    }
+
+    /** Whose shell it is (for the shot sent back), if they're about. */
+    private static @Nullable ServerPlayer shellOwner(LivingEntity victim) {
+        CompoundTag data = victim.getPersistentData();
+        if (!data.hasUUID(SHELL_OWNER) || !(victim.level() instanceof ServerLevel level)) {
+            return null;
+        }
+        return level.getPlayerByUUID(data.getUUID(SHELL_OWNER)) instanceof ServerPlayer owner ? owner : null;
+    }
+
+    private static boolean justRaised(LivingEntity victim) {
+        return victim.level().getGameTime() - victim.getPersistentData().getLong(SHELL_RAISED) <= SuitTuning.SHELL_REFLECT_TICKS;
     }
 
     /**
-     * Ki that reaches the shell (KiGuard): broken on it - and sent back at the shooter as a blast of the bishop's own
+     * Ki that reaches a shell (KiGuard): broken on it - and sent back at the shooter as a blast of the bishop's own
      * when the shell was raised just now.
      */
     public static boolean shellBlocks(LivingEntity victim, LivingEntity shooter, Vec3 from) {
-        if (!shelled(victim)) {
+        if (!shelled(victim) || !(victim.level() instanceof ServerLevel level)) {
             return false;
         }
-        ServerPlayer player = (ServerPlayer) victim;
-        SuitWeapons.State state = SuitWeapons.existing(player);
-        ServerLevel level = player.serverLevel();
-        Vec3 at = player.position().add(0.0D, 1.0D, 0.0D);
+        Vec3 at = victim.position().add(0.0D, victim.getBbHeight() / 2.0D, 0.0D);
         KiFx.burst(level, at, HOLY, 1.6F, 8, KiFx.RING);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.0F, 1.6F);
-        if (state != null && level.getGameTime() - state.shellRaised <= SuitTuning.SHELL_REFLECT_TICKS && shooter != null && shooter.isAlive()) {
+        level.playSound(null, victim.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.0F, 1.6F);
+        ServerPlayer bishop = shellOwner(victim);
+        if (bishop != null && justRaised(victim) && shooter != null && shooter.isAlive()) {
             Vec3 dir = shooter.getBoundingBox().getCenter().subtract(at).normalize();
-            KiShots.fire(level, player, KiShots.Style.KI, at.add(dir.scale(0.8D)), dir, 2.0D, 40.0D, SuitTuning.ANGEL_RAY_DAMAGE, 0.8D,
-                    entity -> entity == shooter || isFoe(player, entity));
-            player.displayClientMessage(Component.translatable("message.flightsuit.shell_reflect"), true);
+            KiShots.fire(level, bishop, KiShots.Style.KI, at.add(dir.scale(0.8D)), dir, 2.0D, 40.0D, SuitTuning.ANGEL_RAY_DAMAGE, 0.8D,
+                    entity -> entity == shooter || isFoe(bishop, entity));
+            bishop.displayClientMessage(Component.translatable("message.flightsuit.shell_reflect"), true);
         }
         return true;
     }
 
-    /** Arrows and the like on the shell: broken, or turned round in the first moments. */
+    /** Arrows and the like on a shell: broken, or turned round in the first moments. */
     static void onAttack(LivingAttackEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || !shelled(player)) {
+        LivingEntity victim = event.getEntity();
+        if (victim.level().isClientSide || !shelled(victim)) {
             return;
         }
-        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile) || projectile.getOwner() == player
+        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile) || projectile.getOwner() == victim
                 || event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) {
             return;
         }
+        ServerPlayer bishop = shellOwner(victim);
+        if (bishop != null && projectile.getOwner() == bishop) {
+            return;
+        }
         event.setCanceled(true);
-        SuitWeapons.State state = SuitWeapons.existing(player);
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) victim.level();
         Vec3 at = projectile.position();
         KiFx.burst(level, at, HOLY, 0.8F, 6, KiFx.SPARK);
-        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.0F, 1.6F);
-        if (state != null && level.getGameTime() - state.shellRaised <= SuitTuning.SHELL_REFLECT_TICKS && projectile.getOwner() instanceof LivingEntity shooter) {
+        level.playSound(null, victim.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.0F, 1.6F);
+        if (bishop != null && justRaised(victim) && projectile.getOwner() instanceof LivingEntity shooter) {
             // Back the way it came, in the bishop's name.
             Vec3 dir = shooter.getBoundingBox().getCenter().subtract(at).normalize();
-            projectile.setOwner(player);
+            projectile.setOwner(bishop);
             projectile.setDeltaMovement(dir.scale(Math.max(1.2D, projectile.getDeltaMovement().length())));
             projectile.hurtMarked = true;
-            player.displayClientMessage(Component.translatable("message.flightsuit.shell_reflect"), true);
+            bishop.displayClientMessage(Component.translatable("message.flightsuit.shell_reflect"), true);
         } else {
             projectile.discard();
         }

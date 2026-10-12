@@ -102,7 +102,7 @@ public final class ModEntities {
 
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.SpaceshipEntity>> SPACESHIP = ENTITY_TYPES.register("spaceship",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.SpaceshipEntity>of(com.pfkfks.flightsuit.planet.SpaceshipEntity::new, MobCategory.MISC)
-                    .sized(2.4F, 2.4F)
+                    .sized(5.4F, 5.6F)
                     .clientTrackingRange(16)
                     .updateInterval(1)
                     .build("spaceship"));
@@ -173,6 +173,31 @@ public final class ModEntities {
                     .noSave()
                     .clientTrackingRange(10)
                     .build("monkey"));
+
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.PhantomCloneEntity>> PHANTOM_CLONE = ENTITY_TYPES.register("phantom_clone",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.PhantomCloneEntity>of(com.pfkfks.flightsuit.entity.PhantomCloneEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 1.8F)
+                    .noSave()
+                    .clientTrackingRange(10)
+                    .build("phantom_clone"));
+
+    /** 2026-10-12: the Cannon Shooter's C4 stuck on a block or a foe (CannonArts) - never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.C4Entity>> C4 = ENTITY_TYPES.register("c4",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.C4Entity>of(com.pfkfks.flightsuit.entity.C4Entity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.3F)
+                    .noSave()
+                    .clientTrackingRange(8)
+                    .updateInterval(1)
+                    .build("c4"));
+
+    /** 2026-10-12: the phantom's stolen witch brew, a splash potion in flight (StolenSkill.WITCH_POTION) - never saved. */
+    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.WitchBrewEntity>> WITCH_BREW = ENTITY_TYPES.register("witch_brew",
+            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.WitchBrewEntity>of(com.pfkfks.flightsuit.entity.WitchBrewEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .noSave()
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build("witch_brew"));
 
     /** The townsfolk of the fortresses and Hero City (after the M16 test) - never saved. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.town.TownsfolkEntity>> TOWNSFOLK = ENTITY_TYPES.register("townsfolk",

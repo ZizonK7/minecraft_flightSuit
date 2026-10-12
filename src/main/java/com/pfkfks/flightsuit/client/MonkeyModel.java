@@ -50,23 +50,16 @@ public class MonkeyModel extends ShiftedHumanoidModel<MonkeyEntity> {
             rightArm.zRot = 0.5F;
             leftArm.zRot = -0.5F;
             tail.xRot = -1.6F;
-        } else if (monkey.mode() == MonkeyEntity.TURRET) {
-            // Hunched over its popgun, both arms forward.
-            body.xRot = 0.35F;
-            head.xRot += 0.2F;
-            rightArm.xRot = -1.3F + Mth.sin(ageInTicks * 0.3F) * 0.08F;
-            leftArm.xRot = -1.3F;
-            rightArm.yRot = -0.3F;
-            leftArm.yRot = 0.3F;
-        } else if (monkey.mode() == MonkeyEntity.RUSH) {
-            // Flat out: body forward, arms pumping.
-            body.xRot = 0.5F;
-            head.xRot -= 0.3F;
-            float pump = Mth.sin(ageInTicks * 1.2F) * 1.2F;
-            rightArm.xRot = pump;
-            leftArm.xRot = -pump;
-            rightLeg.xRot = -pump * 0.9F;
-            leftLeg.xRot = pump * 0.9F;
+        }
+        if (monkey.aiming()) {
+            // The gun up in both hands (2026-10-12); the machine gun shakes them.
+            float shake = monkey.machineGun() ? Mth.sin(ageInTicks * 2.6F) * 0.08F : 0.0F;
+            rightArm.xRot = -1.45F + shake;
+            leftArm.xRot = -1.45F - shake;
+            rightArm.yRot = -0.25F;
+            leftArm.yRot = 0.35F;
+            rightArm.zRot = 0.0F;
+            leftArm.zRot = 0.0F;
         }
     }
 

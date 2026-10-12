@@ -22,7 +22,9 @@ public enum SuitAnim {
     BURNING_ATTACK("burning_attack"),
     SWORD_SHEATHE("sword_sheathe"),
     SWORD_PARRY("sword_parry"),
-    TEMPEST_THROW("tempest_throw");
+    TEMPEST_THROW("tempest_throw"),
+    // 2026-10-12: Link's song (HeroArts.song).
+    OCARINA("ocarina");
 
     private final String animationName;
 

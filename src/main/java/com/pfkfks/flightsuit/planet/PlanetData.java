@@ -40,6 +40,8 @@ public class PlanetData extends SavedData {
         public int stones;
         /** M17: cutscenes this player has watched (each plays once; "/planet replay" shows one again). */
         public final java.util.Set<String> seenCutscenes = new java.util.LinkedHashSet<>();
+        /** 2026-10-12: the spaceship's hangar bays (Hangar), each a suit's pieces by slot name. */
+        public final java.util.List<CompoundTag> hangar = new java.util.ArrayList<>();
 
         CompoundTag save() {
             CompoundTag tag = new CompoundTag();
@@ -61,6 +63,9 @@ public class PlanetData extends SavedData {
             net.minecraft.nbt.ListTag seen = new net.minecraft.nbt.ListTag();
             seenCutscenes.forEach(id -> seen.add(net.minecraft.nbt.StringTag.valueOf(id)));
             tag.put("Seen", seen);
+            net.minecraft.nbt.ListTag bays = new net.minecraft.nbt.ListTag();
+            bays.addAll(hangar);
+            tag.put("Hangar", bays);
             return tag;
         }
 
@@ -89,6 +94,10 @@ public class PlanetData extends SavedData {
             net.minecraft.nbt.ListTag seen = tag.getList("Seen", net.minecraft.nbt.Tag.TAG_STRING);
             for (int i = 0; i < seen.size(); i++) {
                 traveller.seenCutscenes.add(seen.getString(i));
+            }
+            net.minecraft.nbt.ListTag bays = tag.getList("Hangar", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < bays.size(); i++) {
+                traveller.hangar.add(bays.getCompound(i));
             }
             return traveller;
         }

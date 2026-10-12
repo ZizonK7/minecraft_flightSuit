@@ -400,6 +400,11 @@ public final class SuitUpManager {
                 station.dock(parts);
                 return;
             }
+            // On a planet the ship's hangar is the station (2026-10-12).
+            if (com.pfkfks.flightsuit.planet.Hangar.usable(owner) && com.pfkfks.flightsuit.planet.Hangar.store(owner, parts)) {
+                owner.displayClientMessage(Component.translatable("message.flightsuit.hangar_back"), true);
+                return;
+            }
         }
         SuitType type = ((SuitArmorItem) parts.values().iterator().next().getItem()).getSuitType();
         ItemStack capsule = new ItemStack(ModItems.capsuleFor(type));

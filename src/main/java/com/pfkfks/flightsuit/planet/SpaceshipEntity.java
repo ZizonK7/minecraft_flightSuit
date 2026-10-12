@@ -34,6 +34,8 @@ public class SpaceshipEntity extends Entity {
     public static final int DESCENT = 2;
     private static final EntityDataAccessor<Integer> PHASE = SynchedEntityData.defineId(SpaceshipEntity.class, EntityDataSerializers.INT);
     public static final int ASCENT_TICKS = 140;
+    /** The hull's size against the model (2026-10-12: Capsule Corp size, 2.4x); the hitbox in ModEntities matches. */
+    public static final float SCALE = 2.4F;
 
     private @Nullable UUID owner;
     /** Where this flight goes: a planet, or null for home. While landed: the planet it sits on (null at home). */
@@ -110,11 +112,11 @@ public class SpaceshipEntity extends Entity {
         super.tick();
         if (level().isClientSide) {
             if (inFlight()) {
-                for (int i = 0; i < 4; i++) {
-                    level().addParticle(ParticleTypes.FLAME, getX() + (random.nextDouble() - 0.5D) * 1.4D, getY() - 0.1D,
-                            getZ() + (random.nextDouble() - 0.5D) * 1.4D, 0.0D, -0.3D, 0.0D);
-                    level().addParticle(ParticleTypes.CLOUD, getX() + (random.nextDouble() - 0.5D) * 2.0D, getY() - 0.4D,
-                            getZ() + (random.nextDouble() - 0.5D) * 2.0D, 0.0D, -0.05D, 0.0D);
+                for (int i = 0; i < 8; i++) {
+                    level().addParticle(ParticleTypes.FLAME, getX() + (random.nextDouble() - 0.5D) * 1.4D * SCALE, getY() - 0.1D,
+                            getZ() + (random.nextDouble() - 0.5D) * 1.4D * SCALE, 0.0D, -0.4D, 0.0D);
+                    level().addParticle(ParticleTypes.CLOUD, getX() + (random.nextDouble() - 0.5D) * 2.0D * SCALE, getY() - 0.4D,
+                            getZ() + (random.nextDouble() - 0.5D) * 2.0D * SCALE, 0.0D, -0.05D, 0.0D);
                 }
             }
             return;
@@ -194,7 +196,8 @@ public class SpaceshipEntity extends Entity {
 
     @Override
     public double getPassengersRidingOffset() {
-        return 0.5D;
+        // Seated behind the front window.
+        return 2.0D;
     }
 
     @Override

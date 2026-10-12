@@ -86,6 +86,25 @@ public final class HeroRenderer {
         return sword();
     }
 
+    /** Link's song (2026-10-12): the Master Sword in hand is drawn as the ocarina until this game tick, by entity id. */
+    private static final Map<Integer, Long> OCARINA_UNTIL = new HashMap<>();
+
+    public static void playOcarina(int entityId, int ticks) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level != null) {
+            OCARINA_UNTIL.put(entityId, level.getGameTime() + ticks);
+        }
+    }
+
+    /** The Master Sword's "flightsuit:ocarina" model override (ClientSetup). */
+    public static float ocarina(@org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity holder) {
+        if (holder == null) {
+            return 0.0F;
+        }
+        Long until = OCARINA_UNTIL.get(holder.getId());
+        return until != null && until > holder.level().getGameTime() ? 1.0F : 0.0F;
+    }
+
     public static void showSword(int entityId, int ticks) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
@@ -122,6 +141,7 @@ public final class HeroRenderer {
 
     public static void reset() {
         SWORD_UNTIL.clear();
+        OCARINA_UNTIL.clear();
         HOOKS.clear();
     }
 

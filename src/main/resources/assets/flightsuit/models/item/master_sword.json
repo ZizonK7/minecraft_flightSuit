@@ -4,5 +4,8 @@
   "base": {"parent": "flightsuit:item/3d/master_sword"},
   "perspectives": {
     "gui": {"parent": "minecraft:item/generated", "textures": {"layer0": "flightsuit:item/master_sword"}}
-  }
+  },
+  "overrides": [
+    {"predicate": {"flightsuit:ocarina": 1}, "model": "flightsuit:item/ocarina"}
+  ]
 }

@@ -289,6 +289,12 @@ public final class SwordArts {
             return;
         }
         ServerLevel level = player.serverLevel();
+        // Rooted until it's thrown (2026-10-12 feedback: in the original only the hands move, from the signs to the
+        // shot) - held in place on the ground and in the air alike, like the Dragon Fist's power-up.
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 8, 6, false, false, false));
         Vec3 hands = hands(player);
         level.sendParticles(GOLD, hands.x, hands.y, hands.z, 3, 0.15D, 0.15D, 0.15D, 0.0D);
         if (--state.burningWindup > 0) {

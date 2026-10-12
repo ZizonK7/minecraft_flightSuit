@@ -157,6 +157,12 @@ public final class PhantomArts {
             return;
         }
         long now = player.level().getGameTime();
+        if (skill.passive()) {
+            player.displayClientMessage(now < state.stolenReady
+                    ? Component.translatable("message.flightsuit.stolen_passive_resting", skill.title(), String.format("%.0f", (state.stolenReady - now) / 20.0F))
+                    : Component.translatable("message.flightsuit.stolen_passive", skill.title()), true);
+            return;
+        }
         if (now < state.stolenReady || state.chargingSkill != null) {
             SuitWeapons.cooldownMessage(player, state.stolenReady - now);
             return;
@@ -179,7 +185,7 @@ public final class PhantomArts {
             SuitWeapons.sendStatus(player, state);
         } else {
             player.displayClientMessage(Component.translatable(skill == StolenSkill.INSTANT_TRANSMISSION || skill == StolenSkill.WITHER_SLASH
-                    ? "message.flightsuit.no_target" : "message.flightsuit.shadow_step_blocked"), true);
+                    || skill == StolenSkill.SPIDER_WEB ? "message.flightsuit.no_target" : "message.flightsuit.shadow_step_blocked"), true);
         }
     }
 

@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -23,10 +24,11 @@ import net.minecraft.world.phys.Vec3;
  *   <li>Z: the cannon jump - a ball fired at the ground throws the gunner into the air, twice in a row, the monkey
  *   kicking them on at the top; pressed as they land from a height, the landing slam (2026-10-12: no flight, so
  *   the gunner moves by recoil);</li>
- *   <li>X: Monkey Militia - three monkeys with popguns planted round the gunner for a while;</li>
- *   <li>C: the rolling cannon - three balls in a fan;</li>
+ *   <li>X: the monkey's machine gun (2026-10-12; once Monkey Militia, briefly towers) - the monkey at heel, which
+ *   fights with a pistol, sprays a machine gun for a while;</li>
+ *   <li>C: the flame burst (2026-10-12; once the rolling cannon) - a wide cone of fire for a few seconds, rooted;</li>
  *   <li>V: the Big Huge Gigantic Cannonball - slow, straight, bowling through everything;</li>
- *   <li>B: the monkey rush - a line of monkeys charging down the look.</li>
+ *   <li>B: C4 (2026-10-12; once the monkey rush) - stuck on the block or foe in front, set off by B again.</li>
  * </ul>
  */
 public final class CannonArts {
@@ -38,8 +40,16 @@ public final class CannonArts {
 
     static void tick(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
         if (suitClass != SuitClass.CANNONEER) {
+            // Out of the suit: the flame stops and a C4 left stuck somewhere is disarmed.
+            state.flameTicks = 0;
+            if (state.c4 != null) {
+                state.c4.discard();
+                state.c4 = null;
+            }
             return;
         }
+        tickFlame(player, state);
+        tickC4(player, state);
         // The monkey at heel comes with the full set and goes with it (MonkeyEntity minds the going).
         if (player.tickCount % 20 == 3 && WornSuit.of(player).fullSet() && MonkeyEntity.of(player.serverLevel(), player).isEmpty()) {
             MonkeyEntity.heel(player.serverLevel(), player);
@@ -266,57 +276,126 @@ public final class CannonArts {
         return hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? 6.0D : from.y - hit.getLocation().y;
     }
 
-    // ---------------------------------------------------------------- Monkey Militia (X)
+    // ---------------------------------------------------------------- the monkey's machine gun (X, 2026-10-12)
 
-    static void militia(ServerPlayer player, SuitWeapons.State state) {
+    /** The monkey at heel trades its pistol for a machine gun for a while (MonkeyEntity). */
+    static void machineGun(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
         if (now < state.skill1Ready) {
             SuitWeapons.cooldownMessage(player, state.skill1Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.MILITIA_COST)) {
+        java.util.Optional<MonkeyEntity> monkey = MonkeyEntity.of(player.serverLevel(), player);
+        if (monkey.isEmpty()) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.no_monkey"), true);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.MONKEY_MG_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill1Ready = now + SuitTuning.MILITIA_COOLDOWN_TICKS;
+        monkey.get().startMachineGun(SuitTuning.MONKEY_MG_TICKS);
+        state.skill1Ready = now + SuitTuning.MONKEY_MG_COOLDOWN_TICKS;
+        state.machineGunUntil = now + SuitTuning.MONKEY_MG_TICKS;
         SuitWeapons.sendStatus(player, state);
-        ServerLevel level = player.serverLevel();
-        for (int i = 0; i < SuitTuning.MILITIA_COUNT; i++) {
-            double angle = Math.toRadians(player.getYRot() + 90.0D) + Math.PI * 2.0D * i / SuitTuning.MILITIA_COUNT + Math.PI;
-            Vec3 at = SuitSkills.standable(level, player, player.position().add(Math.cos(angle) * 2.2D, 0.0D, Math.sin(angle) * 2.2D));
-            if (at == null) {
-                at = player.position();
-            }
-            MonkeyEntity.turret(level, player, at, SuitTuning.MILITIA_TICKS);
-        }
-        level.playSound(null, player.blockPosition(), SoundEvents.PANDA_AMBIENT, SoundSource.PLAYERS, 0.8F, 1.9F);
         player.swing(InteractionHand.OFF_HAND, true);
-        player.displayClientMessage(Component.translatable("message.flightsuit.militia"), true);
+        player.displayClientMessage(Component.translatable("message.flightsuit.machine_gun"), true);
     }
 
-    // ---------------------------------------------------------------- rolling cannon (C)
+    // ---------------------------------------------------------------- flame burst (C, 2026-10-12)
 
-    static void rollingCannon(ServerPlayer player, SuitWeapons.State state) {
+    /**
+     * Flame out of the cannon's mouth for a few seconds (user: "불꽃을 팍 뿜어대는 기술, 광역"; after the first look
+     * "넉백 없애고 몇 초 동안 쏘되 고정"): the gunner is rooted and turns the stream with the look; everything in the
+     * wide cone burns, nothing is thrown back.
+     */
+    static void flameBurst(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
+        if (state.flameTicks > 0) {
+            return;
+        }
         if (now < state.skill2Ready) {
             SuitWeapons.cooldownMessage(player, state.skill2Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.ROLLING_COST)) {
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.FLAME_BURST_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill2Ready = now + SuitTuning.ROLLING_COOLDOWN_TICKS;
+        state.skill2Ready = now + SuitTuning.FLAME_BURST_COOLDOWN_TICKS;
+        state.flameTicks = SuitTuning.FLAME_BURST_TICKS;
         SuitWeapons.sendStatus(player, state);
-        SuitWeapons.Aim aim = SuitWeapons.aim(player, 48.0D);
-        Vec3 dir = aim.end().subtract(muzzle(player)).normalize().add(0.0D, 0.05D, 0.0D).normalize();
-        for (int i = 0; i < SuitTuning.ROLLING_SHOTS; i++) {
-            double turn = Math.toRadians((i - (SuitTuning.ROLLING_SHOTS - 1) / 2.0D) * SuitTuning.ROLLING_SPREAD_DEG);
-            Vec3 d = dir.yRot((float) turn);
-            shoot(player, d, SuitTuning.CANNON_DAMAGE, SuitTuning.CANNON_RADIUS, false);
+        player.displayClientMessage(Component.translatable("message.flightsuit.flame_burst"), true);
+    }
+
+    private static void tickFlame(ServerPlayer player, SuitWeapons.State state) {
+        if (state.flameTicks <= 0) {
+            return;
         }
-        player.setDeltaMovement(player.getDeltaMovement().subtract(dir.scale(SuitTuning.CANNON_RECOIL * 2.0D)));
+        int t = state.flameTicks--;
+        player.setDeltaMovement(Vec3.ZERO);
         player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 5, 6, false, false, false));
+        if (t % SuitTuning.FLAME_BURST_PULSE != 0) {
+            return;
+        }
+        flameBurst(player.serverLevel(), player, muzzle(player), player.getLookAngle(), SuitTuning.FLAME_BURST_DAMAGE,
+                entity -> !SuitWeapons.isFriendly(player, entity) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
+                        && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player || entity == player.getLastHurtMob()));
+        if (t % (SuitTuning.FLAME_BURST_PULSE * 3) == 0) {
+            player.swing(InteractionHand.MAIN_HAND, true);
+        }
+    }
+
+    /** One pulse of it (the companion Mark 6 uses one too): drawn in fire along the cone; the number it caught. */
+    public static int flameBurst(ServerLevel level, net.minecraft.world.entity.LivingEntity caster, Vec3 from, Vec3 look, float damage,
+                                 java.util.function.Predicate<net.minecraft.world.entity.LivingEntity> hits) {
+        double reach = SuitTuning.FLAME_BURST_REACH;
+        double cos = Math.cos(Math.toRadians(SuitTuning.FLAME_BURST_ARC_DEG / 2.0D));
+        int count = 0;
+        for (net.minecraft.world.entity.LivingEntity target : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                caster.getBoundingBox().inflate(reach), entity -> entity != caster && entity.isAlive() && hits.test(entity))) {
+            Vec3 to = target.getBoundingBox().getCenter().subtract(from);
+            if (to.length() - target.getBbWidth() / 2.0D > reach || to.normalize().dot(look) < cos || !caster.hasLineOfSight(target)) {
+                continue;
+            }
+            target.invulnerableTime = 0;
+            target.hurt(caster instanceof ServerPlayer player ? caster.damageSources().playerAttack(player) : caster.damageSources().mobAttack(caster),
+                    damage);
+            target.setSecondsOnFire(SuitTuning.FLAME_BURST_BURN_SECONDS);
+            count++;
+        }
+        // The flame: fireballs blooming bigger the farther out, a spread of them across the cone.
+        Vec3 flat = new Vec3(look.x, 0.0D, look.z);
+        Vec3 side = flat.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(-flat.z, 0.0D, flat.x).normalize();
+        double spread = Math.tan(Math.toRadians(SuitTuning.FLAME_BURST_ARC_DEG / 2.0D)) * 0.75D;
+        for (double d = 1.2D; d <= reach; d += 1.6D) {
+            Vec3 centre = from.add(look.scale(d));
+            float size = (float) (0.6D + d * 0.32D);
+            int life = 8 + (int) d;
+            KiFx.burst(level, centre, d < 3.0D ? KiFx.BURNING : KiFx.FIRE, size, life, KiFx.BLAST);
+            if (d > 3.0D) {
+                KiFx.burst(level, centre.add(side.scale(d * spread)), KiFx.FIRE, size * 0.8F, life, KiFx.BLAST);
+                KiFx.burst(level, centre.subtract(side.scale(d * spread)), KiFx.FIRE, size * 0.8F, life, KiFx.BLAST);
+            }
+        }
+        Vec3 far = from.add(look.scale(reach));
+        level.sendParticles(ParticleTypes.LARGE_SMOKE, far.x, far.y, far.z, 10, 1.2D, 0.6D, 1.2D, 0.02D);
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.5F);
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.FIRE_AMBIENT, SoundSource.PLAYERS, 1.2F, 0.6F);
+        // The ground may catch, like the scrap suit's flame (no village spared: DESIGN.md M18 2nd feedback).
+        if (level.random.nextFloat() < SuitTuning.FLAME_BURST_IGNITE_CHANCE) {
+            net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(from.add(look.scale(2.0D + level.random.nextDouble() * (reach - 2.0D))));
+            for (int i = 0; i < 4 && level.getBlockState(at.below()).isAir(); i++) {
+                at = at.below();
+            }
+            if (level.isEmptyBlock(at) && net.minecraft.world.level.block.BaseFireBlock.canBePlacedAt(level, at, net.minecraft.core.Direction.UP)
+                    && (!(caster instanceof ServerPlayer player) || level.mayInteract(player, at))) {
+                level.setBlock(at, net.minecraft.world.level.block.BaseFireBlock.getState(level, at), 11);
+            }
+        }
+        return count;
     }
 
     // ---------------------------------------------------------------- Big Huge Gigantic Cannonball (V)
@@ -348,34 +427,110 @@ public final class CannonArts {
         player.displayClientMessage(Component.translatable("message.flightsuit.bhgc"), true);
     }
 
-    // ---------------------------------------------------------------- monkey rush (B)
+    // ---------------------------------------------------------------- C4 (B, 2026-10-12)
 
-    static void monkeyRush(ServerPlayer player, SuitWeapons.State state) {
+    /**
+     * A C4 (user: "근접 폭탄, 블럭이나 엔티티에 붙이는 거"): B sticks it on the block or foe in front (it rides along on
+     * a foe); B again sets it off - or it goes off on its own after a while, beeping faster as it nears.
+     */
+    static void c4(ServerPlayer player, SuitWeapons.State state) {
+        if (state.c4 != null) {
+            detonate(player, state);
+            return;
+        }
         long now = player.level().getGameTime();
         if (now < state.skill3Ready) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.RUSH_COST)) {
+        SuitWeapons.Aim aim = SuitWeapons.aim(player, SuitTuning.C4_RANGE);
+        Vec3 eye = player.getEyePosition();
+        LivingEntity on = aim.target();
+        net.minecraft.world.phys.BlockHitResult block = player.level().clip(new net.minecraft.world.level.ClipContext(eye,
+                eye.add(player.getLookAngle().scale(SuitTuning.C4_RANGE)), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        Vec3 at;
+        if (on != null) {
+            // On its side where the look met it.
+            at = aim.end();
+        } else if (block.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            at = block.getLocation();
+        } else {
+            player.displayClientMessage(Component.translatable("message.flightsuit.c4_nothing"), true);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.C4_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill3Ready = now + SuitTuning.RUSH_COOLDOWN_TICKS;
-        SuitWeapons.sendStatus(player, state);
+        state.c4Fuse = now + SuitTuning.C4_FUSE_TICKS;
         ServerLevel level = player.serverLevel();
-        Vec3 face = Vec3.directionFromRotation(0.0F, player.getYRot());
-        Vec3 side = new Vec3(-face.z, 0.0D, face.x);
-        // Three abreast, from the gunner's feet, the one at heel leading if it's there.
-        for (int i = -1; i <= 1; i++) {
-            Vec3 at = player.position().add(face.scale(1.0D)).add(side.scale(i * 0.9D));
-            MonkeyEntity.rush(level, player, at, face, SuitTuning.RUSH_TICKS + Math.abs(i) * 2);
-        }
-        MonkeyEntity.of(level, player).ifPresent(monkey -> {
-            Vec3 at = player.position().add(face.scale(1.6D));
-            monkey.moveTo(at.x, at.y, at.z, player.getYRot(), 0.0F);
-        });
-        level.playSound(null, player.blockPosition(), SoundEvents.PANDA_AGGRESSIVE_AMBIENT, SoundSource.PLAYERS, 1.0F, 1.8F);
+        state.c4 = on != null ? com.pfkfks.flightsuit.entity.C4Entity.onEntity(level, on, at, state.c4Fuse)
+                : com.pfkfks.flightsuit.entity.C4Entity.onBlock(level, at, block.getDirection(), state.c4Fuse);
         player.swing(InteractionHand.OFF_HAND, true);
-        player.displayClientMessage(Component.translatable("message.flightsuit.monkey_rush"), true);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.SLIME_BLOCK_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 2.0F);
+        player.displayClientMessage(on != null ? Component.translatable("message.flightsuit.c4_on", on.getDisplayName())
+                : Component.translatable("message.flightsuit.c4_placed"), true);
+    }
+
+    private static void tickC4(ServerPlayer player, SuitWeapons.State state) {
+        if (state.c4 == null) {
+            return;
+        }
+        if (state.c4.isRemoved() || state.c4.level() != player.level()) {
+            state.c4 = null;
+            return;
+        }
+        long left = state.c4Fuse - player.level().getGameTime();
+        if (left <= 0L) {
+            detonate(player, state);
+            return;
+        }
+        // A beep with each blink (the light is the C4's own, client/C4Renderer), faster near the end.
+        int every = left > 60L ? 16 : left > 20L ? 6 : 2;
+        if (left % every == 0) {
+            ServerLevel level = player.serverLevel();
+            Vec3 at = state.c4.position();
+            level.playSound(null, at.x, at.y, at.z, SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.PLAYERS, 0.7F, 2.0F);
+        }
+    }
+
+    private static void detonate(ServerPlayer player, SuitWeapons.State state) {
+        com.pfkfks.flightsuit.entity.C4Entity c4 = state.c4;
+        state.c4 = null;
+        if (c4 == null) {
+            return;
+        }
+        Vec3 at = c4.position();
+        LivingEntity on = c4.host();
+        c4.discard();
+        ServerLevel level = player.serverLevel();
+        double radius = SuitTuning.C4_RADIUS;
+        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(radius),
+                entity -> entity.isAlive() && (entity == on || !SuitWeapons.isFriendly(player, entity) && !com.pfkfks.flightsuit.war.RaidMember.isNoThreat(entity)
+                        && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player)))) {
+            double distance = victim.getBoundingBox().getCenter().distanceTo(at);
+            if (victim != on && distance > radius + victim.getBbWidth() / 2.0D) {
+                continue;
+            }
+            float share = victim == on ? 1.0F : (float) (1.0D - 0.5D * Math.min(1.0D, distance / radius));
+            victim.invulnerableTime = 0;
+            victim.hurt(player.damageSources().playerAttack(player), SuitTuning.C4_DAMAGE * share);
+            Vec3 push = victim.position().subtract(at).multiply(1.0D, 0.0D, 1.0D);
+            if (push.lengthSqr() > 1.0E-4D) {
+                victim.knockback(1.2D, -push.x, -push.z);
+            }
+            victim.setDeltaMovement(victim.getDeltaMovement().add(0.0D, 0.4D, 0.0D));
+            victim.hurtMarked = true;
+        }
+        CannonballEntity.crater(level, at, at, SuitTuning.C4_BREAK_RADIUS, SuitTuning.CANNON_BREAK_HARDNESS, false, player, player);
+        KiFx.burst(level, at, KiFx.FIRE, (float) radius, 16, KiFx.BLAST);
+        KiFx.burst(level, at, KiFx.WHITE, 1.6F, 6, KiFx.FLASH);
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.8F, 0.8F);
+        com.pfkfks.flightsuit.cutscene.CutsceneRunner.shake(level, at, 16.0D, 8);
+        state.skill3Ready = level.getGameTime() + SuitTuning.C4_COOLDOWN_TICKS;
+        SuitWeapons.sendStatus(player, state);
     }
 }

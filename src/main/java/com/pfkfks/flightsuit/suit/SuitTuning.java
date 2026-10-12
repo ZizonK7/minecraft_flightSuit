@@ -6,12 +6,12 @@ public final class SuitTuning {
     }
 
     // Storage: the chestplate's arc reactor is the main battery, the other pieces only hold a small buffer.
-    public static final int CHEST_CAPACITY = 20_000;
-    public static final int PIECE_CAPACITY = 2_000;
+    // 2026-10-12 x3 (user: "에너지가 너무 적다, 제대로 싸울 수가 없네" - a Mark 1 beam emptied 20,000 in 40 seconds).
+    public static final int CHEST_CAPACITY = 60_000;
+    public static final int PIECE_CAPACITY = 6_000;
     public static final int ENERGY_CELL_CHARGE = 10_000;
 
     // Per-tick drains.
-    public static final int NIGHT_VISION_COST = 1;
     public static final int HOVER_COST = 8;
     public static final int BOOST_COST = 20;
     public static final int THRUST_COST = 12;
@@ -225,7 +225,7 @@ public final class SuitTuning {
 
     // Scrap Mark 0 (ScrapArts): a coal boiler for a battery, the flamethrower (right click held - M18 feedback: no beam
     // on a scrap suit), the scrap shot (X), a rocket jump (C), overdrive (V), a flare (B).
-    public static final int SCRAP_CHEST_CAPACITY = 8_000;
+    public static final int SCRAP_CHEST_CAPACITY = 24_000;
     /** FE a lump of coal (or charcoal) is worth in the boiler; a coal block is nine. */
     public static final int SCRAP_COAL_ENERGY = 2_000;
     public static final float SCRAP_FLIGHT_FACTOR = 0.55F;
@@ -289,15 +289,40 @@ public final class SuitTuning {
     public static final int XRAY_COOLDOWN_TICKS = 600;
     public static final int XRAY_TICKS = 300;
     public static final int XRAY_RADIUS = 32;
-    /** The flashbang (B): thrown where you look; everything with eyes on it is blinded and loses you for a while. */
-    public static final int FLASHBANG_COST = 500;
-    public static final int FLASHBANG_COOLDOWN_TICKS = 200;
-    public static final double FLASHBANG_RANGE = 20.0D;
+    /**
+     * The flash (2026-10-12: no longer thrown - it goes off where the emergency escape takes off): everything with
+     * eyes on it is blinded and loses you for a while.
+     */
     public static final double FLASHBANG_RADIUS = 7.0D;
     public static final int FLASHBANG_BLIND_TICKS = 100;
     public static final int FLASHBANG_STUN_TICKS = 20;
+    /**
+     * Mark 2 emergency escape (B, 2026-10-12, EscapeFlight): a flash, then the suit flies the wearer home - to the
+     * suit's station, or on a planet to the landed ship. Speeds are blocks per tick (the client flies it).
+     */
+    public static final int ESCAPE_COST = 3_000;
+    public static final int ESCAPE_COOLDOWN_TICKS = 1_800;
+    /** Pressed again, or cut short (blocked, out of the suit): only this long before it can be tried again. */
+    public static final int ESCAPE_FAILED_COOLDOWN_TICKS = 100;
+    public static final double ESCAPE_CLIMB_SPEED = 1.0D;
+    /** Straight up through rock (the laser cutting the way ahead). */
+    public static final double ESCAPE_DRILL_SPEED = 0.6D;
+    public static final double ESCAPE_CRUISE_SPEED = 2.0D;
+    /** Cruising height: this far above the higher of the take-off and landing ground, at least the floor. */
+    public static final int ESCAPE_CRUISE_ABOVE = 40;
+    public static final int ESCAPE_CRUISE_FLOOR = 120;
+    /** Blocks the laser clears above the head while climbing (ahead of the client, which is a few ticks ahead). */
+    public static final int ESCAPE_DRILL_AHEAD = 7;
+    /** Farther than this at cruising height: the suit jumps ahead to ESCAPE_JUMP_TO short of home (sonic boom). */
+    public static final double ESCAPE_JUMP_OVER = 1_600.0D;
+    public static final double ESCAPE_JUMP_TO = 600.0D;
+    /** Within this (horizontally) of home: the descent. */
+    public static final double ESCAPE_DESCENT_RADIUS = 8.0D;
+    /** No closer for this long: the last stretch (a roof over the station, a cliff in the way) is done in one go. */
+    public static final int ESCAPE_STUCK_TICKS = 40;
+    public static final int ESCAPE_MAX_TICKS = 1_200;
 
-    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B). After the
+    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the song of sleep (B, once the gale boomerang). After the
     // first test ("어렵고 쎄야 하는데 그냥 쎈데"): the chain - every move that differs from the last within CHAIN_WINDOW
     // adds a link, each link CHAIN_STEP more damage; a hit taken breaks it - and the perfect guard.
     public static final int HYLIAN_HOLD_DRAIN = 4;
@@ -313,12 +338,19 @@ public final class SuitTuning {
     public static final int TRIFORCE_TICKS = 200;
     public static final int TRIFORCE_COOLDOWN_TICKS = 1_200;
     public static final float TRIFORCE_MULTIPLIER = 1.5F;
-    public static final int BOOMERANG_COST = 700;
-    public static final int BOOMERANG_COOLDOWN_TICKS = 100;
-    public static final double BOOMERANG_RANGE = 16.0D;
-    public static final double BOOMERANG_SPEED = 1.2D;
-    public static final float BOOMERANG_DAMAGE = 4.0F;
-    public static final int BOOMERANG_STUN_TICKS = 25;
+    /**
+     * The song of sleep (B, 2026-10-12, user: Zoe's sleep in LoL - the gale boomerang went): one foe aimed, a short
+     * tune (SONG_TICKS, the foe drowsy meanwhile), then asleep; the first blow wakes it, and from that blow for
+     * SONG_WAKE_TICKS every hit on it lands twice as hard (Link has no big single hit of his own).
+     */
+    public static final int SONG_COST = 1_200;
+    public static final int SONG_COOLDOWN_TICKS = 320;
+    public static final double SONG_RANGE = 24.0D;
+    public static final int SONG_TICKS = 32;
+    public static final int SLEEP_TICKS = 100;
+    public static final int SLEEP_BOSS_TICKS = 40;
+    public static final int SONG_WAKE_TICKS = 60;
+    public static final float SONG_WAKE_MULTIPLIER = 2.0F;
 
     // Mark 5 (SwordArts, M18): the charged ki slash (right click held) and the ki volley (B).
     public static final int CHARGE_SLASH_TICKS = 16;
@@ -350,6 +382,24 @@ public final class SuitTuning {
     public static final int JACKHAMMER_INTERVAL = 3;
     public static final float JACKHAMMER_DAMAGE = 9.0F;
     public static final float JACKHAMMER_BOSS_MULTIPLIER = 1.5F;
+    /**
+     * The boss gauge (2026-10-12, user: "게이지 채우면 궁극기로 피니쉬 공격 연사하는 컷씬"): filled by fighting a boss
+     * (dealing and taking damage), 100 = V is the finisher instead of the jackhammer. Draining after a quiet spell.
+     */
+    public static final float BOSS_GAUGE_PER_DEALT = 1.2F;
+    public static final float BOSS_GAUGE_PER_TAKEN = 2.0F;
+    public static final int BOSS_GAUGE_MAX = 100;
+    public static final int BOSS_GAUGE_QUIET_TICKS = 600;
+    /** The finisher: hold and wind-up, the flurry (one punch every FINISHER_INTERVAL), the last punch, the end. */
+    public static final int FINISHER_GRAB_TICKS = 16;
+    public static final int FINISHER_FLURRY_TICKS = 40;
+    public static final int FINISHER_INTERVAL = 2;
+    public static final int FINISHER_FINAL_TICK = 66;
+    public static final int FINISHER_TICKS = 76;
+    public static final float FINISHER_PUNCH_DAMAGE = 4.0F;
+    public static final float FINISHER_FINAL_DAMAGE = 40.0F;
+    /** Of the target's most health, added to the last punch. */
+    public static final float FINISHER_FINAL_SHARE = 0.15F;
     public static final int THROW_COST = 1_200;
     public static final int THROW_COOLDOWN_TICKS = 240;
     public static final double THROW_RANGE = 6.0D;
@@ -358,8 +408,8 @@ public final class SuitTuning {
     /** How long the ripped-up chunk floats over the shoulder before it's thrown on its own. */
     public static final int THROW_HOLD_TICKS = 200;
 
-    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey militia (X), the rolling
-    // cannon (C), the big huge gigantic cannonball (V), the monkey rush (B).
+    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), the monkey's machine gun (X), the
+    // flame burst (C), the big huge gigantic cannonball (V), C4 (B).
     public static final int CANNON_INTERVAL = 12;
     public static final int CANNON_COST = 250;
     public static final double CANNON_SPEED = 1.6D;
@@ -402,17 +452,35 @@ public final class SuitTuning {
     public static final float CANNON_SLAM_DAMAGE = 6.0F;
     public static final float CANNON_SLAM_DAMAGE_PER_BLOCK = 0.8F;
     public static final float CANNON_SLAM_DAMAGE_MAX = 22.0F;
-    public static final int MILITIA_COST = 1_500;
-    public static final int MILITIA_COOLDOWN_TICKS = 400;
-    public static final int MILITIA_COUNT = 3;
-    public static final int MILITIA_TICKS = 200;
-    public static final int MILITIA_INTERVAL = 15;
-    public static final float MILITIA_DAMAGE = 3.0F;
-    public static final double MILITIA_RANGE = 16.0D;
-    public static final int ROLLING_COST = 1_200;
-    public static final int ROLLING_COOLDOWN_TICKS = 160;
-    public static final int ROLLING_SHOTS = 3;
-    public static final double ROLLING_SPREAD_DEG = 15.0D;
+    /** The monkey's gun (2026-10-12): a pistol at heel; X = the machine gun for a while. */
+    public static final int MONKEY_PISTOL_INTERVAL = 20;
+    public static final float MONKEY_PISTOL_DAMAGE = 4.0F;
+    public static final double MONKEY_PISTOL_RANGE = 16.0D;
+    public static final int MONKEY_MG_INTERVAL = 3;
+    public static final float MONKEY_MG_DAMAGE = 2.0F;
+    public static final double MONKEY_MG_RANGE = 20.0D;
+    public static final int MONKEY_MG_TICKS = 160;
+    public static final int MONKEY_MG_COST = 1_500;
+    public static final int MONKEY_MG_COOLDOWN_TICKS = 400;
+    /** The flame burst (C, 2026-10-12): a wide cone of fire for FLAME_BURST_TICKS, rooted, a hit every PULSE ticks. */
+    public static final int FLAME_BURST_COST = 1_800;
+    public static final int FLAME_BURST_COOLDOWN_TICKS = 240;
+    public static final int FLAME_BURST_TICKS = 60;
+    public static final int FLAME_BURST_PULSE = 4;
+    public static final double FLAME_BURST_REACH = 9.0D;
+    public static final double FLAME_BURST_ARC_DEG = 70.0D;
+    public static final float FLAME_BURST_DAMAGE = 2.5F;
+    public static final int FLAME_BURST_BURN_SECONDS = 5;
+    /** Per pulse. */
+    public static final float FLAME_BURST_IGNITE_CHANCE = 0.08F;
+    /** C4 (B, 2026-10-12): stuck within reach, its blast, the crater, the fuse, the rest after it goes off. */
+    public static final int C4_COST = 1_200;
+    public static final double C4_RANGE = 5.0D;
+    public static final double C4_RADIUS = 4.0D;
+    public static final float C4_DAMAGE = 22.0F;
+    public static final double C4_BREAK_RADIUS = 2.8D;
+    public static final int C4_FUSE_TICKS = 200;
+    public static final int C4_COOLDOWN_TICKS = 160;
     public static final int BHGC_COST = 6_000;
     public static final int BHGC_COOLDOWN_TICKS = 1_200;
     public static final double BHGC_SPEED = 0.6D;
@@ -421,11 +489,6 @@ public final class SuitTuning {
     public static final float BHGC_DAMAGE = 20.0F;
     public static final double BHGC_BLAST_RADIUS = 8.0D;
     public static final float BHGC_BLAST_DAMAGE = 24.0F;
-    public static final int RUSH_COST = 1_000;
-    public static final int RUSH_COOLDOWN_TICKS = 240;
-    public static final int RUSH_TICKS = 12;
-    public static final double RUSH_WIDTH = 1.6D;
-    public static final float RUSH_DAMAGE = 6.0F;
 
     // Mark 7 Bishop (BishopArts): heal beam / holy arrow (right click), Holy Magic Shell (Z), Angel Ray (X), chains
     // of light (C), Genesis (V), Heaven's Door (B).
@@ -437,6 +500,10 @@ public final class SuitTuning {
     public static final int SHELL_TICKS = 40;
     /** Within this many ticks of raising the shell a blocked shot goes back where it came from. */
     public static final int SHELL_REFLECT_TICKS = 8;
+    /** Z then a click (2026-10-12): how long the picking lasts, how far an ally can be, how long their shell holds. */
+    public static final int SHELL_AIM_TICKS = 60;
+    public static final double SHELL_AIM_RANGE = 24.0D;
+    public static final int SHELL_ALLY_TICKS = 60;
     public static final int ANGEL_RAY_COST = 1_200;
     public static final int ANGEL_RAY_COOLDOWN_TICKS = 100;
     public static final double ANGEL_RAY_RANGE = 24.0D;

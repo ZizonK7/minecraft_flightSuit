@@ -7,6 +7,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -417,7 +419,7 @@ public class VillageWorks {
             }
             int cost = DamageLedger.cost(state);
             if (!free && cost > 0 && available(state) < cost) {
-                lacking.merge(DamageLedger.material(state), cost, Integer::sum);
+                lacking.merge(DamageLedger.wanted(state), cost, Integer::sum);
                 continue;
             }
             if (claimedByOther(pos, builder) || !state.canSurvive(level, pos) || !level.isUnobstructed(state, pos, CollisionContext.empty())) {
@@ -441,14 +443,14 @@ public class VillageWorks {
         Map<Item, Integer> need = new HashMap<>();
         Map<Item, BlockState> sample = new HashMap<>();
         for (Blueprint.Entry entry : order.entries()) {
-            int cost = DamageLedger.cost(entry.state());
+            int cost = costAt(level, entry);
             if (cost > 0 && !order.isDone(level, entry)) {
-                need.merge(DamageLedger.material(entry.state()), cost, Integer::sum);
-                sample.putIfAbsent(DamageLedger.material(entry.state()), entry.state());
+                need.merge(DamageLedger.wanted(entry.state()), cost, Integer::sum);
+                sample.putIfAbsent(DamageLedger.wanted(entry.state()), entry.state());
             }
         }
         for (Blueprint.Entry entry : order.entries()) {
-            int cost = DamageLedger.cost(entry.state());
+            int cost = costAt(level, entry);
             if (cost > 0 && !order.isDone(level, entry) && available(entry.state()) < cost) {
                 waitingLayer = Math.min(waitingLayer, entry.layer());
             }
@@ -488,7 +490,7 @@ public class VillageWorks {
                     || skipUntil.containsKey(pos) || claimedByOther(pos, builder) || !order.isReady(level, entry)) {
                 continue;
             }
-            int cost = DamageLedger.cost(entry.state());
+            int cost = costAt(level, entry);
             if (free || cost <= 0 || available(entry.state()) >= cost) {
                 return new Task(pos, new ItemStack(Items.WATER_BUCKET), Kind.BUILD);
             }
@@ -507,7 +509,7 @@ public class VillageWorks {
                 if (order.isDone(level, entry) || skipUntil.containsKey(pos) || claimedByOther(pos, builder)) {
                     continue;
                 }
-                int cost = DamageLedger.cost(entry.state());
+                int cost = costAt(level, entry);
                 if (!free && cost > 0 && available(entry.state()) < cost || !order.isReady(level, entry)) {
                     continue;
                 }
@@ -589,7 +591,7 @@ public class VillageWorks {
             level.destroyBlock(pos, false);
             return true;
         }
-        if (!pay(state)) {
+        if (costAt(level, entry) > 0 && !pay(state)) {
             return false;
         }
         if (!state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF) && !state.hasProperty(BlockStateProperties.BED_PART)) {
@@ -681,6 +683,20 @@ public class VillageWorks {
         }
         takeMaterial(state, cost);
         return true;
+    }
+
+    /**
+     * What one blueprint block costs where it goes: farmland over dirt or grass is only hoed, for nothing -
+     * dirt is paid just where there's a hole or other ground to fill (user report 2026-10-12).
+     */
+    private static int costAt(Level level, Blueprint.Entry entry) {
+        if (entry.state().is(Blocks.FARMLAND)) {
+            BlockState now = level.getBlockState(entry.pos());
+            if (now.is(BlockTags.DIRT) || now.is(Blocks.DIRT_PATH)) {
+                return 0;
+            }
+        }
+        return DamageLedger.cost(entry.state());
     }
 
     private int available(BlockState state) {

@@ -29,7 +29,9 @@ public final class ClientPacketHandler {
         }
         SuitAnim anim = SuitAnim.byId(packet.value);
         SuitAnimator.playOneShot(player, anim);
-        if (anim == SuitAnim.SPIN_ATTACK) {
+        if (anim == SuitAnim.OCARINA) {
+            HeroRenderer.playOcarina(player.getId(), com.pfkfks.flightsuit.suit.SuitTuning.SONG_TICKS + 2);
+        } else if (anim == SuitAnim.SPIN_ATTACK) {
             HeroRenderer.showSword(player.getId(), 14);
         } else if (anim == SuitAnim.SWORD_SHEATHE || anim == SuitAnim.SWORD_PARRY || anim == SuitAnim.BURNING_ATTACK) {
             // Trunks: the sword stays out a moment after the flash slash or a parry.

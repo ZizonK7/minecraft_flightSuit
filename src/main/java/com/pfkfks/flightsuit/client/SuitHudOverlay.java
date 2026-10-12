@@ -172,7 +172,13 @@ public final class SuitHudOverlay implements IGuiOverlay {
                 yield player.getHealth() >= player.getMaxHealth() - 0.01F || ClientWeapons.secondsLeft(ClientWeapons.buffUntil) > 0.0F || maxed
                         ? hero.copy().append(Component.translatable("hud.flightsuit.weapon.hero_full")) : hero;
             }
-            case HULKBUSTER -> Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+            case HULKBUSTER -> {
+                // The boss gauge (2026-10-12): full, V is the finisher.
+                Component hulk = Component.translatable("hud.flightsuit.weapon.hulkbuster", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
+                yield ClientWeapons.gauge >= SuitTuning.BOSS_GAUGE_MAX
+                        ? hulk.copy().append(Component.translatable("hud.flightsuit.weapon.hulk_finisher"))
+                        : ClientWeapons.gauge > 0 ? hulk.copy().append(Component.translatable("hud.flightsuit.weapon.hulk_gauge", ClientWeapons.gauge)) : hulk;
+            }
             case SWORDSMAN -> Component.translatable("hud.flightsuit.weapon.swordsman", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
             case CANNONEER -> Component.translatable("hud.flightsuit.weapon.cannoneer", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));
             case BISHOP -> Component.translatable("hud.flightsuit.weapon.bishop", ready(ClientWeapons.skill1Ready), ready(ClientWeapons.skill2Ready));

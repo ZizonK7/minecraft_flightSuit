@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "name": "ocarina",
+  "author": "flightsuit",
+  "description": "Link's song (2026-10-12): both hands brought up to the mouth as if round an ocarina, swaying gently with the tune, then lowered.",
+  "emote": {
+    "beginTick": 0,
+    "endTick": 34,
+    "stopTick": 40,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": true,
+    "moves": [
+      {"tick": 0, "easing": "INOUTSINE", "rightArm": {"pitch": -20, "yaw": 0, "roll": 0}},
+      {"tick": 5, "easing": "OUTQUAD", "rightArm": {"pitch": -105, "yaw": -38, "roll": 0}},
+      {"tick": 14, "easing": "INOUTSINE", "rightArm": {"pitch": -110, "yaw": -34, "roll": 0}},
+      {"tick": 23, "easing": "INOUTSINE", "rightArm": {"pitch": -102, "yaw": -40, "roll": 0}},
+      {"tick": 30, "easing": "INOUTSINE", "rightArm": {"pitch": -108, "yaw": -36, "roll": 0}},
+      {"tick": 34, "easing": "INOUTSINE", "rightArm": {"pitch": -30, "yaw": 0, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "leftArm": {"pitch": -20, "yaw": 0, "roll": 0}},
+      {"tick": 5, "easing": "OUTQUAD", "leftArm": {"pitch": -100, "yaw": 42, "roll": 0}},
+      {"tick": 14, "easing": "INOUTSINE", "leftArm": {"pitch": -106, "yaw": 38, "roll": 0}},
+      {"tick": 23, "easing": "INOUTSINE", "leftArm": {"pitch": -98, "yaw": 44, "roll": 0}},
+      {"tick": 30, "easing": "INOUTSINE", "leftArm": {"pitch": -104, "yaw": 40, "roll": 0}},
+      {"tick": 34, "easing": "INOUTSINE", "leftArm": {"pitch": -30, "yaw": 0, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "head": {"pitch": 0, "roll": 0}},
+      {"tick": 5, "easing": "INOUTSINE", "head": {"pitch": 12, "roll": 0}},
+      {"tick": 14, "easing": "INOUTSINE", "head": {"pitch": 10, "roll": 6}},
+      {"tick": 23, "easing": "INOUTSINE", "head": {"pitch": 12, "roll": -6}},
+      {"tick": 30, "easing": "INOUTSINE", "head": {"pitch": 10, "roll": 4}},
+      {"tick": 34, "easing": "INOUTSINE", "head": {"pitch": 0, "roll": 0}},
+      {"tick": 0, "easing": "INOUTSINE", "torso": {"roll": 0}},
+      {"tick": 14, "easing": "INOUTSINE", "torso": {"roll": 3}},
+      {"tick": 23, "easing": "INOUTSINE", "torso": {"roll": -3}},
+      {"tick": 34, "easing": "INOUTSINE", "torso": {"roll": 0}}
+    ]
+  }
+}

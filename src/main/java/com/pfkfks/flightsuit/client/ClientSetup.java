@@ -28,6 +28,10 @@ public final class ClientSetup {
                 new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "full"),
                 (stack, level, entity, seed) -> com.pfkfks.flightsuit.thanos.InfinityGauntletItem.stones(stack)
                         == com.pfkfks.flightsuit.thanos.InfinityStone.ALL ? 1.0F : 0.0F));
+        // 2026-10-12: the Master Sword drawn as Link's ocarina while he plays (HeroArts.song).
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(com.pfkfks.flightsuit.registry.ModItems.MASTER_SWORD.get(),
+                new net.minecraft.resources.ResourceLocation(com.pfkfks.flightsuit.FlightSuitMod.MODID, "ocarina"),
+                (stack, level, entity, seed) -> HeroRenderer.ocarina(entity)));
     }
 
     @SubscribeEvent
@@ -83,6 +87,9 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.TOWNSFOLK.get(), TownsfolkRenderer::new);
         event.registerEntityRenderer(ModEntities.CANNONBALL.get(), CannonballRenderer::new);
         event.registerEntityRenderer(ModEntities.MONKEY.get(), MonkeyRenderer::new);
+        event.registerEntityRenderer(ModEntities.PHANTOM_CLONE.get(), PhantomCloneRenderer::new);
+        event.registerEntityRenderer(ModEntities.C4.get(), C4Renderer::new);
+        event.registerEntityRenderer(ModEntities.WITCH_BREW.get(), net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 
@@ -102,6 +109,7 @@ public final class ClientSetup {
     public static void registerParticles(net.minecraftforge.client.event.RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.CARD_SWIRL.get(), CardSwirlParticle.Provider::new);
         event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.CARD_FLIGHT.get(), CardFlightParticle.Provider::new);
+        event.registerSpriteSet(com.pfkfks.flightsuit.registry.ModParticles.SLEEP_Z.get(), SleepZParticle.Provider::new);
     }
 
     @SubscribeEvent

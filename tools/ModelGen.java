@@ -2840,6 +2840,8 @@ public class ModelGen {
             double[] thirdRot, firstRot;
             Map<String, double[][]> rawDisplay;
             int density = 2;
+            /** Item model overrides (predicate id, value, model) written into the outer model (2026-10-12: the ocarina). */
+            final List<String[]> overrides = new ArrayList<>();
 
             W(String id) {
                 this.id = id;
@@ -2860,7 +2862,7 @@ public class ModelGen {
         static void buildAll() throws IOException {
             List<W> all = List.of(trunksSword(), masterSword(), mjolnir(), captainShield(), widowBaton(), hawkeyeBow(),
                     shieldPistol(), greenDragonBlade(), serpentSpear(), xiahouBroadsword(), belledSabre(), twinSwords(),
-                    yitianSword(), guDingDao(), bishopStaff(), cannon());
+                    yitianSword(), guDingDao(), bishopStaff(), cannon(), monkeyPistol(), monkeyMachineGun(), c4(), ocarina());
             List<BufferedImage> previews = new ArrayList<>();
             for (W w : all) {
                 BufferedImage tex = packAndPaint(w);
@@ -2962,6 +2964,8 @@ public class ModelGen {
 
         static W masterSword() {
             W w = new W("master_sword");
+            // While Link plays his song the sword in hand is drawn as the ocarina (client: HeroSongClient).
+            w.overrides.add(new String[]{"flightsuit:ocarina", "1", "flightsuit:item/ocarina"});
             w.grip = new double[]{8, -2.5, 8};
             w.rod("pommel", 2, 2, -6.5, -5.5, metal(0xFF5A4FB0));
             w.rod("grip", 1.2, 1.2, -5.5, 0, wrap(0xFF4B3C9E, 0xFF2E2470));
@@ -3032,6 +3036,112 @@ public class ModelGen {
             // Shouldered: barrel forward and a little up in third person, held out front in first.
             w.thirdRot = new double[]{-80, 0, 0};
             w.firstRot = new double[]{-70, 10, 0};
+            return w;
+        }
+
+        // ------------------------------------------------------------ 2026-10-12: props for the suit roles round 2
+
+        /** The Cannon Shooter monkey's pistol: a stubby revolver - held like the S.H.I.E.L.D. pistol. */
+        static W monkeyPistol() {
+            W w = new W("monkey_pistol");
+            w.grip = new double[]{4.2, 5.2, 8};
+            w.handScale = 0.8;
+            w.thirdRot = new double[]{0, -90, 90};
+            w.firstRot = new double[]{0, -90, 90};
+            w.add("barrel", 7.3, 8, 7.4, 8.9, 14, 8.6, (Paint) p -> p.face == Face.TOP ? 0xFF0B0B0D : metal(STEEL_MID).at(p));
+            w.add("cylinder", 6.6, 5.6, 6.9, 9.4, 8.4, 9.1, (Paint) p -> {
+                // Flutes round the cylinder.
+                if (p.side() && (int) Math.floor((p.face == Face.RIGHT || p.face == Face.LEFT ? p.z : p.x) * 2) % 2 == 0) {
+                    return STEEL_DARK;
+                }
+                return grain(p, STEEL, 0.04);
+            });
+            w.add("frame", 6, 4.4, 7.3, 9, 5.6, 8.7, flat(STEEL_DARK));
+            w.add("hammer", 8.6, 4.4, 7.7, 9.6, 5.4, 8.3, flat(BLACK_LIGHT));
+            w.add("grip", 2, 3.6, 7.2, 6, 6.2, 8.8, wood(WOOD)).rot("z", 22.5, 6, 5, 8);
+            w.add("trigger_guard", 5.2, 6.0, 7.7, 6.2, 7.8, 8.3, flat(STEEL_DARK));
+            return w;
+        }
+
+        /**
+         * The monkey's machine gun (X): a long barrel in a cooling jacket, a drum magazine under the body, a carry
+         * handle on top - held the same way as the pistol, but it's a handful.
+         */
+        static W monkeyMachineGun() {
+            W w = new W("monkey_machine_gun");
+            w.grip = new double[]{3.6, 4.6, 8};
+            w.handScale = 0.85;
+            w.thirdRot = new double[]{0, -90, 90};
+            w.firstRot = new double[]{0, -90, 90};
+            w.add("stock", 6.6, -3, 7.2, 9.4, 3, 8.8, wood(WOOD_DARK));
+            w.add("body", 6, 3, 6.8, 10, 10, 9.2, metal(BLACK_LIGHT));
+            w.add("jacket", 6.9, 10, 6.9, 9.1, 19, 9.1, (Paint) p -> {
+                // Cooling holes down the jacket.
+                if (p.side() && (int) Math.floor(p.y) % 2 == 0 && Math.abs((p.face == Face.RIGHT || p.face == Face.LEFT ? p.z : p.x) - 8) < 0.5) {
+                    return 0xFF0B0B0D;
+                }
+                return grain(p, BLACK, 0.04);
+            });
+            w.add("muzzle", 7.3, 19, 7.3, 8.7, 21, 8.7, (Paint) p -> p.face == Face.TOP ? 0xFF0B0B0D : metal(STEEL_DARK).at(p));
+            w.add("drum", 2.4, 5, 6.2, 6, 9, 9.8, (Paint) p -> {
+                double r = Math.hypot(p.y - 7, (p.face == Face.FRONT || p.face == Face.BACK ? p.x : p.z) - 8);
+                return r < 0.8 ? STEEL_DARK : grain(p, 0xFF3C4A2E, 0.05);
+            });
+            w.add("handle", 10, 5, 7.6, 11.2, 9, 8.4, flat(BLACK));
+            w.add("grip", 2, 2.6, 7.2, 6, 4.8, 8.8, wrap(BLACK, 0xFF2A2C31)).rot("z", 22.5, 6, 3.6, 8);
+            return w;
+        }
+
+        /**
+         * The Cannon Shooter's C4 (B): a brick of olive putty bound with black tape, a little timer with green digits
+         * and a red light on top, a red and a blue wire. Drawn on its own (CannonArts' C4Entity), not held.
+         */
+        static W c4() {
+            W w = new W("c4");
+            w.preRoll = 0;
+            w.grip = new double[]{8, 8, 8};
+            int putty = 0xFFB8B08A, puttyDark = 0xFF8C8566;
+            w.add("brick", 4, 6.5, 5.5, 12, 9.5, 10.5, (Paint) p -> {
+                if (p.face == Face.FRONT && p.y > 7.3 && p.y < 8.4 && p.x > 5 && p.x < 11 && ((int) Math.floor(p.x * 2) % 3 != 0)) {
+                    return 0xFF3A3626; // stencilled lettering
+                }
+                return grain(p, p.edge() == 0 ? puttyDark : putty, 0.05);
+            });
+            w.add("tape_a", 5, 6.3, 5.3, 6.2, 9.7, 10.7, flat(BLACK_LIGHT));
+            w.add("tape_b", 9.8, 6.3, 5.3, 11, 9.7, 10.7, flat(BLACK_LIGHT));
+            w.add("timer", 6.4, 9.5, 6.6, 9.6, 10.6, 9.4, (Paint) p -> p.face == Face.TOP && Math.abs(p.z - 7.6) < 0.5 && p.x > 6.8 && p.x < 9.2
+                    ? ((int) Math.floor(p.x * 2) % 2 == 0 ? 0xFF4CFF6A : 0xFF0E3A16) : grain(p, BLACK, 0.04));
+            w.add("light", 8.1, 10.6, 8.2, 8.9, 11.2, 9.0, flat(0xFFFF2A2A));
+            w.add("wire_red", 9.6, 9.6, 7.2, 11.2, 10.1, 7.7, flat(RED));
+            w.add("wire_blue", 9.6, 9.6, 8.4, 11.6, 10.1, 8.9, flat(BLUE));
+            return w;
+        }
+
+        /**
+         * Link's ocarina (his song, B): the blue Ocarina of Time - a plump body, a mouthpiece, finger holes and the
+         * Triforce in gold. Not an item of its own: the Master Sword's model while he plays.
+         */
+        static W ocarina() {
+            W w = new W("ocarina");
+            w.preRoll = 0;
+            w.grip = new double[]{6, 7, 8};
+            w.handScale = 0.9;
+            w.thirdRot = new double[]{0, -90, 0};
+            w.firstRot = new double[]{0, -90, 0};
+            int blue = 0xFF3A6FD8, blueDark = 0xFF24479A, blueLight = 0xFF6E9BF0;
+            Paint body = p -> {
+                if (p.face == Face.TOP && Math.hypot((p.x - 6.5) % 1.6, p.z - 8) < 0.35 && p.x > 5.5 && p.x < 10.5) {
+                    return 0xFF101A33; // finger holes
+                }
+                if ((p.face == Face.FRONT || p.face == Face.BACK) && Math.abs(p.x - 8) < 0.9 && p.y > 6.8 && p.y < 8.2) {
+                    return GOLD; // the Triforce
+                }
+                return grain(p, p.edge() == 0 ? blueDark : blue, 0.04);
+            };
+            w.add("body", 5, 6, 6.6, 11, 9, 9.4, body);
+            w.add("hump", 6, 9, 7, 10, 9.8, 9, flat(blueLight));
+            w.add("belly", 6, 5.4, 7, 10, 6, 9, flat(blueDark));
+            w.add("mouthpiece", 11, 7, 7.4, 13, 8.2, 8.6, flat(blueLight));
             return w;
         }
 
@@ -3462,9 +3572,22 @@ public class ModelGen {
                     + "  \"base\": {\"parent\": \"flightsuit:item/3d/" + w.id + "\"},\n"
                     + "  \"perspectives\": {\n"
                     + "    \"gui\": {\"parent\": \"minecraft:item/generated\", \"textures\": {\"layer0\": \"flightsuit:item/" + w.id + "\"}}\n"
-                    + "  }\n"
+                    + "  }" + overrides(w) + "\n"
                     + "}\n";
             Files.writeString(asset("models/item/" + w.id + ".json").toPath(), outer, StandardCharsets.UTF_8);
+        }
+
+        static String overrides(W w) {
+            if (w.overrides.isEmpty()) {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder(",\n  \"overrides\": [\n");
+            for (int i = 0; i < w.overrides.size(); i++) {
+                String[] o = w.overrides.get(i);
+                sb.append("    {\"predicate\": {\"").append(o[0]).append("\": ").append(o[1]).append("}, \"model\": \"").append(o[2]).append("\"}")
+                        .append(i == w.overrides.size() - 1 ? "\n" : ",\n");
+            }
+            return sb.append("  ]").toString();
         }
 
         static void check(El e) {

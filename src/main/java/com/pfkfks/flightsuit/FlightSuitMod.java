@@ -112,6 +112,7 @@ public class FlightSuitMod {
         event.put(ModEntities.DBZ_FIGHTER.get(), com.pfkfks.flightsuit.planet.dbz.DbzFighterEntity.createAttributes().build());
         event.put(ModEntities.THANOS_FORCE.get(), com.pfkfks.flightsuit.thanos.ThanosForceEntity.createAttributes().build());
         event.put(ModEntities.MONKEY.get(), com.pfkfks.flightsuit.entity.MonkeyEntity.createAttributes().build());
+        event.put(ModEntities.PHANTOM_CLONE.get(), com.pfkfks.flightsuit.entity.PhantomCloneEntity.createAttributes().build());
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

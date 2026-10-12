@@ -60,7 +60,14 @@ public final class SpaceTravel {
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(Arrays.stream(Planet.values()).map(Planet::id), builder))
                         .executes(ctx -> launch(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "planet")) ? 1 : 0)))
                 .then(Commands.literal("return").executes(ctx -> goHome(ctx.getSource().getPlayerOrException()) ? 1 : 0))
-                .then(Commands.literal("remote").executes(ctx -> remote(ctx.getSource().getPlayerOrException()) ? 1 : 0)));
+                .then(Commands.literal("remote").executes(ctx -> remote(ctx.getSource().getPlayerOrException()) ? 1 : 0))
+                .then(Commands.literal("hangar")
+                        .then(Commands.literal("load").then(Commands.argument("station", com.mojang.brigadier.arguments.LongArgumentType.longArg())
+                                .executes(ctx -> Hangar.load(ctx.getSource().getPlayerOrException(),
+                                        com.mojang.brigadier.arguments.LongArgumentType.getLong(ctx, "station")) ? 1 : 0)))
+                        .then(Commands.literal("unload").then(Commands.argument("bay", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, Hangar.BAYS - 1))
+                                .executes(ctx -> Hangar.unload(ctx.getSource().getPlayerOrException(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "bay")) ? 1 : 0)))));
     }
 
     /** Nobody climbs out of a ship in flight. */
@@ -93,6 +100,7 @@ public final class SpaceTravel {
     public static void padMenu(ServerPlayer player, LaunchPadBlockEntity pad) {
         int stored = pad.energy().getEnergyStored();
         player.sendSystemMessage(Component.translatable("space.flightsuit.pad", stored, LAUNCH_COST).withStyle(ChatFormatting.AQUA));
+        Hangar.menu(player, true);
         if (!pad.canLaunch()) {
             player.sendSystemMessage(Component.translatable("space.flightsuit.pad_charging", stored * 100 / LAUNCH_COST).withStyle(ChatFormatting.GRAY));
             return;
@@ -122,6 +130,9 @@ public final class SpaceTravel {
                 .append("  ")
                 .append(button(Component.translatable("space.flightsuit.button_remote"), "/spaceship remote",
                         Component.translatable("space.flightsuit.button_remote_hint"), ChatFormatting.AQUA)));
+        if (planet != null) {
+            Hangar.menu(player, false);
+        }
     }
 
     private static MutableComponent button(Component label, String command, Component hint, ChatFormatting color) {
@@ -156,7 +167,7 @@ public final class SpaceTravel {
         if (!readyToFly(player)) {
             return false;
         }
-        if (!level.canSeeSky(pad.getBlockPos().above(3))) {
+        if (!level.canSeeSky(pad.getBlockPos().above(6))) {
             player.sendSystemMessage(Component.translatable("space.flightsuit.need_sky").withStyle(ChatFormatting.GRAY));
             return false;
         }
@@ -196,9 +207,14 @@ public final class SpaceTravel {
         return true;
     }
 
+    /** The launch pad by the player, if any (Hangar's loading and unloading are done there). */
+    static @Nullable LaunchPadBlockEntity padNearPlayer(ServerPlayer player) {
+        return padNear(player);
+    }
+
     private static @Nullable LaunchPadBlockEntity padNear(ServerPlayer player) {
         BlockPos at = player.blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(at.offset(-3, -2, -3), at.offset(3, 1, 3))) {
+        for (BlockPos pos : BlockPos.betweenClosed(at.offset(-5, -2, -5), at.offset(5, 1, 5))) {
             if (player.level().getBlockEntity(pos) instanceof LaunchPadBlockEntity pad) {
                 return pad;
             }
@@ -278,7 +294,7 @@ public final class SpaceTravel {
         if (pilot != null) {
             pilot.removeEffect(MobEffects.SLOW_FALLING);
             pilot.fallDistance = 0.0F;
-            Vec3 out = ship.position().add(Vec3.directionFromRotation(0.0F, ship.getYRot()).scale(2.2D));
+            Vec3 out = ship.position().add(Vec3.directionFromRotation(0.0F, ship.getYRot()).scale(ship.getBbWidth() / 2.0D + 1.3D));
             int ground = ship.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(out.x), Mth.floor(out.z));
             pilot.teleportTo(out.x, Math.max(ground, ship.getY()), out.z);
         }
@@ -297,6 +313,11 @@ public final class SpaceTravel {
         }
     }
 
+    /** Where this pilot's ship comes down on {@code planet} - Mark 2's emergency escape flies there (EscapeFlight). */
+    public static BlockPos landingPoint(ServerLevel level, Planet planet, ServerPlayer pilot) {
+        return landingSite(level, planet, pilot);
+    }
+
     /** The planet's landing site (found once: firm ground near the middle of the world), a few steps apart per pilot. */
     private static BlockPos landingSite(ServerLevel level, Planet planet, ServerPlayer pilot) {
         PlanetData data = PlanetData.get(level.getServer());
@@ -307,8 +328,9 @@ public final class SpaceTravel {
         }
         int dx = Math.floorMod(pilot.getUUID().hashCode(), 9) - 4;
         int dz = Math.floorMod(pilot.getUUID().hashCode() >> 8, 9) - 4;
-        int x = site.getX() + dx * 3;
-        int z = site.getZ() + dz * 3;
+        // Far enough apart for the big hull (2026-10-12).
+        int x = site.getX() + dx * 7;
+        int z = site.getZ() + dz * 7;
         level.getChunkAt(new BlockPos(x, 0, z));
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (!level.getFluidState(new BlockPos(x, y - 1, z)).isEmpty()) {

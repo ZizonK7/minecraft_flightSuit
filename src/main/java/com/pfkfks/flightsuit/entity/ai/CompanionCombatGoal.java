@@ -456,15 +456,14 @@ public class CompanionCombatGoal extends Goal {
         }
         Vec3 muzzle = suit.getEyePosition().add(suit.getLookAngle().scale(0.8D));
         Vec3 dir = target.getBoundingBox().getCenter().subtract(muzzle).normalize().add(0.0D, 0.03D + distance * 0.003D, 0.0D).normalize();
-        if (skillCooldown <= 0 && foesWithin(6.0D).size() >= 3 && suit.drain(SuitTuning.ROLLING_COST)) {
-            for (int i = -1; i <= 1; i++) {
-                com.pfkfks.flightsuit.entity.CannonballEntity.fire(level(), suit, muzzle, dir.yRot((float) Math.toRadians(i * SuitTuning.ROLLING_SPREAD_DEG))
-                        .scale(SuitTuning.CANNON_SPEED), SuitTuning.CANNON_DAMAGE * 0.8F, SuitTuning.CANNON_RADIUS);
-            }
+        if (skillCooldown <= 0 && distance < SuitTuning.FLAME_BURST_REACH - 1.0D && foesWithin(6.0D).size() >= 3
+                && suit.drain(SuitTuning.FLAME_BURST_COST)) {
+            // Crowded: the flame burst (2026-10-12; a fan of three balls before).
+            Vec3 look = target.getBoundingBox().getCenter().subtract(muzzle).normalize();
+            com.pfkfks.flightsuit.suit.CannonArts.flameBurst(level(), suit, muzzle, look, SuitTuning.FLAME_BURST_DAMAGE * 3.0F, suit::isFoe);
             suit.swing(InteractionHand.MAIN_HAND);
             suit.markAiming();
-            level().playSound(null, suit.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 0.8F, 1.4F);
-            skillCooldown = 160;
+            skillCooldown = SuitTuning.FLAME_BURST_COOLDOWN_TICKS + 40;
             return;
         }
         if (fireCooldown <= 0 && suit.drain(SuitTuning.CANNON_COST)) {

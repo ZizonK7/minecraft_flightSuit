@@ -119,9 +119,12 @@ public final class SuitWeapons {
         double hookTravelled;
         LivingEntity hookMob;
         int hookTicks;
-        /** M18: the Triforce's power until this tick; the gale boomerang in flight. */
+        /** M18: the Triforce's power until this tick. */
         long triforceUntil;
-        final List<HeroArts.Boomerang> boomerangs = new ArrayList<>();
+        /** 2026-10-12: Link's song under way (the one it's for, how far in), and who it put to sleep. */
+        LivingEntity songTarget;
+        int songTicks;
+        LivingEntity sleeper;
         /** M18 feedback: the chain of different moves (its length, when it lapses, the last move) and when the shield went up. */
         int chain;
         long chainUntil;
@@ -176,6 +179,11 @@ public final class SuitWeapons {
         LivingEntity hammerTarget;
         int hammerHits;
         int hammerTicks;
+        /** 2026-10-12 Mark 44: the boss gauge (0..100), when it last rose; the finisher's victim and clock. */
+        float bossGauge;
+        long bossGaugeLast;
+        LivingEntity finisherTarget;
+        int finisherTicks;
         /** M18 feedback: the chunk of ground ripped up and held over the shoulder (B once), until B again throws it. */
         final List<net.minecraft.world.entity.item.FallingBlockEntity> held = new ArrayList<>();
         long heldSince;
@@ -220,14 +228,25 @@ public final class SuitWeapons {
         long xrayUntil;
         Vec3 flashAt = Vec3.ZERO;
         long flashTick;
-        // M18 Mark 6 (CannonArts): the monkey rush sweeping forward.
-        int rushTicks;
-        Vec3 rushPos = Vec3.ZERO;
-        Vec3 rushDir = Vec3.ZERO;
-        final java.util.Set<LivingEntity> rushHit = new java.util.HashSet<>();
+        /** 2026-10-12 Mark 2 emergency escape (EscapeFlight): where home is (null: not escaping), and how it goes. */
+        Vec3 escapeTo;
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> escapeDim;
+        int escapeCruise;
+        int escapeTicks;
+        boolean escapeJumped;
+        boolean escapeDescending;
+        double escapeBest;
+        int escapeStuck;
+        // Mark 6 (CannonArts, 2026-10-12): the flame burst's ticks left; the C4 stuck on something (an entity, else a
+        // spot), and when it goes off on its own.
+        int flameTicks;
+        com.pfkfks.flightsuit.entity.C4Entity c4;
+        long c4Fuse;
+        /** The monkey on the machine gun until (the HUD's buff clock). */
+        long machineGunUntil;
         // M18 Mark 7 (BishopArts): the Holy Magic Shell's window, Genesis falling, Heaven's Door on allies until.
-        long shellUntil;
-        long shellRaised;
+        /** 2026-10-12: picking whom to shell (Z, then left click an ally / right click yourself) until this tick. */
+        long shellAimUntil;
         int genesisLeft;
         int genesisTicks;
         long doorUntil;
@@ -263,7 +282,8 @@ public final class SuitWeapons {
                 || entity instanceof SuitCompanionEntity companion && companion.isOwnedBy(owner)
                 || entity instanceof RemoteBodyEntity body && owner.getUUID().equals(body.getOwnerId())
                 || entity instanceof CardEntity || entity instanceof MissileEntity
-                || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner);
+                || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner)
+                || entity instanceof com.pfkfks.flightsuit.entity.PhantomCloneEntity clone && clone.isOwnedBy(owner);
     }
 
     /**
@@ -312,7 +332,9 @@ public final class SuitWeapons {
                 if (!SuitWeaponItem.holding(player)) {
                     return;
                 }
-                if (suitClass == SuitClass.HERO) {
+                if (suitClass == SuitClass.BISHOP && BishopArts.aimingShell(player, state)) {
+                    BishopArts.shellAlly(player, state);
+                } else if (suitClass == SuitClass.HERO) {
                     HeroArts.swing(player, state);
                 } else if (suitClass == SuitClass.SWORDSMAN) {
                     SwordArts.swing(player, state);
@@ -327,7 +349,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.spinAttack(player, state);
                     case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
                     case SWORDSMAN -> SwordArts.burningAttack(player, state);
-                    case CANNONEER -> CannonArts.militia(player, state);
+                    case CANNONEER -> CannonArts.machineGun(player, state);
                     case BISHOP -> BishopArts.angelRay(player, state);
                 }
             }
@@ -340,7 +362,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.clawshot(player, state);
                     case HULKBUSTER -> HulkbusterArts.groundSlam(player, state);
                     case SWORDSMAN -> SwordArts.flashSlash(player, state);
-                    case CANNONEER -> CannonArts.rollingCannon(player, state);
+                    case CANNONEER -> CannonArts.flameBurst(player, state);
                     case BISHOP -> BishopArts.chains(player, state);
                 }
             }
@@ -361,12 +383,12 @@ public final class SuitWeapons {
                 switch (suitClass) {
                     case SCRAP -> ScrapArts.flare(player, state);
                     case STANDARD -> MarkArts.shoulderGuns(player, state);
-                    case STEALTH -> MarkArts.flashbang(player, state);
+                    case STEALTH -> EscapeFlight.press(player, state);
                     case PHANTOM -> PhantomArts.useStolen(player, state);
-                    case HERO -> HeroArts.boomerang(player, state);
+                    case HERO -> HeroArts.song(player, state);
                     case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
                     case SWORDSMAN -> SwordArts.dragonFist(player, state);
-                    case CANNONEER -> CannonArts.monkeyRush(player, state);
+                    case CANNONEER -> CannonArts.c4(player, state);
                     case BISHOP -> BishopArts.heavensDoor(player, state);
                 }
             }
@@ -382,6 +404,10 @@ public final class SuitWeapons {
 
     private static void start(ServerPlayer player, State state, SuitClass suitClass) {
         if (state.firing != FIRE_NONE) {
+            return;
+        }
+        if (suitClass == SuitClass.BISHOP && BishopArts.aimingShell(player, state)) {
+            BishopArts.shellSelf(player, state);
             return;
         }
         // The weapon suits fire from the weapon, the others from an empty hand (the client checks too).
@@ -479,6 +505,7 @@ public final class SuitWeapons {
         PhantomArts.tick(player, state, suitClass);
         ScrapArts.tick(player, state, suitClass);
         MarkArts.tick(player, state, suitClass);
+        EscapeFlight.tick(player, state, suitClass);
         CannonArts.tick(player, state, suitClass);
         BishopArts.tick(player, state, suitClass);
         CardDuel.tick(player);
@@ -631,13 +658,15 @@ public final class SuitWeapons {
 
     /** The buff the HUD shows a timer for (overdrive, the Triforce, x-ray, Heaven's Door), whichever is on. */
     private static long buffUntil(State state) {
-        return Math.max(Math.max(state.overdriveUntil, state.triforceUntil), Math.max(state.xrayUntil, state.doorUntil));
+        return Math.max(Math.max(Math.max(state.overdriveUntil, state.triforceUntil), Math.max(state.xrayUntil, state.doorUntil)),
+                state.machineGunUntil);
     }
 
     static void sendStatus(ServerPlayer player, State state) {
         StolenSkill stolen = PhantomArts.stolen(player);
         ModNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready, state.gauge, state.spadeUntil, state.ultReady,
+                new WeaponStatusS2CPacket(state.skill1Ready, state.skill2Ready,
+                        armedClass(player) == SuitClass.HULKBUSTER ? (int) state.bossGauge : state.gauge, state.spadeUntil, state.ultReady,
                         state.superSaiyan, state.ssjLockedUntil, stolen == null ? "" : stolen.name(), state.stolenReady,
                         state.skill3Ready, buffUntil(state), state.armourMode, (byte) state.chain, !state.held.isEmpty()));
     }
@@ -694,6 +723,7 @@ public final class SuitWeapons {
     /** Carte Noir: a phantom's own hits sometimes send a black card after the target. */
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
+        HeroArts.sleepHurt(event);
         HulkbusterArts.onHurt(event);
         HeroArts.onHurt(event);
         BishopArts.onHurt(event);

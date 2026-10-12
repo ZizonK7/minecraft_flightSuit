@@ -39,6 +39,8 @@ public final class SuitWheel {
     public static final byte CAPSULE = 2;
     /** A station in another dimension: only a remote link reaches it. */
     public static final byte FAR_STATION = 3;
+    /** 2026-10-12: a bay of the spaceship's hangar (planet.Hangar) - listed on a planet, where the ship is the base. */
+    public static final byte HANGAR = 4;
 
     public static final byte SUMMON = 0;
     public static final byte WEAR = 1;
@@ -99,6 +101,15 @@ public final class SuitWheel {
             entries.add(new Entry(COMPANION, suit.getId(), type == null ? "?" : type.hudName(), chargePercent(parts),
                     durabilityPercent(parts), (int) suit.distanceTo(player), false, anyBroken(parts)));
         }
+        if (com.pfkfks.flightsuit.planet.Hangar.usable(player)) {
+            List<Map<EquipmentSlot, ItemStack>> bays = com.pfkfks.flightsuit.planet.Hangar.bays(player);
+            for (int bay = 0; bay < bays.size(); bay++) {
+                Collection<ItemStack> parts = bays.get(bay).values();
+                SuitType type = typeOf(parts);
+                entries.add(new Entry(HANGAR, bay, type == null ? "?" : type.hudName(), chargePercent(parts), durabilityPercent(parts),
+                        0, false, anyBroken(parts)));
+            }
+        }
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.items.size(); slot++) {
             ItemStack stack = inventory.items.get(slot);
@@ -121,6 +132,10 @@ public final class SuitWheel {
         }
         if (kind == FAR_STATION) {
             player.displayClientMessage(Component.translatable("message.flightsuit.far_remote_only"), true);
+            return;
+        }
+        if (kind == HANGAR && action != ALL && action != SET_MAIN) {
+            fromHangar(player, (int) key, action == WEAR);
             return;
         }
         if (action == ALL) {
@@ -308,6 +323,22 @@ public final class SuitWheel {
             }
             launched++;
         }
+        // On a planet the hangar's suits come out too.
+        while (com.pfkfks.flightsuit.planet.Hangar.usable(player) && out + launched < CONTROL_CAPACITY) {
+            List<Map<EquipmentSlot, ItemStack>> bays = com.pfkfks.flightsuit.planet.Hangar.bays(player);
+            int bay = -1;
+            for (int i = 0; i < bays.size() && bay < 0; i++) {
+                if (!anyBroken(bays.get(i).values())) {
+                    bay = i;
+                }
+            }
+            if (bay < 0) {
+                break;
+            }
+            Map<EquipmentSlot, ItemStack> parts = com.pfkfks.flightsuit.planet.Hangar.take(player, bay);
+            deployCompanion(player, parts, com.pfkfks.flightsuit.planet.Hangar.launchPoint(player));
+            launched++;
+        }
         for (SuitCompanionEntity suit : Companions.owned(player, COMPANION_RANGE)) {
             suit.startHunt(player.position(), HUNT_TICKS);
         }
@@ -345,6 +376,41 @@ public final class SuitWheel {
         SuitCompanionEntity suit = SuitCompanionEntity.spawnArriving(player, parts, new Vec3(horizon.x, height, horizon.z), null);
         level.playSound(null, player.blockPosition(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.5F, 0.6F);
         return suit;
+    }
+
+    /**
+     * A hangar bay's suit (2026-10-12): out as a companion from the ship, or worn - put on the way a capsule suit is
+     * (the bay's pieces in a capsule that isn't anyone's item).
+     */
+    private static void fromHangar(ServerPlayer player, int bay, boolean wear) {
+        List<Map<EquipmentSlot, ItemStack>> bays = com.pfkfks.flightsuit.planet.Hangar.bays(player);
+        if (!com.pfkfks.flightsuit.planet.Hangar.usable(player) || bay < 0 || bay >= bays.size() || refuseBroken(player, bays.get(bay).values())) {
+            return;
+        }
+        if (!wear) {
+            Map<EquipmentSlot, ItemStack> parts = com.pfkfks.flightsuit.planet.Hangar.take(player, bay);
+            deployCompanion(player, parts, com.pfkfks.flightsuit.planet.Hangar.launchPoint(player));
+            return;
+        }
+        Runnable suitUp = () -> {
+            Map<EquipmentSlot, ItemStack> parts = com.pfkfks.flightsuit.planet.Hangar.take(player, bay);
+            SuitType type = typeOf(parts.values());
+            if (type == null) {
+                return;
+            }
+            ItemStack capsule = new ItemStack(com.pfkfks.flightsuit.registry.ModItems.capsuleFor(type));
+            parts.forEach((slot, stack) -> SuitCapsuleItem.setPart(capsule, slot, stack));
+            SuitUpManager.startFromCapsule(player, capsule);
+            if (SuitCapsuleItem.hasParts(capsule)) {
+                // Not put on after all (still wearing, mid suit-up): back into its bay.
+                com.pfkfks.flightsuit.planet.Hangar.store(player, SuitCapsuleItem.getParts(capsule));
+            }
+        };
+        if (leaveCurrentSuit(player)) {
+            SuitUpManager.schedule(player, SWAP_DELAY_TICKS, suitUp);
+        } else {
+            suitUp.run();
+        }
     }
 
     /** A capsule suit unfolds right where it's aimed and joins as a companion. */
