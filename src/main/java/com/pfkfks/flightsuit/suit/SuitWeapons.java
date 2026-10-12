@@ -235,8 +235,8 @@ public final class SuitWeapons {
         Vec3 rushDir = Vec3.ZERO;
         final java.util.Set<LivingEntity> rushHit = new java.util.HashSet<>();
         // M18 Mark 7 (BishopArts): the Holy Magic Shell's window, Genesis falling, Heaven's Door on allies until.
-        long shellUntil;
-        long shellRaised;
+        /** 2026-10-12: picking whom to shell (Z, then left click an ally / right click yourself) until this tick. */
+        long shellAimUntil;
         int genesisLeft;
         int genesisTicks;
         long doorUntil;
@@ -322,7 +322,9 @@ public final class SuitWeapons {
                 if (!SuitWeaponItem.holding(player)) {
                     return;
                 }
-                if (suitClass == SuitClass.HERO) {
+                if (suitClass == SuitClass.BISHOP && BishopArts.aimingShell(player, state)) {
+                    BishopArts.shellAlly(player, state);
+                } else if (suitClass == SuitClass.HERO) {
                     HeroArts.swing(player, state);
                 } else if (suitClass == SuitClass.SWORDSMAN) {
                     SwordArts.swing(player, state);
@@ -392,6 +394,10 @@ public final class SuitWeapons {
 
     private static void start(ServerPlayer player, State state, SuitClass suitClass) {
         if (state.firing != FIRE_NONE) {
+            return;
+        }
+        if (suitClass == SuitClass.BISHOP && BishopArts.aimingShell(player, state)) {
+            BishopArts.shellSelf(player, state);
             return;
         }
         // The weapon suits fire from the weapon, the others from an empty hand (the client checks too).

@@ -462,6 +462,10 @@ public final class SuitTuning {
     public static final int SHELL_TICKS = 40;
     /** Within this many ticks of raising the shell a blocked shot goes back where it came from. */
     public static final int SHELL_REFLECT_TICKS = 8;
+    /** Z then a click (2026-10-12): how long the picking lasts, how far an ally can be, how long their shell holds. */
+    public static final int SHELL_AIM_TICKS = 60;
+    public static final double SHELL_AIM_RANGE = 24.0D;
+    public static final int SHELL_ALLY_TICKS = 60;
     public static final int ANGEL_RAY_COST = 1_200;
     public static final int ANGEL_RAY_COOLDOWN_TICKS = 100;
     public static final double ANGEL_RAY_RANGE = 24.0D;
