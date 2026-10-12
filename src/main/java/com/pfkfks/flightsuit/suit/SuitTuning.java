@@ -401,8 +401,8 @@ public final class SuitTuning {
     /** How long the ripped-up chunk floats over the shoulder before it's thrown on its own. */
     public static final int THROW_HOLD_TICKS = 200;
 
-    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey towers (X), the flame
-    // burst (C), the big huge gigantic cannonball (V), the monkey rush (B).
+    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), the monkey's machine gun (X), the
+    // flame burst (C), the big huge gigantic cannonball (V), C4 (B).
     public static final int CANNON_INTERVAL = 12;
     public static final int CANNON_COST = 250;
     public static final double CANNON_SPEED = 1.6D;
@@ -445,29 +445,35 @@ public final class SuitTuning {
     public static final float CANNON_SLAM_DAMAGE = 6.0F;
     public static final float CANNON_SLAM_DAMAGE_PER_BLOCK = 0.8F;
     public static final float CANNON_SLAM_DAMAGE_MAX = 22.0F;
-    /** Monkey towers (X, 2026-10-12): placing, levelling up, how many, how long; each level's throws. */
-    public static final int TOWER_COST = 1_200;
-    public static final int TOWER_UPGRADE_COST = 1_500;
-    public static final int TOWER_COOLDOWN_TICKS = 40;
-    public static final int TOWER_MAX = 3;
-    public static final int TOWER_TICKS = 1_200;
-    public static final double TOWER_PLACE_RANGE = 24.0D;
-    public static final double TOWER_RANGE = 14.0D;
-    public static final int TOWER_DART_INTERVAL = 14;
-    public static final int TOWER_TRIPLE_INTERVAL = 12;
-    public static final int TOWER_BOMB_INTERVAL = 24;
-    public static final float TOWER_DART_DAMAGE = 4.0F;
-    public static final float TOWER_BOMB_DAMAGE = 9.0F;
-    public static final double TOWER_BOMB_RADIUS = 2.5D;
-    /** The flame burst (C, 2026-10-12): a wide cone of fire out of the cannon. */
-    public static final int FLAME_BURST_COST = 1_500;
-    public static final int FLAME_BURST_COOLDOWN_TICKS = 120;
+    /** The monkey's gun (2026-10-12): a pistol at heel; X = the machine gun for a while. */
+    public static final int MONKEY_PISTOL_INTERVAL = 20;
+    public static final float MONKEY_PISTOL_DAMAGE = 4.0F;
+    public static final double MONKEY_PISTOL_RANGE = 16.0D;
+    public static final int MONKEY_MG_INTERVAL = 3;
+    public static final float MONKEY_MG_DAMAGE = 2.0F;
+    public static final double MONKEY_MG_RANGE = 20.0D;
+    public static final int MONKEY_MG_TICKS = 160;
+    public static final int MONKEY_MG_COST = 1_500;
+    public static final int MONKEY_MG_COOLDOWN_TICKS = 400;
+    /** The flame burst (C, 2026-10-12): a wide cone of fire for FLAME_BURST_TICKS, rooted, a hit every PULSE ticks. */
+    public static final int FLAME_BURST_COST = 1_800;
+    public static final int FLAME_BURST_COOLDOWN_TICKS = 240;
+    public static final int FLAME_BURST_TICKS = 60;
+    public static final int FLAME_BURST_PULSE = 4;
     public static final double FLAME_BURST_REACH = 9.0D;
     public static final double FLAME_BURST_ARC_DEG = 70.0D;
-    public static final float FLAME_BURST_DAMAGE = 8.0F;
+    public static final float FLAME_BURST_DAMAGE = 2.5F;
     public static final int FLAME_BURST_BURN_SECONDS = 5;
-    public static final double FLAME_BURST_RECOIL = 0.6D;
-    public static final float FLAME_BURST_IGNITE_CHANCE = 0.35F;
+    /** Per pulse. */
+    public static final float FLAME_BURST_IGNITE_CHANCE = 0.08F;
+    /** C4 (B, 2026-10-12): stuck within reach, its blast, the crater, the fuse, the rest after it goes off. */
+    public static final int C4_COST = 1_200;
+    public static final double C4_RANGE = 5.0D;
+    public static final double C4_RADIUS = 4.0D;
+    public static final float C4_DAMAGE = 22.0F;
+    public static final double C4_BREAK_RADIUS = 2.8D;
+    public static final int C4_FUSE_TICKS = 200;
+    public static final int C4_COOLDOWN_TICKS = 160;
     public static final int BHGC_COST = 6_000;
     public static final int BHGC_COOLDOWN_TICKS = 1_200;
     public static final double BHGC_SPEED = 0.6D;
@@ -476,11 +482,6 @@ public final class SuitTuning {
     public static final float BHGC_DAMAGE = 20.0F;
     public static final double BHGC_BLAST_RADIUS = 8.0D;
     public static final float BHGC_BLAST_DAMAGE = 24.0F;
-    public static final int RUSH_COST = 1_000;
-    public static final int RUSH_COOLDOWN_TICKS = 240;
-    public static final int RUSH_TICKS = 12;
-    public static final double RUSH_WIDTH = 1.6D;
-    public static final float RUSH_DAMAGE = 6.0F;
 
     // Mark 7 Bishop (BishopArts): heal beam / holy arrow (right click), Holy Magic Shell (Z), Angel Ray (X), chains
     // of light (C), Genesis (V), Heaven's Door (B).

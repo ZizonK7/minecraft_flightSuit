@@ -460,7 +460,7 @@ public class CompanionCombatGoal extends Goal {
                 && suit.drain(SuitTuning.FLAME_BURST_COST)) {
             // Crowded: the flame burst (2026-10-12; a fan of three balls before).
             Vec3 look = target.getBoundingBox().getCenter().subtract(muzzle).normalize();
-            com.pfkfks.flightsuit.suit.CannonArts.flameBurst(level(), suit, muzzle, look, SuitTuning.FLAME_BURST_DAMAGE * 0.8F, suit::isFoe);
+            com.pfkfks.flightsuit.suit.CannonArts.flameBurst(level(), suit, muzzle, look, SuitTuning.FLAME_BURST_DAMAGE * 3.0F, suit::isFoe);
             suit.swing(InteractionHand.MAIN_HAND);
             suit.markAiming();
             skillCooldown = SuitTuning.FLAME_BURST_COOLDOWN_TICKS + 40;

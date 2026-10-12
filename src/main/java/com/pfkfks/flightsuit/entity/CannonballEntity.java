@@ -245,6 +245,16 @@ public class CannonballEntity extends ThrowableProjectile {
         // Dug in a little along the flight, so the crater bites into the face it struck rather than the air before it.
         Vec3 flight = getDeltaMovement();
         Vec3 centreAt = flight.lengthSqr() > 1.0E-4D ? at.add(flight.normalize().scale(reach * 0.35D)) : at;
+        crater(level, at, centreAt, reach, maxHardness, giant, this, getOwner() instanceof ServerPlayer owner ? owner : null);
+    }
+
+    /**
+     * A ragged crater of radius {@code reach} round {@code centreAt}: blocks up to {@code maxHardness} broken (no
+     * drops), chunks sprayed, the ground shaken. Shared with the Cannon Shooter's C4 (2026-10-12).
+     */
+    public static void crater(ServerLevel level, Vec3 at, Vec3 centreAt, double reach, float maxHardness, boolean giant,
+                              @org.jetbrains.annotations.Nullable Entity breaker, @org.jetbrains.annotations.Nullable ServerPlayer owner) {
+        net.minecraft.util.RandomSource random = level.getRandom();
         net.minecraft.core.BlockPos centre = net.minecraft.core.BlockPos.containing(centreAt);
         int r = (int) Math.ceil(reach + 0.5D);
         int broken = 0;
@@ -259,10 +269,10 @@ public class CannonballEntity extends ThrowableProjectile {
             net.minecraft.world.level.block.state.BlockState block = level.getBlockState(pos);
             float hardness = block.getDestroySpeed(level, pos);
             if (block.isAir() || hardness < 0.0F || hardness > maxHardness || level.getBlockEntity(pos) != null || !block.getFluidState().isEmpty()
-                    || getOwner() instanceof ServerPlayer owner && !level.mayInteract(owner, pos)) {
+                    || owner != null && !level.mayInteract(owner, pos)) {
                 continue;
             }
-            level.destroyBlock(pos, false, this);
+            level.destroyBlock(pos, false, breaker);
             if (broken < sprays) {
                 // Chunks of it thrown up and out.
                 level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, block),

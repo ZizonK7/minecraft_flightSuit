@@ -234,11 +234,14 @@ public final class SuitWeapons {
         boolean escapeDescending;
         double escapeBest;
         int escapeStuck;
-        // M18 Mark 6 (CannonArts): the monkey rush sweeping forward.
-        int rushTicks;
-        Vec3 rushPos = Vec3.ZERO;
-        Vec3 rushDir = Vec3.ZERO;
-        final java.util.Set<LivingEntity> rushHit = new java.util.HashSet<>();
+        // Mark 6 (CannonArts, 2026-10-12): the flame burst's ticks left; the C4 stuck on something (an entity, else a
+        // spot), and when it goes off on its own.
+        int flameTicks;
+        LivingEntity c4On;
+        Vec3 c4At;
+        long c4Fuse;
+        /** The monkey on the machine gun until (the HUD's buff clock). */
+        long machineGunUntil;
         // M18 Mark 7 (BishopArts): the Holy Magic Shell's window, Genesis falling, Heaven's Door on allies until.
         /** 2026-10-12: picking whom to shell (Z, then left click an ally / right click yourself) until this tick. */
         long shellAimUntil;
@@ -344,7 +347,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.spinAttack(player, state);
                     case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
                     case SWORDSMAN -> SwordArts.burningAttack(player, state);
-                    case CANNONEER -> CannonArts.monkeyTower(player, state);
+                    case CANNONEER -> CannonArts.machineGun(player, state);
                     case BISHOP -> BishopArts.angelRay(player, state);
                 }
             }
@@ -383,7 +386,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.boomerang(player, state);
                     case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
                     case SWORDSMAN -> SwordArts.dragonFist(player, state);
-                    case CANNONEER -> CannonArts.monkeyRush(player, state);
+                    case CANNONEER -> CannonArts.c4(player, state);
                     case BISHOP -> BishopArts.heavensDoor(player, state);
                 }
             }
@@ -653,7 +656,8 @@ public final class SuitWeapons {
 
     /** The buff the HUD shows a timer for (overdrive, the Triforce, x-ray, Heaven's Door), whichever is on. */
     private static long buffUntil(State state) {
-        return Math.max(Math.max(state.overdriveUntil, state.triforceUntil), Math.max(state.xrayUntil, state.doorUntil));
+        return Math.max(Math.max(Math.max(state.overdriveUntil, state.triforceUntil), Math.max(state.xrayUntil, state.doorUntil)),
+                state.machineGunUntil);
     }
 
     static void sendStatus(ServerPlayer player, State state) {

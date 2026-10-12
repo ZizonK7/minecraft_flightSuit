@@ -38,28 +38,22 @@ import java.util.UUID;
 
 /**
  * M18 Cannon Shooter's monkey (CannonArts): at heel while the full Mark 6 is worn - hopping after its owner, floating
- * at their shoulder when they fly, popping back beside them when left behind - and the body of the suit's monkey
- * moves: planted as a tower (X, Bloons-style since 2026-10-12: darts, then three darts, then bombs as it's upgraded),
- * charging down a line (Monkey Rush). Never saved; gone when the suit
- * comes off, and the move's monkeys go up in a puff when the move ends.
+ * at their shoulder when they fly, popping back beside them when left behind. Since 2026-10-12 (user: "같이 다니는
+ * 원숭이의 무기를 강화... 평소에는 권총 쏘다가 기관총") it fights at heel: a pistol shot now and then at whatever its
+ * owner fights, and X turns it into a machine gun for a while. Never saved; gone when the suit comes off.
  */
 public class MonkeyEntity extends PathfinderMob {
-    public static final byte HEEL = 0;
-    public static final byte TURRET = 1;
-    public static final byte RUSH = 2;
-
-    private static final EntityDataAccessor<Byte> MODE = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> FLOATING = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BOOLEAN);
-    /** A tower's level (2026-10-12): 1 darts, 2 three darts at once, 3 bombs. */
-    private static final EntityDataAccessor<Byte> TIER = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BYTE);
-    public static final int MAX_TIER = 3;
+    /** Gun up (aiming at something) - the pose; on the machine gun - shaking with it. */
+    private static final EntityDataAccessor<Boolean> AIMING = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> MACHINE_GUN = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BOOLEAN);
 
     private @Nullable UUID ownerId;
-    /** TURRET / RUSH: ticks left; RUSH: the way it runs and whom it has already bowled over. */
-    private int left;
-    private Vec3 rushDir = Vec3.ZERO;
-    private final Set<LivingEntity> rushHit = new HashSet<>();
     private int hop;
+    /** The machine gun's ticks left; ticks to the next shot; ticks the gun stays up after the last. */
+    private int machineGunLeft;
+    private int reload;
+    private int aimLeft;
 
     public MonkeyEntity(EntityType<? extends MonkeyEntity> type, Level level) {
         super(type, level);
@@ -86,43 +80,12 @@ public class MonkeyEntity extends PathfinderMob {
         return monkey;
     }
 
-    /** A tower (level 1) for {@code ticks} at {@code at}. */
-    public static MonkeyEntity turret(ServerLevel level, Player owner, Vec3 at, int ticks) {
-        MonkeyEntity monkey = new MonkeyEntity(com.pfkfks.flightsuit.registry.ModEntities.MONKEY.get(), level);
-        monkey.ownerId = owner.getUUID();
-        monkey.entityData.set(MODE, TURRET);
-        monkey.left = ticks;
-        monkey.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
-        monkey.equipFor(1);
-        monkey.moveTo(at.x, at.y, at.z, owner.getYRot(), 0.0F);
-        level.addFreshEntity(monkey);
-        level.sendParticles(ParticleTypes.POOF, at.x, at.y + 0.4D, at.z, 8, 0.2D, 0.2D, 0.2D, 0.02D);
-        level.playSound(null, at.x, at.y, at.z, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.6F, 1.6F);
-        return monkey;
-    }
-
-    /** One of the rush: runs {@code dir} from {@code at} for {@code ticks}. */
-    public static MonkeyEntity rush(ServerLevel level, Player owner, Vec3 at, Vec3 dir, int ticks) {
-        MonkeyEntity monkey = new MonkeyEntity(com.pfkfks.flightsuit.registry.ModEntities.MONKEY.get(), level);
-        monkey.ownerId = owner.getUUID();
-        monkey.entityData.set(MODE, RUSH);
-        monkey.left = ticks;
-        monkey.rushDir = new Vec3(dir.x, 0.0D, dir.z).normalize();
-        float yaw = (float) (Math.toDegrees(Math.atan2(-monkey.rushDir.x, monkey.rushDir.z)));
-        monkey.moveTo(at.x, at.y, at.z, yaw, 0.0F);
-        monkey.setYBodyRot(yaw);
-        monkey.setYHeadRot(yaw);
-        level.addFreshEntity(monkey);
-        level.sendParticles(ParticleTypes.POOF, at.x, at.y + 0.3D, at.z, 4, 0.2D, 0.1D, 0.2D, 0.02D);
-        return monkey;
-    }
-
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        entityData.define(MODE, HEEL);
         entityData.define(FLOATING, false);
-        entityData.define(TIER, (byte) 1);
+        entityData.define(AIMING, false);
+        entityData.define(MACHINE_GUN, false);
     }
 
     @Override
@@ -132,48 +95,26 @@ public class MonkeyEntity extends PathfinderMob {
         goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
-    public byte mode() {
-        return entityData.get(MODE);
+    /** Gun up (for the model: arms forward). */
+    public boolean aiming() {
+        return entityData.get(AIMING);
     }
 
-    /** A tower's level (1 for anything else). */
-    public int tier() {
-        return entityData.get(TIER);
+    /** On the machine gun (for the model: shaking with the recoil). */
+    public boolean machineGun() {
+        return entityData.get(MACHINE_GUN);
     }
 
-    /** Ticks a tower has left. */
-    public int ticksLeft() {
-        return left;
-    }
-
-    /** A tower one level up (its time starts over): what it holds shows the level - an arrow, a crossbow, TNT. */
-    public void upgrade(int ticks) {
-        int tier = Math.min(MAX_TIER, tier() + 1);
-        entityData.set(TIER, (byte) tier);
-        left = ticks;
-        equipFor(tier);
+    /** X: the machine gun for {@code ticks}. */
+    public void startMachineGun(int ticks) {
+        machineGunLeft = ticks;
+        reload = 0;
+        entityData.set(MACHINE_GUN, true);
         if (level() instanceof ServerLevel level) {
-            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 0.6D, getZ(), 12, 0.3D, 0.4D, 0.3D, 0.0D);
-            com.pfkfks.flightsuit.fx.KiFx.burst(level, position().add(0.0D, 0.1D, 0.0D), com.pfkfks.flightsuit.fx.KiFx.GOLD, 1.2F, 10,
-                    com.pfkfks.flightsuit.fx.KiFx.RING);
-            level.playSound(null, blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.8F);
+            com.pfkfks.flightsuit.fx.KiFx.aura(level, this, com.pfkfks.flightsuit.fx.KiFx.FIRE, ticks);
+            level.playSound(null, blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.8F, 1.6F);
+            level.playSound(null, blockPosition(), SoundEvents.PANDA_AMBIENT, SoundSource.PLAYERS, 0.8F, 2.0F);
         }
-    }
-
-    private void equipFor(int tier) {
-        setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(switch (tier) {
-            case 2 -> net.minecraft.world.item.Items.CROSSBOW;
-            case 3 -> net.minecraft.world.item.Items.TNT;
-            default -> net.minecraft.world.item.Items.ARROW;
-        }));
-    }
-
-    /** The owner's towers about (oldest first). */
-    public static java.util.List<MonkeyEntity> towersOf(ServerLevel level, Player owner) {
-        java.util.List<MonkeyEntity> towers = new java.util.ArrayList<>(level.getEntitiesOfClass(MonkeyEntity.class,
-                owner.getBoundingBox().inflate(96.0D), monkey -> monkey.isOwnedBy(owner) && monkey.mode() == TURRET && monkey.isAlive()));
-        towers.sort(Comparator.comparingInt((MonkeyEntity monkey) -> monkey.tickCount).reversed());
-        return towers;
     }
 
     /** Floating at the shoulder (for the renderer: legs tucked). */
@@ -192,7 +133,7 @@ public class MonkeyEntity extends PathfinderMob {
     /** The owner's own monkey (not the moves'), if one of theirs is loaded near them. */
     public static Optional<MonkeyEntity> of(ServerLevel level, Player owner) {
         return level.getEntitiesOfClass(MonkeyEntity.class, owner.getBoundingBox().inflate(64.0D),
-                monkey -> monkey.isOwnedBy(owner) && monkey.mode() == HEEL).stream().findFirst();
+                monkey -> monkey.isOwnedBy(owner) && monkey.isAlive()).stream().findFirst();
     }
 
     private boolean foe(LivingEntity entity) {
@@ -213,12 +154,7 @@ public class MonkeyEntity extends PathfinderMob {
         if (level().isClientSide) {
             return;
         }
-        Player owner = getOwner();
-        switch (mode()) {
-            case TURRET -> tickTurret(owner);
-            case RUSH -> tickRush(owner);
-            default -> tickHeel(owner);
-        }
+        tickHeel(getOwner());
     }
 
     // ---------------------------------------------------------------- at heel
@@ -229,6 +165,7 @@ public class MonkeyEntity extends PathfinderMob {
             poof();
             return;
         }
+        tickGun(owner);
         double distance = distanceTo(owner);
         boolean ownerFlying = owner.getAbilities().flying || !owner.onGround() && owner.fallDistance < 0.1F && !owner.isInWater();
         if (distance > 24.0D) {
@@ -275,94 +212,70 @@ public class MonkeyEntity extends PathfinderMob {
         }
     }
 
-    // ---------------------------------------------------------------- monkey towers (2026-10-12, Bloons-style)
+    // ---------------------------------------------------------------- the gun (2026-10-12)
 
-    private void tickTurret(@Nullable Player owner) {
-        if (--left <= 0 || owner == null || owner.level() != level()) {
-            poof();
+    /** A pistol shot every so often at its owner's fight; on the machine gun, a stream of them. */
+    private void tickGun(Player owner) {
+        if (machineGunLeft > 0 && --machineGunLeft == 0) {
+            entityData.set(MACHINE_GUN, false);
+        }
+        if (aimLeft > 0 && --aimLeft == 0) {
+            entityData.set(AIMING, false);
+        }
+        if (--reload > 0) {
             return;
         }
-        getNavigation().stop();
-        setDeltaMovement(getDeltaMovement().multiply(0.2D, 1.0D, 0.2D));
-        int tier = tier();
-        int interval = tier == 3 ? SuitTuning.TOWER_BOMB_INTERVAL : tier == 2 ? SuitTuning.TOWER_TRIPLE_INTERVAL : SuitTuning.TOWER_DART_INTERVAL;
-        double range = SuitTuning.TOWER_RANGE + (tier - 1) * 2.0D;
-        if (left % 10 == 0) {
-            // Watching the way it guards between throws.
-            LivingEntity near = nearestFoe(range);
-            if (near != null) {
-                getLookControl().setLookAt(near, 60.0F, 60.0F);
-                lookAt(near, 60.0F, 60.0F);
-            }
+        boolean machine = machineGunLeft > 0;
+        double range = machine ? SuitTuning.MONKEY_MG_RANGE : SuitTuning.MONKEY_PISTOL_RANGE;
+        LivingEntity target = owner.getLastHurtMob();
+        if (target == null || !foe(target) || target.distanceTo(this) > range || !hasLineOfSight(target)
+                || owner.tickCount - owner.getLastHurtMobTimestamp() > 200) {
+            target = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(range), this::foe).stream()
+                    .filter(entity -> entity.distanceTo(this) <= range && hasLineOfSight(entity))
+                    .min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
         }
-        if (left % interval != 0) {
-            return;
-        }
-        LivingEntity target = nearestFoe(range);
         if (target == null) {
+            reload = 5;
             return;
         }
+        reload = machine ? SuitTuning.MONKEY_MG_INTERVAL : SuitTuning.MONKEY_PISTOL_INTERVAL;
+        aimLeft = 20;
+        entityData.set(AIMING, true);
         lookAt(target, 360.0F, 360.0F);
         setYBodyRot(getYRot());
         setYHeadRot(getYRot());
-        Vec3 hand = position().add(0.0D, getBbHeight() * 0.8D, 0.0D);
-        Vec3 aim = target.getBoundingBox().getCenter().subtract(hand);
-        swing(InteractionHand.MAIN_HAND, true);
-        ServerLevel level = (ServerLevel) level();
-        if (tier == 3) {
-            // A lit bomb lobbed a little high.
-            Vec3 dir = aim.normalize().add(0.0D, 0.08D, 0.0D).normalize();
-            KiShots.fire(level, owner, KiShots.Style.BURNING, hand.add(dir.scale(0.4D)), dir, 1.0D, range + 4.0D, SuitTuning.TOWER_BOMB_DAMAGE,
-                    SuitTuning.TOWER_BOMB_RADIUS, this::foe);
-            level.playSound(null, blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 0.5F, 1.6F);
-            return;
-        }
-        // Darts thrown with a little lift for the drop.
-        Vec3 dir = aim.add(0.0D, aim.horizontalDistance() * 0.08D, 0.0D).normalize();
-        int darts = tier == 2 ? 3 : 1;
-        for (int i = 0; i < darts; i++) {
-            Vec3 d = dir.yRot((float) Math.toRadians((i - (darts - 1) / 2.0D) * 8.0D));
-            MonkeyDartEntity.throwDart(level, owner, hand.add(d.scale(0.3D)), d, 2.2F, SuitTuning.TOWER_DART_DAMAGE);
-        }
-        level.playSound(null, blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 0.6F, 1.6F);
+        shoot(owner, target, machine ? SuitTuning.MONKEY_MG_DAMAGE : SuitTuning.MONKEY_PISTOL_DAMAGE, machine);
     }
 
-    private @Nullable LivingEntity nearestFoe(double range) {
-        return level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(range), this::foe).stream()
-                .filter(entity -> entity.distanceTo(this) <= range && hasLineOfSight(entity))
-                .min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
-    }
-
-    // ---------------------------------------------------------------- Monkey Rush
-
-    private void tickRush(@Nullable Player owner) {
-        if (--left <= 0 || owner == null || owner.level() != level()) {
-            poof();
-            return;
-        }
-        getNavigation().stop();
-        Vec3 step = rushDir.scale(0.7D);
-        // Up a step if a block's in the way; stopped dead by a wall.
-        setDeltaMovement(step.x, onGround() && horizontalCollision ? 0.42D : getDeltaMovement().y, step.z);
-        hurtMarked = true;
-        if (horizontalCollision && !onGround()) {
-            left = Math.min(left, 2);
-        }
+    /** One round: hitscan, a thin tracer from the muzzle to where it struck (like the Mark 1's shoulder guns). */
+    private void shoot(Player owner, LivingEntity target, float damage, boolean machine) {
         ServerLevel level = (ServerLevel) level();
-        if (tickCount % 2 == 0) {
-            level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 0.1D, getZ(), 1, 0.1D, 0.0D, 0.1D, 0.01D);
+        Vec3 muzzle = position().add(0.0D, getBbHeight() * 0.65D, 0.0D).add(Vec3.directionFromRotation(0.0F, getYRot()).scale(0.3D));
+        Vec3 dir = target.getBoundingBox().getCenter().subtract(muzzle).normalize();
+        if (machine) {
+            // A little spray.
+            dir = dir.add((random.nextDouble() - 0.5D) * 0.06D, (random.nextDouble() - 0.5D) * 0.06D, (random.nextDouble() - 0.5D) * 0.06D).normalize();
         }
-        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(SuitTuning.RUSH_WIDTH * 0.5D, 0.5D, SuitTuning.RUSH_WIDTH * 0.5D),
-                entity -> foe(entity) && !rushHit.contains(entity))) {
-            rushHit.add(victim);
+        Vec3 far = muzzle.add(dir.scale(SuitTuning.MONKEY_MG_RANGE + 4.0D));
+        net.minecraft.world.phys.BlockHitResult block = level.clip(new net.minecraft.world.level.ClipContext(muzzle, far,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+        Vec3 end = block.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? far : block.getLocation();
+        net.minecraft.world.phys.EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(level, this, muzzle, end,
+                new net.minecraft.world.phys.AABB(muzzle, end).inflate(0.4D), entity -> entity instanceof LivingEntity living && foe(living));
+        int colour = 0xFFE9A0;
+        if (hit != null) {
+            end = hit.getLocation();
+            LivingEntity victim = (LivingEntity) hit.getEntity();
             victim.invulnerableTime = 0;
-            victim.hurt(owner instanceof ServerPlayer player ? damageSources().playerAttack(player) : damageSources().mobAttack(this), SuitTuning.RUSH_DAMAGE);
-            victim.knockback(1.0D, -rushDir.x, -rushDir.z);
-            victim.setDeltaMovement(victim.getDeltaMovement().add(0.0D, 0.35D, 0.0D));
-            victim.hurtMarked = true;
-            swing(InteractionHand.MAIN_HAND);
-            level.playSound(null, victim.blockPosition(), SoundEvents.PLAYER_ATTACK_KNOCKBACK, SoundSource.PLAYERS, 0.8F, 1.3F);
+            victim.hurt(owner instanceof ServerPlayer player ? damageSources().playerAttack(player) : damageSources().mobAttack(this), damage);
+            com.pfkfks.flightsuit.fx.KiFx.burst(level, end, colour, 0.4F, 3, com.pfkfks.flightsuit.fx.KiFx.SPARK);
         }
+        com.pfkfks.flightsuit.fx.KiFx.beam(level, muzzle, end, colour, machine ? 0.05F : 0.06F, 3, com.pfkfks.flightsuit.fx.KiFx.BEAM_THIN,
+                null, com.pfkfks.flightsuit.fx.KiFx.AT_POS, null);
+        com.pfkfks.flightsuit.fx.KiFx.burst(level, muzzle, colour, machine ? 0.3F : 0.35F, 2, com.pfkfks.flightsuit.fx.KiFx.FLASH);
+        swing(InteractionHand.MAIN_HAND);
+        level.playSound(null, blockPosition(), machine ? SoundEvents.CROSSBOW_SHOOT : SoundEvents.FIREWORK_ROCKET_BLAST,
+                SoundSource.PLAYERS, machine ? 0.35F : 0.5F, machine ? 1.9F + random.nextFloat() * 0.2F : 1.8F);
     }
 
     /** Gone in a puff of smoke. */
@@ -384,19 +297,14 @@ public class MonkeyEntity extends PathfinderMob {
 
     @Override
     public boolean isPushable() {
-        return mode() == HEEL && !floating();
+        return !floating();
     }
 
     @Override
     protected void pushEntities() {
-        if (mode() == HEEL && !floating()) {
+        if (!floating()) {
             super.pushEntities();
         }
-    }
-
-    @Override
-    public boolean isNoAi() {
-        return mode() != HEEL;
     }
 
     @Override

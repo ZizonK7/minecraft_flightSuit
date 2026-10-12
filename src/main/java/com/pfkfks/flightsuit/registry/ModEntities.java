@@ -181,14 +181,6 @@ public final class ModEntities {
                     .clientTrackingRange(10)
                     .build("phantom_clone"));
 
-    public static final RegistryObject<EntityType<com.pfkfks.flightsuit.entity.MonkeyDartEntity>> MONKEY_DART = ENTITY_TYPES.register("monkey_dart",
-            () -> EntityType.Builder.<com.pfkfks.flightsuit.entity.MonkeyDartEntity>of(com.pfkfks.flightsuit.entity.MonkeyDartEntity::new, MobCategory.MISC)
-                    .sized(0.5F, 0.5F)
-                    .noSave()
-                    .clientTrackingRange(6)
-                    .updateInterval(20)
-                    .build("monkey_dart"));
-
     /** The townsfolk of the fortresses and Hero City (after the M16 test) - never saved. */
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.town.TownsfolkEntity>> TOWNSFOLK = ENTITY_TYPES.register("townsfolk",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.town.TownsfolkEntity>of(com.pfkfks.flightsuit.town.TownsfolkEntity::new, MobCategory.MISC)
