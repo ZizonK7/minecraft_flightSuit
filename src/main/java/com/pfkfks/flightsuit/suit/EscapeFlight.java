@@ -198,11 +198,11 @@ public final class EscapeFlight {
         List<SpaceshipEntity> ships = level.getEntitiesOfClass(SpaceshipEntity.class, player.getBoundingBox().inflate(256.0D),
                 ship -> !ship.inFlight() && player.getUUID().equals(ship.owner()));
         if (!ships.isEmpty()) {
-            Vec3 ship = ships.get(0).position();
-            return new Vec3(ship.x + 3.0D, ship.y, ship.z);
+            SpaceshipEntity ship = ships.get(0);
+            return new Vec3(ship.getX() + ship.getBbWidth() / 2.0D + 1.5D, ship.getY(), ship.getZ());
         }
         BlockPos site = SpaceTravel.landingPoint(level, planet, player);
-        return new Vec3(site.getX() + 3.5D, site.getY(), site.getZ() + 0.5D);
+        return new Vec3(site.getX() + 4.5D, site.getY(), site.getZ() + 0.5D);
     }
 
     /** Cruising height: well over the ground at both ends; under the roof in a dimension that has one. */

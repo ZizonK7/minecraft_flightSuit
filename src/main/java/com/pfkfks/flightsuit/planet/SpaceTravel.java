@@ -156,7 +156,7 @@ public final class SpaceTravel {
         if (!readyToFly(player)) {
             return false;
         }
-        if (!level.canSeeSky(pad.getBlockPos().above(3))) {
+        if (!level.canSeeSky(pad.getBlockPos().above(6))) {
             player.sendSystemMessage(Component.translatable("space.flightsuit.need_sky").withStyle(ChatFormatting.GRAY));
             return false;
         }
@@ -198,7 +198,7 @@ public final class SpaceTravel {
 
     private static @Nullable LaunchPadBlockEntity padNear(ServerPlayer player) {
         BlockPos at = player.blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(at.offset(-3, -2, -3), at.offset(3, 1, 3))) {
+        for (BlockPos pos : BlockPos.betweenClosed(at.offset(-5, -2, -5), at.offset(5, 1, 5))) {
             if (player.level().getBlockEntity(pos) instanceof LaunchPadBlockEntity pad) {
                 return pad;
             }
@@ -278,7 +278,7 @@ public final class SpaceTravel {
         if (pilot != null) {
             pilot.removeEffect(MobEffects.SLOW_FALLING);
             pilot.fallDistance = 0.0F;
-            Vec3 out = ship.position().add(Vec3.directionFromRotation(0.0F, ship.getYRot()).scale(2.2D));
+            Vec3 out = ship.position().add(Vec3.directionFromRotation(0.0F, ship.getYRot()).scale(ship.getBbWidth() / 2.0D + 1.3D));
             int ground = ship.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(out.x), Mth.floor(out.z));
             pilot.teleportTo(out.x, Math.max(ground, ship.getY()), out.z);
         }
@@ -312,8 +312,9 @@ public final class SpaceTravel {
         }
         int dx = Math.floorMod(pilot.getUUID().hashCode(), 9) - 4;
         int dz = Math.floorMod(pilot.getUUID().hashCode() >> 8, 9) - 4;
-        int x = site.getX() + dx * 3;
-        int z = site.getZ() + dz * 3;
+        // Far enough apart for the big hull (2026-10-12).
+        int x = site.getX() + dx * 7;
+        int z = site.getZ() + dz * 7;
         level.getChunkAt(new BlockPos(x, 0, z));
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (!level.getFluidState(new BlockPos(x, y - 1, z)).isEmpty()) {

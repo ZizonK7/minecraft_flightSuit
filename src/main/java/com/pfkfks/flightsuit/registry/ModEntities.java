@@ -102,7 +102,7 @@ public final class ModEntities {
 
     public static final RegistryObject<EntityType<com.pfkfks.flightsuit.planet.SpaceshipEntity>> SPACESHIP = ENTITY_TYPES.register("spaceship",
             () -> EntityType.Builder.<com.pfkfks.flightsuit.planet.SpaceshipEntity>of(com.pfkfks.flightsuit.planet.SpaceshipEntity::new, MobCategory.MISC)
-                    .sized(2.4F, 2.4F)
+                    .sized(5.4F, 5.6F)
                     .clientTrackingRange(16)
                     .updateInterval(1)
                     .build("spaceship"));

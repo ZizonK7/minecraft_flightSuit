@@ -15,12 +15,15 @@ import net.minecraft.util.Mth;
 public class SpaceshipRenderer extends EntityRenderer<SpaceshipEntity> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(FlightSuitMod.MODID, "textures/entity/spaceship.png");
 
+    /** 2026-10-12 (user: "실제 부르마가 만든 우주선처럼"): the model drawn 2.4x - about 5.4 blocks across. */
+    public static final float SCALE = SpaceshipEntity.SCALE;
+
     private final SpaceshipModel model;
 
     public SpaceshipRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.model = new SpaceshipModel(context.bakeLayer(SpaceshipModel.LAYER));
-        this.shadowRadius = 1.3F;
+        this.shadowRadius = 1.3F * SCALE;
     }
 
     @Override
@@ -38,7 +41,7 @@ public class SpaceshipRenderer extends EntityRenderer<SpaceshipEntity> {
             poseStack.mulPose(Axis.ZP.rotationDegrees(Mth.sin(t * 0.7F) * 1.5F));
             poseStack.mulPose(Axis.XP.rotationDegrees(Mth.cos(t * 0.5F) * 1.5F));
         }
-        poseStack.scale(-1.0F, -1.0F, 1.0F);
+        poseStack.scale(-SCALE, -SCALE, SCALE);
         model.renderToBuffer(poseStack, buffers.getBuffer(model.renderType(TEXTURE)), packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
         poseStack.popPose();
         super.render(ship, entityYaw, partialTick, poseStack, buffers, packedLight);
