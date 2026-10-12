@@ -272,7 +272,8 @@ public final class SuitWeapons {
                 || entity instanceof SuitCompanionEntity companion && companion.isOwnedBy(owner)
                 || entity instanceof RemoteBodyEntity body && owner.getUUID().equals(body.getOwnerId())
                 || entity instanceof CardEntity || entity instanceof MissileEntity
-                || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner);
+                || entity instanceof com.pfkfks.flightsuit.entity.MonkeyEntity monkey && monkey.isOwnedBy(owner)
+                || entity instanceof com.pfkfks.flightsuit.entity.PhantomCloneEntity clone && clone.isOwnedBy(owner);
     }
 
     /**

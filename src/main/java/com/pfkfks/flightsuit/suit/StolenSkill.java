@@ -78,7 +78,18 @@ public enum StolenSkill {
     /** Evoker: a row of fangs along the ground. */
     EVOKER_FANGS(700, 120, 0, 6.0F),
     /** Wither skeleton: a cut that withers. */
-    WITHER_SLASH(500, 80, 0, 8.0F);
+    WITHER_SLASH(500, 80, 0, 8.0F),
+    // 2026-10-12 (user: the common monsters too).
+    /** Skeleton, stray: three arrows loosed at once where you look. */
+    SKELETON_ARROWS(400, 40, 0, 0.0F),
+    /** Spider: a line of web at the aimed foe, Spider-Man style - slowed, and held fast by the third in a row. */
+    SPIDER_WEB(300, 20, 0, 2.0F),
+    /** Witch: a splash potion thrown where you look - harming, poison, slowness or weakness on everything round. */
+    WITCH_POTION(600, 60, 0, 4.0F),
+    /** Slime, magma cube: three copies of you, weaker than you, fight beside you for fifteen seconds. */
+    SLIME_CLONES(1_500, 400, 0, 0.0F),
+    /** Zombie: nothing to press - a blow that would kill you leaves you on half a heart instead (then two minutes' rest). */
+    ZOMBIE_UNDYING(0, 2_400, 0, 0.0F);
 
     private static final DustParticleOptions KAME_GLOW = new DustParticleOptions(new Vector3f(0.35F, 0.7F, 1.0F), 2.8F);
     private static final DustParticleOptions GALICK_GLOW = new DustParticleOptions(new Vector3f(0.7F, 0.3F, 1.0F), 2.8F);
@@ -136,6 +147,11 @@ public enum StolenSkill {
         return null;
     }
 
+    /** Kept rather than used: works on its own while it's the phantom's card (B only says how it stands). */
+    public boolean passive() {
+        return this == ZOMBIE_UNDYING;
+    }
+
     /** A vanilla monster's one skill, by kind (they don't record when they use it). */
     public static @Nullable StolenSkill ofMob(LivingEntity mob) {
         if (mob instanceof Creeper) {
@@ -152,6 +168,21 @@ public enum StolenSkill {
         }
         if (mob instanceof WitherSkeleton) {
             return WITHER_SLASH;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.AbstractSkeleton) {
+            return SKELETON_ARROWS;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.Spider) {
+            return SPIDER_WEB;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.Witch) {
+            return WITCH_POTION;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.Slime) {
+            return SLIME_CLONES;
+        }
+        if (mob instanceof net.minecraft.world.entity.monster.Zombie) {
+            return ZOMBIE_UNDYING;
         }
         return null;
     }
@@ -232,7 +263,68 @@ public enum StolenSkill {
             case WITHER_SLASH -> {
                 return witherSlash(level, caster, aimed, damage, hits);
             }
+            case SKELETON_ARROWS -> arrows(level, caster, from, look);
+            case SPIDER_WEB -> {
+                return web(level, caster, from, aimed, damage, hits);
+            }
+            case WITCH_POTION -> {
+                KiShots.fire(level, caster, KiShots.Style.POTION, from, look.add(0.0D, 0.04D, 0.0D), 1.0D, 24.0D, damage, 3.0D, hits);
+                level.playSound(null, from.x, from.y, from.z, SoundEvents.WITCH_THROW, SoundSource.PLAYERS, 1.0F, 1.0F);
+            }
+            case SLIME_CLONES -> {
+                if (!(caster instanceof ServerPlayer player)) {
+                    return false;
+                }
+                com.pfkfks.flightsuit.entity.PhantomCloneEntity.spawn(level, player, 3, 300);
+            }
+            case ZOMBIE_UNDYING -> {
+                return false;
+            }
         }
+        return true;
+    }
+
+    private static void arrows(ServerLevel level, LivingEntity caster, Vec3 from, Vec3 look) {
+        for (int i = -1; i <= 1; i++) {
+            Vec3 dir = look.yRot((float) Math.toRadians(i * 3.0D));
+            net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(level, caster);
+            arrow.setPos(from.x, from.y, from.z);
+            arrow.shoot(dir.x, dir.y, dir.z, 3.0F, 0.5F);
+            arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.CREATIVE_ONLY;
+            level.addFreshEntity(arrow);
+        }
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.SKELETON_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    private static final String WEB_HITS = "flightsuit_web_hits";
+    private static final String WEB_LAST = "flightsuit_web_last";
+
+    /** A line of web straight to the aimed foe: slowed; the third within four seconds holds it fast for two. */
+    private static boolean web(ServerLevel level, LivingEntity caster, Vec3 from, @Nullable LivingEntity aimed, float damage,
+                               Predicate<LivingEntity> hits) {
+        if (aimed == null || !aimed.isAlive() || !hits.test(aimed) || aimed.distanceTo(caster) > 24.0D) {
+            return false;
+        }
+        Vec3 at = aimed.getBoundingBox().getCenter();
+        KiFx.beam(level, from, at, KiFx.WHITE, 0.12F, 6, KiFx.BEAM_THIN, null, KiFx.AT_POS, null);
+        aimed.invulnerableTime = 0;
+        aimed.hurt(caster instanceof ServerPlayer player ? caster.damageSources().playerAttack(player)
+                : caster.damageSources().mobAttack(caster), damage);
+        CompoundTag data = aimed.getPersistentData();
+        long now = level.getGameTime();
+        int count = now - data.getLong(WEB_LAST) <= 80L ? data.getInt(WEB_HITS) + 1 : 1;
+        data.putLong(WEB_LAST, now);
+        if (count >= 3) {
+            data.remove(WEB_HITS);
+            HulkbusterArts.stun(level, aimed, 40);
+            KiFx.burst(level, at, KiFx.WHITE, Math.max(1.2F, aimed.getBbWidth() * 1.6F), 40, KiFx.RING);
+            level.playSound(null, aimed.blockPosition(), SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 1.0F, 0.8F);
+        } else {
+            data.putInt(WEB_HITS, count);
+            aimed.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, count));
+            KiFx.burst(level, at, KiFx.WHITE, 0.8F, 8, KiFx.SPARK);
+        }
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.SPIDER_STEP, SoundSource.PLAYERS, 1.0F, 1.6F);
         return true;
     }
 
@@ -466,6 +558,30 @@ public enum StolenSkill {
             }
             return;
         }
+    }
+
+    // ---------------------------------------------------------------- the zombie's undying (passive)
+
+    /** A killing blow on a phantom holding the zombie's card: back up on half a heart, if it has rested since. */
+    @SubscribeEvent
+    public static void onDeath(net.minecraftforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                || SuitWeapons.armedClass(player) != SuitClass.PHANTOM || PhantomArts.stolen(player) != ZOMBIE_UNDYING) {
+            return;
+        }
+        SuitWeapons.State state = SuitWeapons.state(player);
+        ServerLevel level = player.serverLevel();
+        long now = level.getGameTime();
+        if (now < state.stolenReady) {
+            return;
+        }
+        event.setCanceled(true);
+        player.setHealth(1.0F);
+        state.stolenReady = now + ZOMBIE_UNDYING.cooldownTicks();
+        SuitWeapons.sendStatus(player, state);
+        KiFx.burst(level, player.position().add(0.0D, 1.0D, 0.0D), 0x5FA05A, 2.0F, 14, KiFx.RING);
+        level.playSound(null, player.blockPosition(), SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 1.0F, 1.2F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.undying"), true);
     }
 
     @SubscribeEvent
