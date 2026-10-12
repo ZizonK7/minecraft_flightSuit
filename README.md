@@ -4,6 +4,7 @@
 
 - 기획과 의도, 로드맵은 [DESIGN.md](DESIGN.md)에 정리되어 있습니다.
 - **M18** (2026-10-12 main 반영): 5차 피드백 - 스크랩 Mark 0·캐논 슈터 Mark 6·비숍 Mark 7과 슈트별 키 6개, 검·지팡이·대포 아이템, 케이블·발전소·기술자, 살아 있는 마을(주막·소문·일기토·봉화), 행성 전용 지형, 드래곤볼 인물 입체 부품. 1·2·3차 테스트 피드백(용권, Z 방패, 체인, 총력 사냥, 용권 시야·초사이어인 3 보이기, 시원한 포탄 구덩이, 용사 영웅 모드 등) 반영. 게임 흐름 1차(2026-10-12): 바닐라 마을 상자의 오수전·달러, 마을 직업 **광부**, 상인의 **외부 상단 가게**, 캐논 슈터의 **캐논 점프·착지 충격**. 아직 안 본 항목은 [docs/TEST_PLAN.md](docs/TEST_PLAN.md). 성채·행성을 월드 생성 구조물로 바꾸는 것은 가안(DESIGN.md 6장).
+- **슈트 역할 2차** (2026-10-12, 브랜치 `claude/happy-goodall-hms6ci`, 인게임 테스트 전): 슈트마다 역할을 다시 잡음 - Mark 2 `B` **긴급 탈출**(스테이션·우주선으로 날아 돌아감), 팬텀 훔치기에 스켈레톤·거미·마녀·슬라임(분신)·좀비(불사), 비숍 쉘을 **아군에게 지정**, 헐크버스터 **보스 게이지와 피니쉬 컷신**, 캐논 슈터 `X` 원숭이 기관총·`C` 고정 화염 분출·`B` **C4**, 링크 `B` **자장가**(재우고 깨운 뒤 3초 피해 2배), 트랭크스 버닝 어택 중 고정·**신룡 소원으로만 얻는 종결 슈트**, 부르마 크기 **우주선**과 착륙장, **우주선 격납고** 2벌. 결정과 Claude 판단은 DESIGN.md 5장 "슈트 역할 2차", 확인 항목은 [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
 - M1~M17 (M17: 슈트 3벌 기술·궁극기 키 `V`·팬텀 기술 훔치기, 컷신 엔진과 드래곤볼 1~4장 재구성, 서쪽 도시·나메크 마을)과 그 뒤 피드백 반영분은 2026-10-10 인게임 테스트를 통과했습니다. M17 테스트 피드백으로 **기 기술을 파티클 대신 직접 그린 빛으로** 바꾸고 컷신 카메라가 가려지지 않게 했으며, 재배맨을 새로 그렸습니다 (큰 머리·가는 팔다리) (아래 "기 기술의 모습"). 남은 확인은 [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
 - 게임 안에서는 **플라이트 슈트 안내서**(처음 접속하면 받음)와 아이템 **Shift 툴팁**으로 조작법을 볼 수 있고, JEI가 있으면 R/U로 조합법이 나옵니다.
 - 개인 프로젝트입니다.
@@ -480,11 +481,11 @@ src/main/java/com/pfkfks/flightsuit/
   planet/dbz/ 드래곤볼: 인물(DbzCharacter, DbzFighterEntity: NPC·동료·보스·부하, 동작 DbzAction, 기술표 DbzMoves), 볼거리(DbzLandmarks, 서쪽 도시 WestCity), 열린 세계(DbzEarth), 1~4장 장면·컷신 연결·원기옥(DbzSaga), 컷신 대본(DbzCutscenes), 테스트 명령(DbzCommands), 드래곤볼·신룡(DragonBalls, ShenronEntity), 스카우터, 선두콩
   fx/        기 기술 그림(KiFx: 광선·기 모으기·기탄·폭발·빛기둥·오라·태양권을 근처 클라이언트에 보냄. 그리는 쪽은 client/KiFxClient·KiDraw)
   cutscene/  컷신 엔진(M17): 대본과 빌더(Cutscene), 등록(Cutscenes), 서버 재생·건너뛰기(CutsceneRunner), 카메라(CameraEntity). 클라이언트 쪽은 client/CutsceneClient·CutsceneOverlay
-  planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock), 우주선(SpaceshipEntity), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
+  planet/    우주와 행성: 행성(Planet), 발사대(LaunchPadBlock, 착륙장), 우주선(SpaceshipEntity), 격납고(Hangar), 이륙·우주 건너기·착륙·귀환·차원 넘는 원격(SpaceTravel), 저장(PlanetData), 행성 스토리(PlanetStory)
   thanos/    타노스 사가: 인피니티 스톤(InfinityStone, InfinityStoneItem), 타노스 군단(ThanosForce, ThanosForceEntity: 치타우리·블랙 오더·타노스·레드 스컬), 타이탄 볼거리(TitanSites), 스톤 사냥·전조(ThanosSaga), 최종전(ThanosRaid)
   thief/     배트맨 일당: 도둑 종류(ThiefType), 도둑 엔티티(ThiefEntity: 몰래 털기·발견·EMP·도주), 일정·계산 처리·상자 털기(ThiefManager), 저장(ThiefData), 배트랭·갈고리 총·연막탄, 명령어
   village/   마을: 회관(VillageHallBlockEntity), 주민(ResidentEntity)과 직업·재능, 건축(VillageWorks: 복구·주문·개축·건의, Blueprint 설계도, Construction), 설계도 아이템, 피해 기록, 주민 AI(village/ai)
-  entity/    착용 연출 파츠 엔티티, 미사일·카드, 동료 슈트 엔티티와 AI(entity/ai), 원격 조종 중 남는 몸
+  entity/    착용 연출 파츠 엔티티, 미사일·카드, 동료 슈트 엔티티와 AI(entity/ai), 원격 조종 중 남는 몸, 캐논 원숭이(MonkeyEntity: 권총·기관총)·포탄, 팬텀 분신(PhantomCloneEntity)
   client/    아머·안경 모델, 몸 동작 애니메이션(SuitAnimator), 비행 조작, 카메라, HUD, 스테이션 렌더러(로봇 팔), 주민 렌더러·화면, 회관 게시판, 설계도 미리보기
   town/      성채·히어로 시티·서쪽 도시·나메크 마을의 마을 사람(TownsfolkEntity, 역할 TownRole, 하루 일과 TownLife), 거래(TownTrades: 오수전·달러·제니), 부탁(TownRequests), 배치(TownPlan)
   guide/     안내서 아이템(GuideBookItem), 아이템 사용법(ItemTips: Shift 툴팁·JEI 정보 페이지), JEI 연동(JeiFlightSuit, 선택)
