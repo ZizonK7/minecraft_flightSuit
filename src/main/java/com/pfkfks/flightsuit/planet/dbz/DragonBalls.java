@@ -62,7 +62,8 @@ import java.util.UUID;
  * They lie 200-900 blocks out from the landing site and appear on the ground when someone comes near; Bulma's
  * radar points to the nearest. Set all seven down together on the planet (within a few blocks of each other):
  * they glow and the ground rumbles, then Shenron rises from them and grants one wish - strength (+2 hearts,
- * up to +6), a better suit battery (one upgrade past Iron Man's), treasure, or senzu beans. Then the balls
+ * up to +6), a better suit battery (one upgrade past Iron Man's), the Trunks suit (2026-10-12: no longer crafted),
+ * treasure, or senzu beans. Then the balls
  * fly apart and are stone for three days.
  */
 @Mod.EventBusSubscriber(modid = FlightSuitMod.MODID)
@@ -473,7 +474,7 @@ public final class DragonBalls {
         if (summoner != null) {
             PENDING.put(summoner.getUUID(), level.getGameTime() + WISH_TICKS);
             MutableComponent wishes = Component.empty();
-            for (String wish : new String[]{"strength", "suit", "treasure", "senzu"}) {
+            for (String wish : new String[]{"strength", "suit", "trunks", "treasure", "senzu"}) {
                 wishes.append(Component.literal("[").append(Component.translatable("dragonball.flightsuit.wish." + wish)).append("]")
                         .withStyle(style -> style.withColor(ChatFormatting.GOLD).withBold(true)
                                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/shenron " + wish))
@@ -661,6 +662,8 @@ public final class DragonBalls {
                 give(player, new ItemStack(ModItems.ARC_REACTOR.get(), 3));
             }
             case "senzu" -> give(player, new ItemStack(ModItems.SENZU_BEAN.get(), 6));
+            // 2026-10-12 (user): the strongest suit isn't crafted - Shenron grants it (or beating Cell, DbzSaga).
+            case "trunks" -> give(player, ModItems.capsuleFor(com.pfkfks.flightsuit.suit.SuitType.TRUNKS_MK5).createFilledCapsule());
             default -> {
                 return false;
             }
