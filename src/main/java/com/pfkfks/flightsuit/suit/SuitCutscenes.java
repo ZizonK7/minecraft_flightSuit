@@ -10,6 +10,7 @@ import com.pfkfks.flightsuit.cutscene.Cutscenes;
 public final class SuitCutscenes {
     public static final String DRAGON_FIST = "suit.dragon_fist";
     public static final String HULK_FINISHER = "suit.hulk_finisher";
+    public static final String HERO_SONG = "suit.hero_song";
 
     private SuitCutscenes() {
     }
@@ -17,6 +18,7 @@ public final class SuitCutscenes {
     public static void registerAll() {
         Cutscenes.register(dragonFist());
         Cutscenes.register(hulkFinisher());
+        Cutscenes.register(heroSong());
     }
 
     /**
@@ -48,6 +50,17 @@ public final class SuitCutscenes {
                 .at(0).shake(40)
                 .shot(20).cam(-2.4, 3.2, -3.4).camTo(-3.0, 3.6, -5.0).look(0, 2.0, 3.0).lookTo(0, 2.6, 9.0)
                 .at(10).shake(10)
+                .build();
+    }
+
+    /**
+     * Link's song (HeroArts.song, 2026-10-12, user: "컷씬은 짧게 피리 부는 느낌"): close in front of him playing, the
+     * camera drifting round to his side (32), then over his shoulder down the line to the one put to sleep (12).
+     */
+    static Cutscene heroSong() {
+        return Cutscene.of(HERO_SONG).free()
+                .shot(32).cam(0.9, 1.55, 2.2).camTo(-1.8, 1.7, 1.5).look(0, 1.55, 0).lookTo(0, 1.6, 0.2)
+                .shot(12).cam(-1.1, 2.0, -2.0).camTo(-1.3, 2.2, -2.6).look(0, 1.2, 8).lookTo(0, 1.0, 9)
                 .build();
     }
 }

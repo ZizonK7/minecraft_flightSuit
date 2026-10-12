@@ -322,7 +322,7 @@ public final class SuitTuning {
     public static final int ESCAPE_STUCK_TICKS = 40;
     public static final int ESCAPE_MAX_TICKS = 1_200;
 
-    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the gale boomerang (B). After the
+    // Mark 4 (HeroArts, M18): shield raised (right click held), the Triforce (V), the song of sleep (B, once the gale boomerang). After the
     // first test ("어렵고 쎄야 하는데 그냥 쎈데"): the chain - every move that differs from the last within CHAIN_WINDOW
     // adds a link, each link CHAIN_STEP more damage; a hit taken breaks it - and the perfect guard.
     public static final int HYLIAN_HOLD_DRAIN = 4;
@@ -338,12 +338,19 @@ public final class SuitTuning {
     public static final int TRIFORCE_TICKS = 200;
     public static final int TRIFORCE_COOLDOWN_TICKS = 1_200;
     public static final float TRIFORCE_MULTIPLIER = 1.5F;
-    public static final int BOOMERANG_COST = 700;
-    public static final int BOOMERANG_COOLDOWN_TICKS = 100;
-    public static final double BOOMERANG_RANGE = 16.0D;
-    public static final double BOOMERANG_SPEED = 1.2D;
-    public static final float BOOMERANG_DAMAGE = 4.0F;
-    public static final int BOOMERANG_STUN_TICKS = 25;
+    /**
+     * The song of sleep (B, 2026-10-12, user: Zoe's sleep in LoL - the gale boomerang went): one foe aimed, a short
+     * tune (SONG_TICKS, the foe drowsy meanwhile), then asleep; the first blow wakes it, and from that blow for
+     * SONG_WAKE_TICKS every hit on it lands twice as hard (Link has no big single hit of his own).
+     */
+    public static final int SONG_COST = 1_200;
+    public static final int SONG_COOLDOWN_TICKS = 320;
+    public static final double SONG_RANGE = 24.0D;
+    public static final int SONG_TICKS = 32;
+    public static final int SLEEP_TICKS = 100;
+    public static final int SLEEP_BOSS_TICKS = 40;
+    public static final int SONG_WAKE_TICKS = 60;
+    public static final float SONG_WAKE_MULTIPLIER = 2.0F;
 
     // Mark 5 (SwordArts, M18): the charged ki slash (right click held) and the ki volley (B).
     public static final int CHARGE_SLASH_TICKS = 16;

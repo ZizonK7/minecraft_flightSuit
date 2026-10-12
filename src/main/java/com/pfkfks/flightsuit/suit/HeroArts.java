@@ -61,28 +61,10 @@ public final class HeroArts {
     static final byte MOVE_SWING = 1;
     static final byte MOVE_SPIN = 2;
     static final byte MOVE_CLAW = 3;
-    static final byte MOVE_BOOMERANG = 4;
+    static final byte MOVE_SONG = 4;
     static final byte MOVE_GUARD = 5;
     private static final DustParticleOptions BEAM_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.85F, 1.0F), 1.3F);
     private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 0.8F);
-
-    /**
-     * M18: the gale boomerang in flight - out along {@code dir} for BOOMERANG_RANGE, then back to the thrower,
-     * stunning whatever it passes (each once per leg).
-     */
-    static final class Boomerang {
-        Vec3 pos;
-        Vec3 dir;
-        double travelled;
-        boolean returning;
-        final java.util.Set<LivingEntity> hit = new java.util.HashSet<>();
-        int fx;
-
-        Boomerang(Vec3 pos, Vec3 dir) {
-            this.pos = pos;
-            this.dir = dir;
-        }
-    }
 
     /** A sword beam in flight. */
     static final class SwordBeam {
@@ -182,7 +164,7 @@ public final class HeroArts {
         tickBeams(player, state);
         tickSpin(player, state);
         tickHook(player, state, suitClass);
-        tickBoomerangs(player, state);
+        tickSong(player, state, suitClass);
         if (suitClass != SuitClass.HERO) {
             state.triforceUntil = 0L;
             state.chain = 0;
@@ -363,84 +345,174 @@ public final class HeroArts {
         player.displayClientMessage(Component.translatable("message.flightsuit.triforce_on"), true);
     }
 
-    // ---------------------------------------------------------------- gale boomerang (B, M18)
+    // ---------------------------------------------------------------- the song of sleep (B, 2026-10-12)
 
-    static void boomerang(ServerPlayer player, SuitWeapons.State state) {
+    private static final String SLEEP_UNTIL = "FlightSuitSleepUntil";
+    private static final String WAKE_UNTIL = "FlightSuitWakeUntil";
+    /** The tune (Zelda's Lullaby, roughly): when each note sounds, and its pitch on the flute. */
+    private static final int[] SONG_AT = {2, 7, 12, 19, 24, 29};
+    private static final float[] SONG_PITCH = {1.335F, 1.587F, 1.189F, 1.335F, 1.587F, 1.189F};
+
+    /** B: the aimed foe hears a short tune on the ocarina (a camera scene for Link) and falls asleep. */
+    static void song(ServerPlayer player, SuitWeapons.State state) {
         long now = player.level().getGameTime();
+        if (state.songTarget != null) {
+            return;
+        }
         if (now < state.skill3Ready) {
             SuitWeapons.cooldownMessage(player, state.skill3Ready - now);
             return;
         }
-        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.BOOMERANG_COST)) {
+        LivingEntity target = SuitWeapons.aim(player, SuitTuning.SONG_RANGE).target();
+        if (target == null) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.no_target"), true);
+            return;
+        }
+        if (!SuitEnergy.tryDrain(player, EquipmentSlot.CHEST, SuitTuning.SONG_COST)) {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.skill3Ready = now + SuitTuning.BOOMERANG_COOLDOWN_TICKS;
-        link(player, state, MOVE_BOOMERANG);
+        state.skill3Ready = now + SuitTuning.SONG_COOLDOWN_TICKS;
+        link(player, state, MOVE_SONG);
         SuitWeapons.sendStatus(player, state);
+        state.songTarget = target;
+        state.songTicks = 0;
+        // Facing the one it's for, so the scene's last shot looks down the line at it.
+        Vec3 to = target.position().subtract(player.position());
+        float yaw = (float) (Math.atan2(-to.x, to.z) * (180.0D / Math.PI));
+        player.setYRot(yaw);
+        player.setYBodyRot(yaw);
+        player.setYHeadRot(yaw);
         ServerLevel level = player.serverLevel();
-        Vec3 look = player.getLookAngle();
-        Vec3 from = player.getEyePosition().add(look.scale(0.6D)).add(0.0D, -0.25D, 0.0D);
-        Boomerang boomerang = new Boomerang(from, look);
-        boomerang.fx = KiFx.shot(level, (byte) KiShots.Style.DISC.ordinal(), 0x7CE8A0, 0.9F, from, look, SuitTuning.BOOMERANG_SPEED,
-                SuitTuning.BOOMERANG_RANGE);
-        state.boomerangs.add(boomerang);
-        player.swing(InteractionHand.OFF_HAND, true);
-        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW, SoundSource.PLAYERS, 1.0F, 1.3F);
+        com.pfkfks.flightsuit.cutscene.CutsceneRunner.play(level, SuitCutscenes.HERO_SONG, player.position(), yaw,
+                java.util.Map.of(), actors -> {
+                }, true, java.util.List.of(player));
+        ModNetwork.sendToTrackingAndSelf(player, SuitAnimS2CPacket.oneShot(player, SuitAnim.OCARINA, 0));
+        player.displayClientMessage(Component.translatable("message.flightsuit.song", target.getDisplayName()), true);
     }
 
-    private static void tickBoomerangs(ServerPlayer player, SuitWeapons.State state) {
-        if (state.boomerangs.isEmpty()) {
+    private static void tickSong(ServerPlayer player, SuitWeapons.State state, SuitClass suitClass) {
+        tickSleeper(player, state);
+        LivingEntity target = state.songTarget;
+        if (target == null) {
             return;
         }
+        if (suitClass != SuitClass.HERO || !player.isAlive()) {
+            state.songTarget = null;
+            return;
+        }
+        int t = state.songTicks++;
         ServerLevel level = player.serverLevel();
-        Iterator<Boomerang> it = state.boomerangs.iterator();
-        while (it.hasNext()) {
-            Boomerang b = it.next();
-            Vec3 from = b.pos;
-            if (b.returning) {
-                // Homes on the hand that threw it.
-                Vec3 hand = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
-                Vec3 toHand = hand.subtract(from);
-                if (toHand.length() < SuitTuning.BOOMERANG_SPEED * 1.2D) {
-                    KiFx.shotEnd(level, b.fx, hand);
-                    level.playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.8F, 1.4F);
-                    it.remove();
-                    continue;
+        // Playing: rooted; the foe grows drowsy.
+        player.setDeltaMovement(Vec3.ZERO);
+        player.hurtMarked = true;
+        player.fallDistance = 0.0F;
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, 6, false, false, false));
+        if (target.isAlive()) {
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, 2, false, false, false));
+        }
+        for (int i = 0; i < SONG_AT.length; i++) {
+            if (t == SONG_AT[i]) {
+                Vec3 mouth = player.getEyePosition().add(player.getLookAngle().scale(0.4D)).add(0.0D, -0.2D, 0.0D);
+                level.playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.PLAYERS, 1.2F, SONG_PITCH[i]);
+                level.sendParticles(ParticleTypes.NOTE, mouth.x, mouth.y + 0.3D, mouth.z, 0, (SONG_PITCH[i] - 1.0F) * 2.0F, 0.0D, 0.0D, 1.0D);
+                if (target.isAlive()) {
+                    Vec3 head = target.getEyePosition().add(0.0D, 0.4D, 0.0D);
+                    level.sendParticles(ParticleTypes.NOTE, head.x, head.y, head.z, 0, (SONG_PITCH[i] - 1.0F) * 2.0F, 0.0D, 0.0D, 1.0D);
                 }
-                b.dir = toHand.normalize();
             }
-            Vec3 to = from.add(b.dir.scale(SuitTuning.BOOMERANG_SPEED));
-            BlockHitResult block = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            boolean wall = block.getType() != HitResult.Type.MISS;
-            Vec3 end = wall ? block.getLocation() : to;
-            for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, end).inflate(1.2D),
-                    entity -> entity.isAlive() && !SuitWeapons.isFriendly(player, entity) && (SuitWeapons.isHostile(player, entity) || entity.getLastHurtByMob() == player))) {
-                if (!b.hit.add(target)) {
-                    continue;
-                }
-                hit(player, target, SuitTuning.BOOMERANG_DAMAGE * power(player, state), 0.3D, b.dir);
-                HulkbusterArts.stun(level, target, SuitTuning.BOOMERANG_STUN_TICKS);
-                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.8F, 1.6F);
+        }
+        if (t < SuitTuning.SONG_TICKS) {
+            return;
+        }
+        state.songTarget = null;
+        if (!target.isAlive() || target.level() != player.level() || target.distanceTo(player) > SuitTuning.SONG_RANGE + 8.0D) {
+            player.displayClientMessage(Component.translatable("message.flightsuit.song_missed"), true);
+            return;
+        }
+        sleep(level, player, state, target);
+    }
+
+    /** Asleep: held still (a boss only dozes, slowed, and not for as long) until the first blow or the time is up. */
+    private static void sleep(ServerLevel level, ServerPlayer player, SuitWeapons.State state, LivingEntity target) {
+        boolean boss = Stasis.isBoss(target);
+        int ticks = boss ? SuitTuning.SLEEP_BOSS_TICKS : SuitTuning.SLEEP_TICKS;
+        long now = level.getGameTime();
+        target.getPersistentData().putLong(SLEEP_UNTIL, now + ticks);
+        target.getPersistentData().remove(WAKE_UNTIL);
+        if (!Stasis.hold(level, target, ticks, false)) {
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks, 6, false, false, false));
+        }
+        if (target instanceof net.minecraft.world.entity.Mob mob) {
+            mob.getNavigation().stop();
+        }
+        state.sleeper = target;
+        KiFx.aura(level, target, SLEEP_COLOUR, ticks);
+        KiFx.burst(level, target.getBoundingBox().getCenter(), SLEEP_COLOUR, target.getBbWidth() + 0.8F, 14, KiFx.RING);
+        level.playSound(null, target.blockPosition(), SoundEvents.FOX_SLEEP, SoundSource.PLAYERS, 1.2F, 0.8F);
+        level.playSound(null, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.6F);
+        player.displayClientMessage(Component.translatable("message.flightsuit.sleeping", target.getDisplayName()), true);
+    }
+
+    private static final int SLEEP_COLOUR = 0x9AB8FF;
+
+    /**
+     * The one asleep: a snore now and then, a drifting bubble of light; woken, gold rings at its feet while its
+     * window is open; let go once that's shut.
+     */
+    private static void tickSleeper(ServerPlayer player, SuitWeapons.State state) {
+        LivingEntity sleeper = state.sleeper;
+        if (sleeper == null) {
+            return;
+        }
+        long now = player.level().getGameTime();
+        net.minecraft.nbt.CompoundTag data = sleeper.getPersistentData();
+        boolean asleep = data.getLong(SLEEP_UNTIL) > now;
+        if (!sleeper.isAlive() || !asleep && data.getLong(WAKE_UNTIL) <= now) {
+            state.sleeper = null;
+            return;
+        }
+        if (asleep && (now % 30L) == 0L && sleeper.level() instanceof ServerLevel level) {
+            Vec3 head = sleeper.getEyePosition().add(0.0D, sleeper.getBbHeight() * 0.3D + 0.3D, 0.0D);
+            KiFx.burst(level, head, SLEEP_COLOUR, 0.35F, 20, KiFx.ORB);
+            level.playSound(null, sleeper.blockPosition(), SoundEvents.FOX_SLEEP, SoundSource.PLAYERS, 0.8F, 0.9F);
+        }
+        // Awake and open (user: show it on the foe, not as a count): a gold ring spreading at its feet over and
+        // over while its blows land double, on top of the gold aura.
+        if (!asleep && (now % 8L) == 0L && sleeper.level() instanceof ServerLevel level) {
+            KiFx.burst(level, sleeper.position().add(0.0D, 0.1D, 0.0D), KiFx.GOLD, sleeper.getBbWidth() + 0.9F, 8, KiFx.RING);
+        }
+    }
+
+    /**
+     * A blow on a sleeper: it wakes - and from that blow on, for SONG_WAKE_TICKS, every hit on it lands twice as hard
+     * (2026-10-12, user: "첫 타격 이후 3초 정도"). Any attacker's blow; burning and the like don't wake it.
+     */
+    static void sleepHurt(LivingHurtEvent event) {
+        LivingEntity victim = event.getEntity();
+        if (victim.level().isClientSide || event.getAmount() <= 0.0F || event.getSource().getEntity() == null) {
+            return;
+        }
+        net.minecraft.nbt.CompoundTag data = victim.getPersistentData();
+        long now = victim.level().getGameTime();
+        if (data.getLong(SLEEP_UNTIL) > now) {
+            data.remove(SLEEP_UNTIL);
+            data.putLong(WAKE_UNTIL, now + SuitTuning.SONG_WAKE_TICKS);
+            Stasis.release(victim);
+            victim.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+            ServerLevel level = (ServerLevel) victim.level();
+            Vec3 at = victim.getBoundingBox().getCenter();
+            KiFx.burst(level, at, KiFx.GOLD, victim.getBbWidth() + 1.0F, 10, KiFx.FLASH);
+            KiFx.aura(level, victim, KiFx.GOLD, SuitTuning.SONG_WAKE_TICKS);
+            level.playSound(null, victim.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
+            if (event.getSource().getEntity() instanceof ServerPlayer hitter) {
+                hitter.displayClientMessage(Component.translatable("message.flightsuit.woken"), true);
             }
-            if (!b.returning && b.hit.size() > 0 && from.distanceTo(player.position()) > 2.0D) {
-                // Hits count once out and once back: the way back gets its own list.
-            }
-            b.travelled += end.distanceTo(from);
-            b.pos = end;
-            if (!b.returning && (wall || b.travelled >= SuitTuning.BOOMERANG_RANGE)) {
-                b.returning = true;
-                b.hit.clear();
-                KiFx.shotEnd(level, b.fx, end);
-                Vec3 hand = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
-                b.dir = hand.subtract(end).normalize();
-                b.fx = KiFx.shot(level, (byte) KiShots.Style.DISC.ordinal(), 0x7CE8A0, 0.9F, end, b.dir, SuitTuning.BOOMERANG_SPEED,
-                        SuitTuning.BOOMERANG_RANGE * 2.0D);
-                level.playSound(null, end.x, end.y, end.z, SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 0.8F, 1.2F);
-            } else if (b.returning && wall) {
-                // Stuck behind something on the way back: it just comes to hand.
-                b.pos = player.getEyePosition().add(0.0D, -0.3D, 0.0D);
-            }
+        }
+        if (data.getLong(WAKE_UNTIL) > now) {
+            event.setAmount(event.getAmount() * SuitTuning.SONG_WAKE_MULTIPLIER);
+            Vec3 at = victim.getBoundingBox().getCenter();
+            KiFx.burst((ServerLevel) victim.level(), at, KiFx.GOLD, 0.6F, 5, KiFx.SPARK);
         }
     }
 

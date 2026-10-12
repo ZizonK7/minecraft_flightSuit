@@ -119,9 +119,12 @@ public final class SuitWeapons {
         double hookTravelled;
         LivingEntity hookMob;
         int hookTicks;
-        /** M18: the Triforce's power until this tick; the gale boomerang in flight. */
+        /** M18: the Triforce's power until this tick. */
         long triforceUntil;
-        final List<HeroArts.Boomerang> boomerangs = new ArrayList<>();
+        /** 2026-10-12: Link's song under way (the one it's for, how far in), and who it put to sleep. */
+        LivingEntity songTarget;
+        int songTicks;
+        LivingEntity sleeper;
         /** M18 feedback: the chain of different moves (its length, when it lapses, the last move) and when the shield went up. */
         int chain;
         long chainUntil;
@@ -383,7 +386,7 @@ public final class SuitWeapons {
                     case STANDARD -> MarkArts.shoulderGuns(player, state);
                     case STEALTH -> EscapeFlight.press(player, state);
                     case PHANTOM -> PhantomArts.useStolen(player, state);
-                    case HERO -> HeroArts.boomerang(player, state);
+                    case HERO -> HeroArts.song(player, state);
                     case HULKBUSTER -> HulkbusterArts.throwBlocks(player, state);
                     case SWORDSMAN -> SwordArts.dragonFist(player, state);
                     case CANNONEER -> CannonArts.c4(player, state);
@@ -721,6 +724,7 @@ public final class SuitWeapons {
     /** Carte Noir: a phantom's own hits sometimes send a black card after the target. */
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
+        HeroArts.sleepHurt(event);
         HulkbusterArts.onHurt(event);
         HeroArts.onHurt(event);
         BishopArts.onHurt(event);

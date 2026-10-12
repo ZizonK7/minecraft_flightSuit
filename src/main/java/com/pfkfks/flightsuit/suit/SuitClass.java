@@ -26,7 +26,7 @@ public enum SuitClass {
     /**
      * Hero of Twilight (Zelda): a swordsman - Master Sword slashes that loose sword beams at full health, spin
      * attack, clawshot, and a Hylian shield that turns projectiles from the front (see HeroArts). M18: the sword
-     * is an item in hand, right click raises the shield, the Triforce (V), the gale boomerang (B).
+     * is an item in hand, right click raises the shield, the Triforce (V), the song of sleep (B).
      */
     HERO(36.0D),
     /**
