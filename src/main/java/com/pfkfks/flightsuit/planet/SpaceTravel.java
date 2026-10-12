@@ -60,7 +60,14 @@ public final class SpaceTravel {
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(Arrays.stream(Planet.values()).map(Planet::id), builder))
                         .executes(ctx -> launch(ctx.getSource().getPlayerOrException(), StringArgumentType.getString(ctx, "planet")) ? 1 : 0)))
                 .then(Commands.literal("return").executes(ctx -> goHome(ctx.getSource().getPlayerOrException()) ? 1 : 0))
-                .then(Commands.literal("remote").executes(ctx -> remote(ctx.getSource().getPlayerOrException()) ? 1 : 0)));
+                .then(Commands.literal("remote").executes(ctx -> remote(ctx.getSource().getPlayerOrException()) ? 1 : 0))
+                .then(Commands.literal("hangar")
+                        .then(Commands.literal("load").then(Commands.argument("station", com.mojang.brigadier.arguments.LongArgumentType.longArg())
+                                .executes(ctx -> Hangar.load(ctx.getSource().getPlayerOrException(),
+                                        com.mojang.brigadier.arguments.LongArgumentType.getLong(ctx, "station")) ? 1 : 0)))
+                        .then(Commands.literal("unload").then(Commands.argument("bay", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, Hangar.BAYS - 1))
+                                .executes(ctx -> Hangar.unload(ctx.getSource().getPlayerOrException(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "bay")) ? 1 : 0)))));
     }
 
     /** Nobody climbs out of a ship in flight. */
@@ -93,6 +100,7 @@ public final class SpaceTravel {
     public static void padMenu(ServerPlayer player, LaunchPadBlockEntity pad) {
         int stored = pad.energy().getEnergyStored();
         player.sendSystemMessage(Component.translatable("space.flightsuit.pad", stored, LAUNCH_COST).withStyle(ChatFormatting.AQUA));
+        Hangar.menu(player, true);
         if (!pad.canLaunch()) {
             player.sendSystemMessage(Component.translatable("space.flightsuit.pad_charging", stored * 100 / LAUNCH_COST).withStyle(ChatFormatting.GRAY));
             return;
@@ -122,6 +130,9 @@ public final class SpaceTravel {
                 .append("  ")
                 .append(button(Component.translatable("space.flightsuit.button_remote"), "/spaceship remote",
                         Component.translatable("space.flightsuit.button_remote_hint"), ChatFormatting.AQUA)));
+        if (planet != null) {
+            Hangar.menu(player, false);
+        }
     }
 
     private static MutableComponent button(Component label, String command, Component hint, ChatFormatting color) {
@@ -194,6 +205,11 @@ public final class SpaceTravel {
             return false;
         }
         return true;
+    }
+
+    /** The launch pad by the player, if any (Hangar's loading and unloading are done there). */
+    static @Nullable LaunchPadBlockEntity padNearPlayer(ServerPlayer player) {
+        return padNear(player);
     }
 
     private static @Nullable LaunchPadBlockEntity padNear(ServerPlayer player) {

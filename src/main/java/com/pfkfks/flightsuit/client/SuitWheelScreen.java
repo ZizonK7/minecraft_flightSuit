@@ -156,6 +156,7 @@ public class SuitWheelScreen extends Screen {
             case SuitWheel.STATION -> Component.translatable("screen.flightsuit.source_station", entry.distance());
             case SuitWheel.COMPANION -> Component.translatable("screen.flightsuit.source_companion", entry.distance());
             case SuitWheel.FAR_STATION -> Component.translatable("screen.flightsuit.source_far");
+            case SuitWheel.HANGAR -> Component.translatable("screen.flightsuit.source_hangar");
             default -> Component.translatable("screen.flightsuit.source_capsule");
         };
     }
