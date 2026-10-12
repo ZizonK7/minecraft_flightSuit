@@ -38,8 +38,9 @@ import java.util.UUID;
 
 /**
  * M18 Cannon Shooter's monkey (CannonArts): at heel while the full Mark 6 is worn - hopping after its owner, floating
- * at their shoulder when they fly, popping back beside them when left behind - and the body of three of the suit's
- * moves: planted as a turret (Monkey Militia), charging down a line (Monkey Rush). Never saved; gone when the suit
+ * at their shoulder when they fly, popping back beside them when left behind - and the body of the suit's monkey
+ * moves: planted as a tower (X, Bloons-style since 2026-10-12: darts, then three darts, then bombs as it's upgraded),
+ * charging down a line (Monkey Rush). Never saved; gone when the suit
  * comes off, and the move's monkeys go up in a puff when the move ends.
  */
 public class MonkeyEntity extends PathfinderMob {
@@ -49,6 +50,9 @@ public class MonkeyEntity extends PathfinderMob {
 
     private static final EntityDataAccessor<Byte> MODE = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> FLOATING = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BOOLEAN);
+    /** A tower's level (2026-10-12): 1 darts, 2 three darts at once, 3 bombs. */
+    private static final EntityDataAccessor<Byte> TIER = SynchedEntityData.defineId(MonkeyEntity.class, EntityDataSerializers.BYTE);
+    public static final int MAX_TIER = 3;
 
     private @Nullable UUID ownerId;
     /** TURRET / RUSH: ticks left; RUSH: the way it runs and whom it has already bowled over. */
@@ -82,12 +86,14 @@ public class MonkeyEntity extends PathfinderMob {
         return monkey;
     }
 
-    /** A turret for {@code ticks} at {@code at}. */
+    /** A tower (level 1) for {@code ticks} at {@code at}. */
     public static MonkeyEntity turret(ServerLevel level, Player owner, Vec3 at, int ticks) {
         MonkeyEntity monkey = new MonkeyEntity(com.pfkfks.flightsuit.registry.ModEntities.MONKEY.get(), level);
         monkey.ownerId = owner.getUUID();
         monkey.entityData.set(MODE, TURRET);
         monkey.left = ticks;
+        monkey.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
+        monkey.equipFor(1);
         monkey.moveTo(at.x, at.y, at.z, owner.getYRot(), 0.0F);
         level.addFreshEntity(monkey);
         level.sendParticles(ParticleTypes.POOF, at.x, at.y + 0.4D, at.z, 8, 0.2D, 0.2D, 0.2D, 0.02D);
@@ -116,6 +122,7 @@ public class MonkeyEntity extends PathfinderMob {
         super.defineSynchedData();
         entityData.define(MODE, HEEL);
         entityData.define(FLOATING, false);
+        entityData.define(TIER, (byte) 1);
     }
 
     @Override
@@ -127,6 +134,46 @@ public class MonkeyEntity extends PathfinderMob {
 
     public byte mode() {
         return entityData.get(MODE);
+    }
+
+    /** A tower's level (1 for anything else). */
+    public int tier() {
+        return entityData.get(TIER);
+    }
+
+    /** Ticks a tower has left. */
+    public int ticksLeft() {
+        return left;
+    }
+
+    /** A tower one level up (its time starts over): what it holds shows the level - an arrow, a crossbow, TNT. */
+    public void upgrade(int ticks) {
+        int tier = Math.min(MAX_TIER, tier() + 1);
+        entityData.set(TIER, (byte) tier);
+        left = ticks;
+        equipFor(tier);
+        if (level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 0.6D, getZ(), 12, 0.3D, 0.4D, 0.3D, 0.0D);
+            com.pfkfks.flightsuit.fx.KiFx.burst(level, position().add(0.0D, 0.1D, 0.0D), com.pfkfks.flightsuit.fx.KiFx.GOLD, 1.2F, 10,
+                    com.pfkfks.flightsuit.fx.KiFx.RING);
+            level.playSound(null, blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.8F);
+        }
+    }
+
+    private void equipFor(int tier) {
+        setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(switch (tier) {
+            case 2 -> net.minecraft.world.item.Items.CROSSBOW;
+            case 3 -> net.minecraft.world.item.Items.TNT;
+            default -> net.minecraft.world.item.Items.ARROW;
+        }));
+    }
+
+    /** The owner's towers about (oldest first). */
+    public static java.util.List<MonkeyEntity> towersOf(ServerLevel level, Player owner) {
+        java.util.List<MonkeyEntity> towers = new java.util.ArrayList<>(level.getEntitiesOfClass(MonkeyEntity.class,
+                owner.getBoundingBox().inflate(96.0D), monkey -> monkey.isOwnedBy(owner) && monkey.mode() == TURRET && monkey.isAlive()));
+        towers.sort(Comparator.comparingInt((MonkeyEntity monkey) -> monkey.tickCount).reversed());
+        return towers;
     }
 
     /** Floating at the shoulder (for the renderer: legs tucked). */
@@ -228,7 +275,7 @@ public class MonkeyEntity extends PathfinderMob {
         }
     }
 
-    // ---------------------------------------------------------------- Monkey Militia (turret)
+    // ---------------------------------------------------------------- monkey towers (2026-10-12, Bloons-style)
 
     private void tickTurret(@Nullable Player owner) {
         if (--left <= 0 || owner == null || owner.level() != level()) {
@@ -237,20 +284,53 @@ public class MonkeyEntity extends PathfinderMob {
         }
         getNavigation().stop();
         setDeltaMovement(getDeltaMovement().multiply(0.2D, 1.0D, 0.2D));
-        if (tickCount % SuitTuning.MILITIA_INTERVAL != 0) {
+        int tier = tier();
+        int interval = tier == 3 ? SuitTuning.TOWER_BOMB_INTERVAL : tier == 2 ? SuitTuning.TOWER_TRIPLE_INTERVAL : SuitTuning.TOWER_DART_INTERVAL;
+        double range = SuitTuning.TOWER_RANGE + (tier - 1) * 2.0D;
+        if (left % 10 == 0) {
+            // Watching the way it guards between throws.
+            LivingEntity near = nearestFoe(range);
+            if (near != null) {
+                getLookControl().setLookAt(near, 60.0F, 60.0F);
+                lookAt(near, 60.0F, 60.0F);
+            }
+        }
+        if (left % interval != 0) {
             return;
         }
-        LivingEntity target = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(SuitTuning.MILITIA_RANGE), this::foe)
-                .stream().filter(this::hasLineOfSight).min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
+        LivingEntity target = nearestFoe(range);
         if (target == null) {
             return;
         }
-        getLookControl().setLookAt(target, 60.0F, 60.0F);
-        Vec3 muzzle = position().add(0.0D, getBbHeight() * 0.7D, 0.0D);
-        Vec3 dir = target.getBoundingBox().getCenter().subtract(muzzle).normalize();
-        swing(InteractionHand.MAIN_HAND);
-        KiShots.fire((ServerLevel) level(), owner, KiShots.Style.FIRE, muzzle.add(dir.scale(0.4D)), dir, 1.8D, SuitTuning.MILITIA_RANGE + 4.0D,
-                SuitTuning.MILITIA_DAMAGE, 0.6D, this::foe);
+        lookAt(target, 360.0F, 360.0F);
+        setYBodyRot(getYRot());
+        setYHeadRot(getYRot());
+        Vec3 hand = position().add(0.0D, getBbHeight() * 0.8D, 0.0D);
+        Vec3 aim = target.getBoundingBox().getCenter().subtract(hand);
+        swing(InteractionHand.MAIN_HAND, true);
+        ServerLevel level = (ServerLevel) level();
+        if (tier == 3) {
+            // A lit bomb lobbed a little high.
+            Vec3 dir = aim.normalize().add(0.0D, 0.08D, 0.0D).normalize();
+            KiShots.fire(level, owner, KiShots.Style.BURNING, hand.add(dir.scale(0.4D)), dir, 1.0D, range + 4.0D, SuitTuning.TOWER_BOMB_DAMAGE,
+                    SuitTuning.TOWER_BOMB_RADIUS, this::foe);
+            level.playSound(null, blockPosition(), SoundEvents.TNT_PRIMED, SoundSource.PLAYERS, 0.5F, 1.6F);
+            return;
+        }
+        // Darts thrown with a little lift for the drop.
+        Vec3 dir = aim.add(0.0D, aim.horizontalDistance() * 0.08D, 0.0D).normalize();
+        int darts = tier == 2 ? 3 : 1;
+        for (int i = 0; i < darts; i++) {
+            Vec3 d = dir.yRot((float) Math.toRadians((i - (darts - 1) / 2.0D) * 8.0D));
+            MonkeyDartEntity.throwDart(level, owner, hand.add(d.scale(0.3D)), d, 2.2F, SuitTuning.TOWER_DART_DAMAGE);
+        }
+        level.playSound(null, blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 0.6F, 1.6F);
+    }
+
+    private @Nullable LivingEntity nearestFoe(double range) {
+        return level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(range), this::foe).stream()
+                .filter(entity -> entity.distanceTo(this) <= range && hasLineOfSight(entity))
+                .min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
     }
 
     // ---------------------------------------------------------------- Monkey Rush

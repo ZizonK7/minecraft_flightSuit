@@ -84,6 +84,7 @@ public final class ClientSetup {
         event.registerEntityRenderer(ModEntities.CANNONBALL.get(), CannonballRenderer::new);
         event.registerEntityRenderer(ModEntities.MONKEY.get(), MonkeyRenderer::new);
         event.registerEntityRenderer(ModEntities.PHANTOM_CLONE.get(), PhantomCloneRenderer::new);
+        event.registerEntityRenderer(ModEntities.MONKEY_DART.get(), MonkeyDartRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.VILLAGE_HALL.get(), VillageHallRenderer::new);
     }
 

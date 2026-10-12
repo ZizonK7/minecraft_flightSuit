@@ -344,7 +344,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.spinAttack(player, state);
                     case HULKBUSTER -> HulkbusterArts.pistonPunch(player, state);
                     case SWORDSMAN -> SwordArts.burningAttack(player, state);
-                    case CANNONEER -> CannonArts.militia(player, state);
+                    case CANNONEER -> CannonArts.monkeyTower(player, state);
                     case BISHOP -> BishopArts.angelRay(player, state);
                 }
             }
@@ -357,7 +357,7 @@ public final class SuitWeapons {
                     case HERO -> HeroArts.clawshot(player, state);
                     case HULKBUSTER -> HulkbusterArts.groundSlam(player, state);
                     case SWORDSMAN -> SwordArts.flashSlash(player, state);
-                    case CANNONEER -> CannonArts.rollingCannon(player, state);
+                    case CANNONEER -> CannonArts.flameBurst(player, state);
                     case BISHOP -> BishopArts.chains(player, state);
                 }
             }

@@ -401,8 +401,8 @@ public final class SuitTuning {
     /** How long the ripped-up chunk floats over the shoulder before it's thrown on its own. */
     public static final int THROW_HOLD_TICKS = 200;
 
-    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey militia (X), the rolling
-    // cannon (C), the big huge gigantic cannonball (V), the monkey rush (B).
+    // Mark 6 Cannon Shooter (CannonArts): cannonballs (right click), recoil jump (Z), monkey towers (X), the flame
+    // burst (C), the big huge gigantic cannonball (V), the monkey rush (B).
     public static final int CANNON_INTERVAL = 12;
     public static final int CANNON_COST = 250;
     public static final double CANNON_SPEED = 1.6D;
@@ -445,17 +445,29 @@ public final class SuitTuning {
     public static final float CANNON_SLAM_DAMAGE = 6.0F;
     public static final float CANNON_SLAM_DAMAGE_PER_BLOCK = 0.8F;
     public static final float CANNON_SLAM_DAMAGE_MAX = 22.0F;
-    public static final int MILITIA_COST = 1_500;
-    public static final int MILITIA_COOLDOWN_TICKS = 400;
-    public static final int MILITIA_COUNT = 3;
-    public static final int MILITIA_TICKS = 200;
-    public static final int MILITIA_INTERVAL = 15;
-    public static final float MILITIA_DAMAGE = 3.0F;
-    public static final double MILITIA_RANGE = 16.0D;
-    public static final int ROLLING_COST = 1_200;
-    public static final int ROLLING_COOLDOWN_TICKS = 160;
-    public static final int ROLLING_SHOTS = 3;
-    public static final double ROLLING_SPREAD_DEG = 15.0D;
+    /** Monkey towers (X, 2026-10-12): placing, levelling up, how many, how long; each level's throws. */
+    public static final int TOWER_COST = 1_200;
+    public static final int TOWER_UPGRADE_COST = 1_500;
+    public static final int TOWER_COOLDOWN_TICKS = 40;
+    public static final int TOWER_MAX = 3;
+    public static final int TOWER_TICKS = 1_200;
+    public static final double TOWER_PLACE_RANGE = 24.0D;
+    public static final double TOWER_RANGE = 14.0D;
+    public static final int TOWER_DART_INTERVAL = 14;
+    public static final int TOWER_TRIPLE_INTERVAL = 12;
+    public static final int TOWER_BOMB_INTERVAL = 24;
+    public static final float TOWER_DART_DAMAGE = 4.0F;
+    public static final float TOWER_BOMB_DAMAGE = 9.0F;
+    public static final double TOWER_BOMB_RADIUS = 2.5D;
+    /** The flame burst (C, 2026-10-12): a wide cone of fire out of the cannon. */
+    public static final int FLAME_BURST_COST = 1_500;
+    public static final int FLAME_BURST_COOLDOWN_TICKS = 120;
+    public static final double FLAME_BURST_REACH = 9.0D;
+    public static final double FLAME_BURST_ARC_DEG = 70.0D;
+    public static final float FLAME_BURST_DAMAGE = 8.0F;
+    public static final int FLAME_BURST_BURN_SECONDS = 5;
+    public static final double FLAME_BURST_RECOIL = 0.6D;
+    public static final float FLAME_BURST_IGNITE_CHANCE = 0.35F;
     public static final int BHGC_COST = 6_000;
     public static final int BHGC_COOLDOWN_TICKS = 1_200;
     public static final double BHGC_SPEED = 0.6D;
