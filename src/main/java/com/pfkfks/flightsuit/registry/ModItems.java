@@ -89,6 +89,10 @@ public final class ModItems {
     public static final RegistryObject<Item> WIDOW_BATON = display("widow_baton");
     public static final RegistryObject<Item> HAWKEYE_BOW = display("hawkeye_bow");
     public static final RegistryObject<Item> SHIELD_PISTOL = display("shield_pistol");
+    /** 2026-10-12 props (3D, tools/ModelGen weapons): the Cannon Shooter monkey's guns, and the C4 it sticks on things. */
+    public static final RegistryObject<Item> MONKEY_PISTOL = display("monkey_pistol");
+    public static final RegistryObject<Item> MONKEY_MACHINE_GUN = display("monkey_machine_gun");
+    public static final RegistryObject<Item> C4 = display("c4");
     /**
      * The towns' money (after the M16 test: "money instead of emeralds - different eras, different money"): the
      * Three Kingdoms' wuzhu coins, Hero City's dollars. Earned from their shops, requests and rewards.

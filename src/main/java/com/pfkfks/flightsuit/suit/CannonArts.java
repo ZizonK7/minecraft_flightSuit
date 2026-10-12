@@ -42,8 +42,10 @@ public final class CannonArts {
         if (suitClass != SuitClass.CANNONEER) {
             // Out of the suit: the flame stops and a C4 left stuck somewhere is disarmed.
             state.flameTicks = 0;
-            state.c4At = null;
-            state.c4On = null;
+            if (state.c4 != null) {
+                state.c4.discard();
+                state.c4 = null;
+            }
             return;
         }
         tickFlame(player, state);
@@ -432,7 +434,7 @@ public final class CannonArts {
      * a foe); B again sets it off - or it goes off on its own after a while, beeping faster as it nears.
      */
     static void c4(ServerPlayer player, SuitWeapons.State state) {
-        if (state.c4At != null) {
+        if (state.c4 != null) {
             detonate(player, state);
             return;
         }
@@ -444,12 +446,15 @@ public final class CannonArts {
         SuitWeapons.Aim aim = SuitWeapons.aim(player, SuitTuning.C4_RANGE);
         Vec3 eye = player.getEyePosition();
         LivingEntity on = aim.target();
+        net.minecraft.world.phys.BlockHitResult block = player.level().clip(new net.minecraft.world.level.ClipContext(eye,
+                eye.add(player.getLookAngle().scale(SuitTuning.C4_RANGE)), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
         Vec3 at;
         if (on != null) {
-            at = on.getBoundingBox().getCenter();
-        } else if (aim.end().distanceTo(eye) < SuitTuning.C4_RANGE - 0.05D) {
-            // Against the face it struck, a hair out from it.
-            at = aim.end().subtract(player.getLookAngle().scale(0.1D));
+            // On its side where the look met it.
+            at = aim.end();
+        } else if (block.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            at = block.getLocation();
         } else {
             player.displayClientMessage(Component.translatable("message.flightsuit.c4_nothing"), true);
             return;
@@ -458,54 +463,48 @@ public final class CannonArts {
             player.displayClientMessage(Component.translatable("message.flightsuit.low_power"), true);
             return;
         }
-        state.c4On = on;
-        state.c4At = at;
         state.c4Fuse = now + SuitTuning.C4_FUSE_TICKS;
         ServerLevel level = player.serverLevel();
+        state.c4 = on != null ? com.pfkfks.flightsuit.entity.C4Entity.onEntity(level, on, at, state.c4Fuse)
+                : com.pfkfks.flightsuit.entity.C4Entity.onBlock(level, at, block.getDirection(), state.c4Fuse);
         player.swing(InteractionHand.OFF_HAND, true);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.SLIME_BLOCK_PLACE, SoundSource.PLAYERS, 1.0F, 1.2F);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 2.0F);
-        KiFx.burst(level, at, KiFx.RED, 0.5F, 6, KiFx.FLASH);
         player.displayClientMessage(on != null ? Component.translatable("message.flightsuit.c4_on", on.getDisplayName())
                 : Component.translatable("message.flightsuit.c4_placed"), true);
     }
 
     private static void tickC4(ServerPlayer player, SuitWeapons.State state) {
-        if (state.c4At == null) {
+        if (state.c4 == null) {
             return;
         }
-        LivingEntity on = state.c4On;
-        if (on != null) {
-            if (on.isAlive() && on.level() == player.level()) {
-                state.c4At = on.getBoundingBox().getCenter();
-            } else {
-                // Fell off where it died.
-                state.c4On = null;
-            }
+        if (state.c4.isRemoved() || state.c4.level() != player.level()) {
+            state.c4 = null;
+            return;
         }
         long left = state.c4Fuse - player.level().getGameTime();
         if (left <= 0L) {
             detonate(player, state);
             return;
         }
-        // A red blink and a beep, faster near the end.
+        // A beep with each blink (the light is the C4's own, client/C4Renderer), faster near the end.
         int every = left > 60L ? 16 : left > 20L ? 6 : 2;
         if (left % every == 0) {
             ServerLevel level = player.serverLevel();
-            Vec3 at = state.c4At;
-            KiFx.burst(level, at, KiFx.RED, 0.35F, 3, KiFx.FLASH);
+            Vec3 at = state.c4.position();
             level.playSound(null, at.x, at.y, at.z, SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.PLAYERS, 0.7F, 2.0F);
         }
     }
 
     private static void detonate(ServerPlayer player, SuitWeapons.State state) {
-        Vec3 at = state.c4At;
-        LivingEntity on = state.c4On;
-        state.c4At = null;
-        state.c4On = null;
-        if (at == null) {
+        com.pfkfks.flightsuit.entity.C4Entity c4 = state.c4;
+        state.c4 = null;
+        if (c4 == null) {
             return;
         }
+        Vec3 at = c4.position();
+        LivingEntity on = c4.host();
+        c4.discard();
         ServerLevel level = player.serverLevel();
         double radius = SuitTuning.C4_RADIUS;
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(radius),

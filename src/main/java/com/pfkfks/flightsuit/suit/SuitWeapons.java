@@ -240,8 +240,7 @@ public final class SuitWeapons {
         // Mark 6 (CannonArts, 2026-10-12): the flame burst's ticks left; the C4 stuck on something (an entity, else a
         // spot), and when it goes off on its own.
         int flameTicks;
-        LivingEntity c4On;
-        Vec3 c4At;
+        com.pfkfks.flightsuit.entity.C4Entity c4;
         long c4Fuse;
         /** The monkey on the machine gun until (the HUD's buff clock). */
         long machineGunUntil;

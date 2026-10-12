@@ -2,15 +2,12 @@ package com.pfkfks.flightsuit.suit;
 
 import com.pfkfks.flightsuit.FlightSuitMod;
 import com.pfkfks.flightsuit.fx.KiFx;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -47,9 +44,7 @@ public final class KiShots {
         /** A plain ki blast: a small burst on what it hits. */
         KI,
         /** A purple ki blast (Frieza's side). */
-        KI_DARK,
-        /** 2026-10-12: a witch's splash potion (the phantom's stolen one) - a bad brew on everything round where it lands. */
-        POTION
+        KI_DARK
     }
 
 
@@ -86,7 +81,6 @@ public final class KiShots {
     }
 
     private static final List<Shot> SHOTS = new ArrayList<>();
-    private static final int POTION_COLOUR = 0x9A4CD8;
 
     private KiShots() {
     }
@@ -116,7 +110,6 @@ public final class KiShots {
             case BURNING, DISC -> KiFx.BURNING;
             case FIRE -> KiFx.FIRE;
             case KI_DARK -> KiFx.KI_DARK;
-            case POTION -> POTION_COLOUR;
             default -> KiFx.KI;
         };
     }
@@ -127,7 +120,6 @@ public final class KiShots {
             case BURNING -> 1.5F;
             case DISC -> (float) (radius * 1.3D);
             case FIRE -> 0.5F;
-            case POTION -> 0.45F;
             default -> 0.6F;
         };
     }
@@ -201,7 +193,7 @@ public final class KiShots {
             return true;
         }
         if (shot.travelled >= shot.range) {
-            if (shot.style == Style.BURNING || shot.style == Style.POTION) {
+            if (shot.style == Style.BURNING) {
                 impact(shot, end, null);
             }
             return true;
@@ -214,28 +206,6 @@ public final class KiShots {
         DamageSource source = shot.owner instanceof ServerPlayer player ? shot.owner.damageSources().playerAttack(player)
                 : shot.owner.damageSources().mobAttack(shot.owner);
         victim.hurt(source, damage);
-    }
-
-    /** The witch's brew where it lands: one bad effect, chosen as she would, on every foe within the radius. */
-    private static void splash(Shot shot, Vec3 at) {
-        ServerLevel level = shot.level;
-        int pick = level.getRandom().nextInt(4);
-        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(shot.radius),
-                entity -> entity != shot.owner && entity.isAlive() && shot.hits.test(entity)
-                        && entity.getBoundingBox().getCenter().distanceTo(at) <= shot.radius + entity.getBbWidth() / 2.0D)) {
-            switch (pick) {
-                case 0 -> hurt(shot, victim, shot.damage * 1.5F);
-                case 1 -> victim.addEffect(new MobEffectInstance(MobEffects.POISON, 100, 1));
-                case 2 -> victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 2));
-                default -> victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 1));
-            }
-            if (pick != 0) {
-                hurt(shot, victim, shot.damage * 0.5F);
-            }
-        }
-        int[] colours = {0x430A09, 0x4E9331, 0x5A6C81, 0x484D48};
-        // The vanilla splash: the glass breaking and the coloured cloud.
-        level.levelEvent(2002, BlockPos.containing(at), colours[pick]);
     }
 
     private static void impact(Shot shot, Vec3 at, LivingEntity direct) {
@@ -267,7 +237,6 @@ public final class KiShots {
                 level.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 6, 0.2D, 0.2D, 0.2D, 0.02D);
                 level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
             }
-            case POTION -> splash(shot, at);
             default -> {
                 // A ki blast: Trunks may cut it, a boss may dodge it (KiGuard).
                 if (direct != null && !KiGuard.blocks(direct, shot.owner, at.subtract(shot.dir.scale(2.0D)))) {

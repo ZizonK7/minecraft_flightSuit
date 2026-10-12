@@ -25,6 +25,10 @@ public final class ModParticles {
     public static final RegistryObject<SimpleParticleType> CARD_FLIGHT =
             PARTICLE_TYPES.register("card_flight", () -> new SimpleParticleType(true));
 
+    /** 2026-10-12: a "Z" drifting up off whoever Link's song put to sleep (client/SleepZParticle). */
+    public static final RegistryObject<SimpleParticleType> SLEEP_Z =
+            PARTICLE_TYPES.register("sleep_z", () -> new SimpleParticleType(false));
+
     /** How long a flying card lives: senders scale its velocity to the distance it should cover. */
     public static final int CARD_FLIGHT_LIFE = 9;
 

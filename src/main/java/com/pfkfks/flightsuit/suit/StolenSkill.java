@@ -268,7 +268,7 @@ public enum StolenSkill {
                 return web(level, caster, from, aimed, damage, hits);
             }
             case WITCH_POTION -> {
-                KiShots.fire(level, caster, KiShots.Style.POTION, from, look.add(0.0D, 0.04D, 0.0D), 1.0D, 24.0D, damage, 3.0D, hits);
+                com.pfkfks.flightsuit.entity.WitchBrewEntity.throwFrom(level, caster, from, look, damage, hits);
                 level.playSound(null, from.x, from.y, from.z, SoundEvents.WITCH_THROW, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
             case SLIME_CLONES -> {

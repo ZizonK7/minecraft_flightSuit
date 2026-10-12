@@ -457,7 +457,7 @@ public final class HeroArts {
     private static final int SLEEP_COLOUR = 0x9AB8FF;
 
     /**
-     * The one asleep: a snore now and then, a drifting bubble of light; woken, gold rings at its feet while its
+     * The one asleep: "Z"s off its head and a snore now and then; woken, gold rings at its feet while its
      * window is open; let go once that's shut.
      */
     private static void tickSleeper(ServerPlayer player, SuitWeapons.State state) {
@@ -472,10 +472,16 @@ public final class HeroArts {
             state.sleeper = null;
             return;
         }
-        if (asleep && (now % 30L) == 0L && sleeper.level() instanceof ServerLevel level) {
-            Vec3 head = sleeper.getEyePosition().add(0.0D, sleeper.getBbHeight() * 0.3D + 0.3D, 0.0D);
-            KiFx.burst(level, head, SLEEP_COLOUR, 0.35F, 20, KiFx.ORB);
-            level.playSound(null, sleeper.blockPosition(), SoundEvents.FOX_SLEEP, SoundSource.PLAYERS, 0.8F, 0.9F);
+        if (asleep && sleeper.level() instanceof ServerLevel level) {
+            // "Z"s drifting up off its head, and a snore now and then.
+            if (now % 12L == 0L) {
+                Vec3 head = sleeper.getEyePosition().add(0.0D, 0.35D, 0.0D);
+                double side = (now / 12L) % 2L == 0L ? 1.0D : -1.0D;
+                level.sendParticles(com.pfkfks.flightsuit.registry.ModParticles.SLEEP_Z.get(), head.x, head.y, head.z, 0, side, 0.0D, 0.0D, 1.0D);
+            }
+            if (now % 40L == 0L) {
+                level.playSound(null, sleeper.blockPosition(), SoundEvents.FOX_SLEEP, SoundSource.PLAYERS, 0.8F, 0.9F);
+            }
         }
         // Awake and open (user: show it on the foe, not as a count): a gold ring spreading at its feet over and
         // over while its blows land double, on top of the gold aura.

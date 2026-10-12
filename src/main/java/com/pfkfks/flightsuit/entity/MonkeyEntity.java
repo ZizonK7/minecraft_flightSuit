@@ -75,6 +75,8 @@ public class MonkeyEntity extends PathfinderMob {
         Vec3 side = Vec3.directionFromRotation(0.0F, owner.getYRot() + 90.0F);
         Vec3 at = owner.position().add(side.scale(0.9D));
         monkey.moveTo(at.x, at.y, at.z, owner.getYRot(), 0.0F);
+        monkey.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0.0F);
+        monkey.arm(false);
         level.addFreshEntity(monkey);
         level.sendParticles(ParticleTypes.POOF, at.x, at.y + 0.4D, at.z, 6, 0.2D, 0.2D, 0.2D, 0.02D);
         return monkey;
@@ -105,11 +107,18 @@ public class MonkeyEntity extends PathfinderMob {
         return entityData.get(MACHINE_GUN);
     }
 
+    /** The gun in its hand (2026-10-12, 3D props from tools/ModelGen): the pistol, or the machine gun. */
+    private void arm(boolean machine) {
+        setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(machine
+                ? com.pfkfks.flightsuit.registry.ModItems.MONKEY_MACHINE_GUN.get() : com.pfkfks.flightsuit.registry.ModItems.MONKEY_PISTOL.get()));
+    }
+
     /** X: the machine gun for {@code ticks}. */
     public void startMachineGun(int ticks) {
         machineGunLeft = ticks;
         reload = 0;
         entityData.set(MACHINE_GUN, true);
+        arm(true);
         if (level() instanceof ServerLevel level) {
             com.pfkfks.flightsuit.fx.KiFx.aura(level, this, com.pfkfks.flightsuit.fx.KiFx.FIRE, ticks);
             level.playSound(null, blockPosition(), SoundEvents.IRON_DOOR_OPEN, SoundSource.PLAYERS, 0.8F, 1.6F);
@@ -218,6 +227,7 @@ public class MonkeyEntity extends PathfinderMob {
     private void tickGun(Player owner) {
         if (machineGunLeft > 0 && --machineGunLeft == 0) {
             entityData.set(MACHINE_GUN, false);
+            arm(false);
         }
         if (aimLeft > 0 && --aimLeft == 0) {
             entityData.set(AIMING, false);
