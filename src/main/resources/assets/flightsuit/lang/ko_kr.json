@@ -1903,5 +1903,6 @@
   "dbz.flightsuit.sue.beaten": "괜찮아요... 잠깐 물러설게요.",
   "dbz.flightsuit.johnny.beaten": "불이... 꺼졌어...",
   "dbz.flightsuit.ben.beaten": "이런... 오늘은 운이 없군.",
-  "guide.flightsuit.page.23": "§1§l닥터 둠 사가§r\n§8타노스 이후 (또는 60일째 밤)§r\n하늘에 지구가 하나 더\n→ 균열의 둠봇을 막으면\n판타스틱 4가 열쇠를 줌\n\n§1§l멀티버스 게이트§r\n자수정 블록 문틀 +\n브리지 열쇠 %9$s\n3초 서 있으면 배틀월드\n/doom = 다음 목표"
+  "guide.flightsuit.page.23": "§1§l닥터 둠 사가§r\n§8타노스 이후 (또는 60일째 밤)§r\n하늘에 지구가 하나 더\n→ 균열의 둠봇을 막으면\n판타스틱 4가 열쇠를 줌\n\n§1§l멀티버스 게이트§r\n자수정 블록 문틀 +\n브리지 열쇠 %9$s\n3초 서 있으면 배틀월드\n/doom = 다음 목표",
+  "doom.flightsuit.incursion.overworld": "인커전은 오버월드에서만 시작됩니다"
 }

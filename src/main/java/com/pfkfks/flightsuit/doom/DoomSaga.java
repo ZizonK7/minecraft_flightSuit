@@ -208,7 +208,8 @@ public final class DoomSaga {
 
     /** Starts this player's incursion now (the test command, and the night it's due). */
     public static boolean startIncursion(ServerPlayer player) {
-        if (INCURSIONS.containsKey(player.getUUID()) || Multiverse.inBattleworld(player.level())) {
+        if (INCURSIONS.containsKey(player.getUUID()) || player.level().dimension() != net.minecraft.world.level.Level.OVERWORLD) {
+            player.sendSystemMessage(Component.translatable("doom.flightsuit.incursion.overworld").withStyle(ChatFormatting.GRAY));
             return false;
         }
         ServerLevel level = player.serverLevel();
@@ -242,7 +243,8 @@ public final class DoomSaga {
             }
         }
         List<UUID> over = new ArrayList<>();
-        for (Incursion inc : INCURSIONS.values()) {
+        // A copy: a scene can end at once (already seen) and take its incursion off the map mid-loop.
+        for (Incursion inc : new ArrayList<>(INCURSIONS.values())) {
             ServerPlayer player = server.getPlayerList().getPlayer(inc.player);
             if (player == null || player.level() != overworld && !inc.scene || !inc.scene && player.position().distanceTo(inc.rift) > 96.0D) {
                 over.add(inc.player);
@@ -394,7 +396,10 @@ public final class DoomSaga {
         for (int i = 1; i < there.size(); i++) {
             there.get(i).discard();
         }
-        if (there.isEmpty()) {
+        // The one flying along with a player counts as home (no second copy while they're here).
+        boolean escorting = !level.getEntitiesOfClass(DbzFighterEntity.class, new AABB(post).inflate(48.0D),
+                f -> f.getCharacter() == who && f.isEscort()).isEmpty();
+        if (there.isEmpty() && !escorting) {
             DbzFighterEntity person = DbzFighterEntity.create(level, who, post, false);
             person.moveTo(post.getX() + 0.5D, post.getY(), post.getZ() + 0.5D, 180.0F, 0.0F);
             level.addFreshEntity(person);
@@ -909,6 +914,7 @@ public final class DoomSaga {
     private static void escort(ServerLevel level, List<UUID> allies, ServerPlayer lead) {
         for (UUID id : allies) {
             if (level.getEntity(id) instanceof DbzFighterEntity ally && ally.isAlive() && !ally.isActing()) {
+                ally.setInvisible(false);
                 ally.escort(lead.getUUID());
             }
         }

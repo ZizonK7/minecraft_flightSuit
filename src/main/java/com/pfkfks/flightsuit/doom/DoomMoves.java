@@ -381,7 +381,7 @@ public final class DoomMoves {
                 }
                 for (LivingEntity hit : server.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(spot, spot).inflate(1.8D),
                         me::isEnemy)) {
-                    hit.hurt(me.damageSources().lightningBolt(), 9.0F);
+                    hit.hurt(me.damageSources().mobAttack(me), 9.0F);
                 }
             });
         }
@@ -404,7 +404,10 @@ public final class DoomMoves {
                 return;
             }
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 6, false, true));
-            target.addEffect(new MobEffectInstance(MobEffects.JUMP, 50, 200, false, false));
+            if (target instanceof Player) {
+                // A jump boost past 127 wraps negative on the client: no jumping out of the cage.
+                target.addEffect(new MobEffectInstance(MobEffects.JUMP, 50, 250, false, false));
+            }
             for (int i = 0; i < 4; i++) {
                 later(me, i * 10, () -> {
                     if (target.isAlive()) {
@@ -602,9 +605,6 @@ public final class DoomMoves {
     /** Sue: force fields over our side (absorption), a push that throws foes back, and now and then out of sight. */
     private static void sue(DbzFighterEntity me, ServerLevel server, LivingEntity target, double distance) {
         if (!me.specialReady()) {
-            if (me.isInvisible() && me.tickCount % 60 == 0) {
-                me.setInvisible(false);
-            }
             return;
         }
         int move = me.getPersistentData().getInt(MOVE);
@@ -623,6 +623,7 @@ public final class DoomMoves {
             me.specialCooldown(160);
         } else {
             me.setInvisible(true);
+            later(me, 60, () -> me.setInvisible(false));
             me.specialCooldown(120);
         }
     }
@@ -666,7 +667,7 @@ public final class DoomMoves {
                 || me.getRandom().nextFloat() > (who == DbzCharacter.DOOMBOT ? 0.1F : 0.3F)) {
             return;
         }
-        attacker.hurt(me.damageSources().lightningBolt(), who == DbzCharacter.DOOMBOT ? 3.0F : 6.0F);
+        attacker.hurt(me.damageSources().mobAttack(me), who == DbzCharacter.DOOMBOT ? 3.0F : 6.0F);
         Vec3 push = attacker.position().subtract(me.position()).multiply(1.0D, 0.0D, 1.0D);
         if (push.lengthSqr() > 1.0E-4D) {
             push = push.normalize().scale(0.9D);

@@ -1903,5 +1903,6 @@
   "dbz.flightsuit.sue.beaten": "I'm fine... falling back for a moment.",
   "dbz.flightsuit.johnny.beaten": "Flame's... out...",
   "dbz.flightsuit.ben.beaten": "Aw, nuts... not my day.",
-  "guide.flightsuit.page.23": "§1§lThe Doom Saga§r\n§8After Thanos (or from night 60)§r\nAnother Earth in the sky\n-> beat the rift's Doombots\nand the Fantastic Four\ngive you a key\n\n§1§lMultiverse gate§r\nAmethyst block frame +\nbridge key %9$s\nStand in it 3s: Battleworld\n/doom = what's next"
+  "guide.flightsuit.page.23": "§1§lThe Doom Saga§r\n§8After Thanos (or from night 60)§r\nAnother Earth in the sky\n-> beat the rift's Doombots\nand the Fantastic Four\ngive you a key\n\n§1§lMultiverse gate§r\nAmethyst block frame +\nbridge key %9$s\nStand in it 3s: Battleworld\n/doom = what's next",
+  "doom.flightsuit.incursion.overworld": "The incursion only begins in the overworld"
 }

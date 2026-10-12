@@ -56,6 +56,7 @@ public final class KiShots {
         METAL,
         /** Namor's (and Talokan's) water lances. */
         WATER
+        // Ordinal 10 is KiFx.SHOT_SPIRIT on the clients: move that up before adding an eleventh style here.
     }
 
 
